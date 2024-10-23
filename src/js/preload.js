@@ -152,14 +152,27 @@ async function handleLiveviewV4andV5() {
     '0'
   )
 
-  // This ensures that the 16:9 views will fill the screen when the nav/header is hidden
-  setStyle(
-    document
-      .querySelectorAll('[class^=liveView__LiveViewWrapper]')[0]
-      .querySelectorAll('[class^=liveview__ViewportsWrapper]')[0],
-    'maxWidth',
-    'calc((100vh) * 1.7777777777777777)'
-  )
+  // For grids other than "All Cameras", we adjust the aspect ratio of the ViewPortsWrapper to match so that
+  // they all fit within the window without cropping or needing to scroll
+  // The "All Cameras" view is designed to be scrolled, so we don't adjust it
+  if (!checkUrl('/protect/dashboard/all')) {
+    // Get the aspect ratio of the ViewPortsWrapper
+    let viewPortAspectRatio = 16 / 9
+
+    const viewPortsWrapper = document.querySelectorAll('[class^=liveview__ViewportsWrapper]')[0]
+    if (viewPortsWrapper) {
+      viewPortAspectRatio = viewPortsWrapper.offsetWidth / viewPortsWrapper.offsetHeight
+    }
+
+    // Set the max width of the ViewPortsWrapper to maintain the aspect ratio
+    setStyle(
+      document
+        .querySelectorAll('[class^=liveView__LiveViewWrapper]')[0]
+        .querySelectorAll('[class^=liveview__ViewportsWrapper]')[0],
+      'maxWidth',
+      `calc(100vh * ${viewPortAspectRatio})`
+    )
+  }
 
   // wait until remove option buttons are visible
   await waitUntil(() => document.querySelectorAll('[data-testid="option"]').length > 0)
@@ -300,6 +313,7 @@ function setupNavigationMonitor() {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href
       handleDashboardButton()
+      handleLiveviewV4andV5()
     }
   })
 
@@ -318,6 +332,7 @@ function setupNavigationMonitor() {
       if (window.location.href !== lastUrl) {
         lastUrl = window.location.href
         handleDashboardButton()
+        handleLiveviewV4andV5()
       }
     })
   })
