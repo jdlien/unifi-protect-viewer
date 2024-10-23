@@ -189,14 +189,10 @@ async function handleLiveviewV4andV5() {
   setStyle(document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0], 'opacity', '0.5')
 }
 
-const triggerDashboardNavigation = () => {
+function triggerDashboardNavigation() {
   // Find the UniFi dashboard link
   const dashboardLink = document.querySelector('a[href*="/protect/dashboard"]')
-
-  if (dashboardLink) {
-    // Trigger a click event
-    dashboardLink.click()
-  }
+  if (dashboardLink) dashboardLink.click()
 }
 
 function injectDashboardButton() {
