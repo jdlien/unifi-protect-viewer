@@ -1,7 +1,7 @@
 {
   "name": "unifi-protect-viewer",
   "productName": "UniFi Protect Viewer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Electron app for UniFi Protect",
   "main": "main.js",
   "scripts": {
