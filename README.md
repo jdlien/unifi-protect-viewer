@@ -35,6 +35,10 @@ For some platforms there are scripts inside the package.json.
 
 `npm run build:x64:linux`
 
+## Known Issues
+
+Currently, enhanced codec (h.265) support does not appear to work in Windows (likely due to licensing limitations in Electon). Let me know if you have any ideas on how to fix this — one potential solution is to use a fok of electron with HEVC support like https://github.com/AAAhs/electron-hevc
+
 ## Usage
 
 After configuration the app will automaticly start the live view after startup. If you want to change the configuration you can press `F10` to reset all settings and restart the configuration process.
