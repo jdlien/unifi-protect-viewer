@@ -1,0 +1,151 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #111;
+  color: lightgray;
+
+  font-family: 'UI Sans', Lato, Arial, sans-serif;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  margin: auto;
+  padding-top: 20px;
+}
+
+.heading {
+  font-weight: 400;
+  font-size: 24px;
+}
+
+.hotkey {
+  display: flex;
+  font-size: 14px;
+}
+
+.hotkey + .hotkey {
+  margin-top: 6px;
+}
+
+.hotkey key {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  border: 1px solid #4e4e4e;
+  border-radius: 4px;
+  background-color: #565656;
+  padding: 5px 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: inline-block;
+  font-weight: bold;
+  color: #dadada;
+  width: 30px;
+  text-align: center;
+}
+
+.hotkey span {
+  margin-left: 10px;
+  line-height: 32px;
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+}
+
+.logo img {
+  max-width: 192px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group button {
+  font-size: 16px;
+  padding: 6px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  line-height: 32px;
+  border-style: none;
+  border-top: 1px solid #2682f9;
+  border-bottom: 1px solid #0045ad;
+  border-radius: 8px;
+  color: #fff;
+  background-color: #0055ce;
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.group button:hover {
+  border-top-color: #3086f7;
+  background-color: #005ce6;
+}
+
+.group button:focus {
+  border-top-color: #549eff;
+  background-color: #0261ef;
+  border-bottom-color: #005ad0;
+}
+
+.group button:disabled {
+  border-top-color: #3086f7;
+  background-color: #cce2ff;
+}
+
+.group label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #aaa;
+  padding-bottom: 4px;
+}
+
+.group input {
+  color: #ddd;
+  outline: none;
+  padding: 10px 8px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(100, 100, 100, 0.3);
+  border-bottom-width: 2px;
+  /* inner shadow */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 16px;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  background-color: #6665;
+}
+
+.group input::placeholder {
+  color: rgba(128, 128, 128, 0.4);
+}
+
+.group input:hover {
+  border-bottom: 2px solid #006fff77;
+  box-shadow: 0 2px 6px rgba(0, 111, 255, 0.2);
+}
+
+.group input:focus {
+  border-bottom: 2px solid #006fff;
+  box-shadow: 0 2px 6px rgba(0, 111, 255, 0.2);
+  background-color: rgba(120, 120, 120, 0.333);
+}
+
+.error {
+  border-left: 10px solid red;
+  padding: 0 16px;
+  line-height: 32px;
+  border-radius: 8px;
+}
+
+small {
+  font-size: 12px;
+}
+
+.text-center {
+  text-align: center;
+}

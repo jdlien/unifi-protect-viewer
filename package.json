@@ -1,22 +1,24 @@
 {
   "name": "unifi-protect-viewer",
-  "version": "0.3.2",
-  "description": "Electron app for Unifi Protect Live View.",
+  "productName": "UniFi Protect Viewer",
+  "version": "2.0.0",
+  "description": "Electron app for UniFi Protect",
   "main": "main.js",
   "scripts": {
     "start": "electron --ignore=builds .",
+    "dev": "NODE_ENV=development electron .",
     "build": "npm run build:x64:linux && npm run build:ia32:windows",
     "build:portable": "npm run build:x64:linux:portable && npm run build:ia32:windows:portable",
-    "build:macos": "npm run run build:x64:macos && npm run build:arm64:macos",
-    "build:macos:portable": "npm run run build:x64:macos:portable && npm run build:arm64:macos:portable",
-    "build:ia32:windows": "electron-packager ./ unifi-protect-viewer --overwrite --asar --platform win32 --arch ia32 --icon ./src/img/128.png --prune true --out builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"unifi-protect-viewer\"",
-    "build:ia32:windows:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform win32 --arch ia32 --icon ./src/img/128.png --prune true --out builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"unifi-protect-viewer\"",
-    "build:x64:macos": "electron-packager ./ unifi-protect-viewer --overwrite --platform darwin --arch x64 --icon ./src/img/128.png --prune=true --out=builds",
-    "build:x64:macos:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --platform darwin --arch x64 --icon ./src/img/128.png --prune=true --out=builds",
-    "build:arm64:macos": "electron-packager ./ unifi-protect-viewer --overwrite --platform darwin --arch arm64 --icon ./src/img/128.png --prune=true --out=builds",
-    "build:arm64:macos:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --platform darwin --arch arm64 --icon ./src/img/128.png --prune=true --out=builds",
+    "build:ia32:windows": "electron-packager ./ unifi-protect-viewer --overwrite --asar --platform win32 --arch ia32 --icon ./src/img/128.png --prune=true --out builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"unifi-protect-viewer\"",
+    "build:ia32:windows:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform win32 --arch ia32 --icon ./src/img/128.png --prune=true --out builds --version-string.CompanyName=CE --version-string.FileDescription=CE --version-string.ProductName=\"unifi-protect-viewer\"",
+    "build:macos": "npm run build:x64:macos && npm run build:arm64:macos",
+    "build:macos:portable": "npm run build:x64:macos:portable && npm run build:arm64:macos:portable",
+    "build:x64:macos": "electron-packager ./ \"UniFi Protect Viewer\" --overwrite --platform darwin --arch x64 --icon ./src/img/icon.icns --prune=true --out=builds",
+    "build:x64:macos:portable": "electron-packager ./ \"UniFi Protect Viewer\" --overwrite --platform darwin --arch x64 --icon ./src/img/icon.icns --prune=true --out=builds",
+    "build:arm64:macos": "electron-packager ./ \"UniFi Protect Viewer\" --overwrite --platform darwin --arch arm64 --icon ./src/img/icon.icns --prune=true --out=builds",
+    "build:arm64:macos:portable": "electron-packager ./ \"UniFi Protect Viewer\" --overwrite --platform darwin --arch arm64 --icon ./src/img/icon.icns --prune=true --out=builds",
     "build:x64:linux": "electron-packager ./ unifi-protect-viewer --overwrite --asar --platform linux --arch x64 --icon ./src/img/128.png --prune true --out builds",
-    "build:x64:linux:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform linux --arch x64 --icon ./src/img/128.png --prune true --out builds",
+    "build:x64:linux:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform linux --arch x64 --icon ./src/img/128.png --prune=true --out builds",
     "rename": "node scripts/rename-builds.js"
   },
   "keywords": [
@@ -26,14 +28,15 @@
     "protect",
     "viewer"
   ],
-  "author": "Sebastian Loer",
+  "author": "JD Lien",
   "license": "",
   "devDependencies": {
-    "electron": "29.1.5",
+    "electron": "^33.0.1",
     "electron-packager": "17.1.2",
-    "electron-reloader": "1.2.3"
+    "electron-reloader": "^1.2.3",
+    "prettier": "^3.3.3"
   },
   "dependencies": {
-    "electron-store": "8.2.0"
+    "electron-store": "^10.0.0"
   }
 }
