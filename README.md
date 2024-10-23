@@ -1,6 +1,6 @@
 # UniFi Protect Viewer
 
-This Electron app is a wrapper for UniFi Protect that gives a clean interface which maximizes the live view, and automatically logs you in. When you first launch the app, you'll be prompted to enter your UniFi Protect credentials and the URL to your UniFi Protect instance. This will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
+This Electron app is a wrapper for UniFi Protect that gives a clean interface which maximizes the live view, and automatically logs you in. When you first launch the app, you'll be prompted to enter a URL for your Protect console and your Ubiquiti credentials (or, if connecting directly to a console, you can also use a local account). This will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
 
 The app will then automatically log in and present you with the live view you selected.
 
