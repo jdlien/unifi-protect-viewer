@@ -247,7 +247,6 @@ function injectDashboardButton() {
 
 // Ensure that the dashboard button is visible when on a Protect page that isn't the dashboard
 function handleDashboardButton() {
-  console.log('Handling dashboard button')
   injectDashboardButton()
 
   // Check if we're already on dashboard
