@@ -1,8 +1,8 @@
 # UniFi Protect Viewer
 
-This Electron app is a wrapper for the UniFi Protect liveview that gives a clean interface that maximizes the live view. It allows you to view your liveview from a simple app with automatic login. When you first launch the app, you'll be prompted to enter your UniFi Protect credentials and the URL to your UniFi Protect instance. This will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
+This Electron app is a wrapper for UniFi Protect that gives a clean interface which maximizes the live view, and automatically logs you in. When you first launch the app, you'll be prompted to enter your UniFi Protect credentials and the URL to your UniFi Protect instance. This will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
 
-The app will then automatically log in and present you with the liveview you selected.
+The app will then automatically log in and present you with the live view you selected.
 
 ## Credits
 
@@ -23,7 +23,7 @@ Copy the finished build to a location of your choice, then start the application
 
 ## Building
 
-Install all dependencies with the `npm install` or `npm i` command. After this you can build the application yourself for your needed platform.
+Install all dependencies with `npm install`. After this you can build the application yourself for your needed platform.
 
 For some platforms there are scripts inside the package.json.
 
