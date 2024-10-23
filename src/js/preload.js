@@ -190,9 +190,17 @@ async function handleLiveviewV4andV5() {
 }
 
 function triggerDashboardNavigation() {
+  // Get the URL up to the '/protect/' part
+  const protectIndex = document.URL.indexOf('/protect/')
+  const baseUrl = document.URL.substring(0, protectIndex + '/protect/'.length)
+  const dashboardUrl = baseUrl + 'dashboard'
+
   // Find the UniFi dashboard link
   const dashboardLink = document.querySelector('a[href*="/protect/dashboard"]')
+
+  // If the link is present, click it. Otherwise, navigate directly.
   if (dashboardLink) dashboardLink.click()
+  else window.location.href = dashboardUrl
 }
 
 function injectDashboardButton() {
@@ -213,10 +221,6 @@ function injectDashboardButton() {
   button.style.cursor = 'pointer'
   button.style.fontSize = '14px'
   button.style.lineHeight = '1.6'
-  // Get the URL up to the '/protect/' part
-  const protectIndex = document.URL.indexOf('/protect/')
-  const baseUrl = document.URL.substring(0, protectIndex + '/protect/'.length)
-  const dashboardUrl = baseUrl + 'dashboard'
 
   button.onclick = () => {
     triggerDashboardNavigation()
