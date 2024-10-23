@@ -136,9 +136,6 @@ async function handleLiveviewV4andV5() {
   setStyle(document.getElementsByTagName('header')[0], 'display', 'none')
   setStyle(document.getElementsByTagName('nav')[0], 'display', 'none')
 
-  //setStyle(document.querySelectorAll("[class^=dashboard__Widgets]")[0], "display", "none")
-  //setStyle(document.querySelectorAll("button[class^=dashboard__ExpandButton]")[0], "display", "none")
-  //setStyle(document.querySelectorAll("[class^=dashboard__Content]")[0], "display", "block")
   setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'gap', '0')
   setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'padding', '0')
   setStyle(document.querySelectorAll('[class^=liveView__FullscreenWrapper]')[0], 'background-color', 'black')
@@ -153,6 +150,15 @@ async function handleLiveviewV4andV5() {
       .querySelectorAll('[class^=dashboard__Scrollable]')[0],
     'paddingBottom',
     '0'
+  )
+
+  // This ensures that the 16:9 views will fill the screen when the nav/header is hidden
+  setStyle(
+    document
+      .querySelectorAll('[class^=liveView__LiveViewWrapper]')[0]
+      .querySelectorAll('[class^=liveview__ViewportsWrapper]')[0],
+    'maxWidth',
+    'calc((100vh) * 1.7777777777777777)'
   )
 
   // wait until remove option buttons are visible
