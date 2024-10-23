@@ -6,9 +6,14 @@ The app will then automatically log in and present you with the liveview you sel
 
 ## Credits
 
-This application is based on the [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has been heavily modified and only works with UniFi Protect 4+ and has been updated to work with the latest Electron version.
+This application is based on the [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has been heavily modified. It now only works with Protect v4/5.
 
-This version removes fewer of the features of the original app, than the original, allowing navigation between different parts of the app, and you can toggle the navigation and header by pressing `Escape`. There is a button that allows for you to easily return to the dashboard view if you leave it.
+This version removes fewer of the features/elements of UniFi Protect than the original, allowing navigation between different parts of the app. The following features have also been added:
+
+- You can toggle navigation/header by pressing `Escape`
+- A button shows allowing you to easily return to the dashboard view if you leave it
+- The configuration and error pages have been redesigned
+- The latest version of Electron is now used (v33)
 
 ## Installation
 
