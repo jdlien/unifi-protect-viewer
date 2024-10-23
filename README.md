@@ -27,22 +27,22 @@ Install all dependencies with `npm install`. After this you can build the applic
 
 For some platforms there are scripts inside the package.json.
 
-`npm run build:ia32:windows`
+`npm run build:windows:ia32:windows`
 
-`npm run build:x64:macos`
+`npm run build:macos:x64`
 
-`npm run build:arm64:macos`
+`npm run build:macos:arm64`
 
-`npm run build:x64:linux`
+`npm run build:linux:x64`
 
 ## Known Issues
 
-Currently, enhanced codec (h.265) support does not appear to work in Windows (likely due to licensing limitations in Electon). Let me know if you have any ideas on how to fix this — one potential solution is to use a fok of electron with HEVC support like https://github.com/AAAhs/electron-hevc
+Currently, enhanced codec (h.265) support does not appear to work in Windows (likely due to licensing limitations in Electron). Let me know if you have any ideas on how to fix this — one potential solution is to use a fork of Electron with HEVC support like https://github.com/AAAhs/electron-hevc
 
 ## Usage
 
 After configuration the app will automaticly start the live view after startup. If you want to change the configuration you can press `F10` to reset all settings and restart the configuration process.
 
+- Escape: Toggle Navigation
 - F9: Restart
 - F10: Restart & Reset
-- Escape: Toggle Navigation
