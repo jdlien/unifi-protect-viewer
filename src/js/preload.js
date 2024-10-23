@@ -171,6 +171,9 @@ async function handleLiveviewV4andV5() {
   if (isWidgetPanelOpen) {
     document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0].click()
   }
+
+  // Make the widget panel open/close button less prominent
+  setStyle(document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0], 'opacity', '0.5')
 }
 
 function injectDashboardButton() {
