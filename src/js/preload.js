@@ -102,6 +102,12 @@ async function handleLogin() {
   setNativeValue(document.getElementsByName('username')[0], config.username)
   setNativeValue(document.getElementsByName('password')[0], config.password)
 
+  // Attempting to check "remember me" so it doesn't ask for login every time
+  const rememberMeCheckbox = document.getElementById('rememberMe')
+  if (rememberMeCheckbox && !rememberMeCheckbox.checked) {
+    clickElement(rememberMeCheckbox)
+  }
+
   clickElement(document.getElementsByTagName('button')[0])
 }
 
