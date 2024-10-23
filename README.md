@@ -39,5 +39,6 @@ For some platforms there are scripts inside the package.json.
 
 After configuration the app will automaticly start the liveview after startup. If you want to change the configuration or when you misspell your credentials you can press `F10` to reset all settings and restart the configuration process.
 
-- F9 Restart
-- F10 Restart & Reset
+- F9: Restart
+- F10: Restart & Reset
+- Escape: Toggle Navigation
