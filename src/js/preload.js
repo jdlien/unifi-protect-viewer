@@ -17,7 +17,7 @@ addEventListener(
       window.location.href = FALLBACK_URL
     })
   },
-  { once: true }
+  { once: true },
 )
 
 addEventListener('keydown', async (event) => {
@@ -129,7 +129,7 @@ async function handleLiveviewV4andV5() {
     () =>
       Array.from(document.getElementsByClassName('ReactModalPortal'))
         .map((e) => e.children.length === 0)
-        .filter((e) => e === false).length === 0
+        .filter((e) => e === false).length === 0,
   )
 
   setStyle(document.getElementsByTagName('body')[0], 'background', 'black')
@@ -142,14 +142,14 @@ async function handleLiveviewV4andV5() {
   setStyle(
     document.querySelectorAll('[class^=liveView__LiveViewWrapper]')[0].querySelectorAll('[class^=common__Widget]')[0],
     'border',
-    '0'
+    '0',
   )
   setStyle(
     document
       .querySelectorAll('[class^=liveView__LiveViewWrapper]')[0]
       .querySelectorAll('[class^=dashboard__Scrollable]')[0],
     'paddingBottom',
-    '0'
+    '0',
   )
 
   // For grids other than "All Cameras", we adjust the aspect ratio of the ViewPortsWrapper to match so that
@@ -170,7 +170,7 @@ async function handleLiveviewV4andV5() {
         .querySelectorAll('[class^=liveView__LiveViewWrapper]')[0]
         .querySelectorAll('[class^=liveview__ViewportsWrapper]')[0],
       'maxWidth',
-      `calc(100vh * ${viewPortAspectRatio})`
+      `calc(100vh * ${viewPortAspectRatio})`,
     )
   }
 
@@ -471,7 +471,7 @@ async function waitForLiveViewReady() {
     () =>
       document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0 &&
       document.querySelectorAll('[class^=dashboard__Content]').length > 0 &&
-      document.querySelectorAll('[data-testid="option"]').length > 0
+      document.querySelectorAll('[data-testid="option"]').length > 0,
   )
 
   // Additional check: wait for any loading indicators to disappear
