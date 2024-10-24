@@ -24,3 +24,6 @@ iconutil -c icns ../src/img/icon.iconset
 
 # Optional: remove the iconset directory after creating the icns file
 rm -rf ../src/img/icon.iconset
+
+# Create a 256x256 Windows icon
+magick ../src/img/256.png -define icon:auto-resize=256,128,64,48,32,16 ../src/img/256.ico
