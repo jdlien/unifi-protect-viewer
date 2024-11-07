@@ -1,11 +1,11 @@
+// Get info used to spoof Chrome browser
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
+const chromeConfig = require(path.join(__dirname, '/src/config/chrome-version'))
 const fs = require('node:fs')
 
 // some const
-const userAgent =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
 const defaultWidth = 1270
 const defaultHeight = 750
 
@@ -67,14 +67,18 @@ async function handleWindow(mainWindow) {
   }
 
   if (store.has('config')) {
-    // do not await here, the file is the fallback if the url cannot be loaded
-    mainWindow.loadFile('./src/html/index.html').then()
+    try {
+      // Load index.html as fallback
+      await mainWindow.loadFile('./src/html/index.html')
 
-    await mainWindow.loadURL(store.get('config').url, {
-      userAgent: userAgent,
-    })
-  } else {
-    await mainWindow.loadFile('./src/html/config.html')
+      // Try loading the URL
+      await mainWindow.loadURL(store.get('config').url, {
+        userAgent: chromeConfig.userAgent,
+      })
+    } catch (error) {
+      console.error('Failed to load URL:', error)
+      // Already loaded fallback index.html
+    }
   }
 
   if (!store.has('init')) {
@@ -91,10 +95,12 @@ async function createWindow() {
     y: store.get('bounds')?.y || undefined,
     webPreferences: {
       nodeIntegration: false,
-      spellcheck: true,
+      spellcheck: false,
       preload: path.join(__dirname, '/src/js/preload.js'),
       allowDisplayingInsecureContent: true,
       allowRunningInsecureContent: true,
+      contextIsolation: true,
+      sandbox: true,
     },
 
     icon: path.join(__dirname, '/src/img/128.png'),
@@ -105,6 +111,18 @@ async function createWindow() {
     closable: true,
     darkTheme: true,
     autoHideMenuBar: true,
+  })
+
+  const requestHandler = mainWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+    callback({
+      requestHeaders: chromeConfig.getHeaders(details.requestHeaders),
+    })
+  })
+
+  mainWindow.on('closed', () => {
+    if (requestHandler && typeof requestHandler.dispose === 'function') {
+      requestHandler.dispose()
+    }
   })
 
   // set the main window title
@@ -157,7 +175,7 @@ app.whenReady().then(async () => {
     })
     return result.response === 1 // Returns true if 'Reset' was clicked
   })
-})
+}) // end of whenReady
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
