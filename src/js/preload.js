@@ -44,8 +44,8 @@ addEventListener('keydown', async (event) => {
     return
   }
 
-  // Command/Control + N to toggle navigation and header
-  if (((event.ctrlKey || event.metaKey) && event.key === 'n') || event.key === 'Escape') {
+  // Escape to toggle navigation and header
+  if (event.key === 'Escape') {
     toggleNavigation()
   }
 })
@@ -209,18 +209,6 @@ function injectDashboardButton() {
   const button = document.createElement('button')
   button.id = 'dashboard-button'
   button.innerText = '← Dashboard'
-  button.style.position = 'fixed'
-  button.style.top = '48px'
-  button.style.left = '24px'
-  button.style.zIndex = '1000'
-  // button.style.display = 'none'
-  button.style.padding = '2px 8px'
-  button.style.border = 'none'
-  button.style.borderRadius = '4px'
-  button.style.fontWeight = 'bold'
-  button.style.cursor = 'pointer'
-  button.style.fontSize = '14px'
-  button.style.lineHeight = '1.6'
 
   button.onclick = () => {
     triggerDashboardNavigation()
@@ -266,10 +254,27 @@ function injectDashboardButton() {
 
   document.body.appendChild(button)
 
+  // Create an informational popup to tell people how to show the nav
+  const showNavPopup = document.createElement('div')
+  showNavPopup.id = 'show-nav-popup'
+  showNavPopup.innerHTML = '<kbd>Esc</kbd> Show/Hide Navigation'
+  document.body.appendChild(showNavPopup)
+
   // Create and inject the stylesheet
   const style = document.createElement('style')
   style.innerHTML = `
     #dashboard-button {
+      position: fixed;
+      top: 48px;
+      left: 24px;
+      z-index: 1000;
+      padding: 2px 8px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1.6;
       color: rgb(183, 188, 194);
       background-color: rgba(0, 0, 0, 0.6);
     }
@@ -278,9 +283,51 @@ function injectDashboardButton() {
       background-color: rgba(0, 0, 0, 0.7);
       color: rgb(153, 160, 168);
     }
+
+    #show-nav-popup {
+      align-items: center;
+      position: fixed;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 18px;
+      color: hsl(210, 10%, 80%);
+      background-color: rgba(0, 0, 0, 0.6);
+      pointer-events: none;
+      animation: fadeOut 4s ease-in forwards;
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      65% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #show-nav-popup kbd {
+      color: white;
+      display: inline-block;
+      margin-right: 2px;
+      font-weight: semibold;
+      border-radius: 4px;
+      border: 1px solid rgb(183, 188, 194);
+      padding: 1px 2px;
+    }
+
+
   `
 
   document.body.appendChild(style)
+
+  // Remove the popup from DOM after animation
+  setTimeout(() => {
+    const popup = document.getElementById('show-nav-popup')
+    if (popup) {
+      popup.remove()
+    }
+  }, 4000)
 }
 
 // Ensure that the dashboard button is visible when on a Protect page that isn't the dashboard
