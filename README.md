@@ -1,17 +1,17 @@
 # UniFi Protect Viewer
 
-This Electron app is a wrapper for UniFi Protect that gives a clean interface which maximizes the live view, and automatically logs you in. When you first launch the app, you'll be prompted to enter a URL for your Protect console and your Ubiquiti credentials (or, if connecting directly to a console, you can also use a local account). This will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
+This Electron app is a wrapper for UniFi Protect that gives a clean interface that maximizes the live view and automatically logs you in. When you first launch the app, you'll be prompted to enter a URL for your Protect console and your Ubiquiti credentials (or, if connecting directly to a console, you can also use a local account). The URL will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
 
 The app will then automatically log in and present you with the live view you selected.
 
 ## Credits
 
-This application is based on the [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has been heavily modified. It now only works with Protect v4/5. The chief difference is that this version is designed to allow you the Protect application as you normally would without any features removed, where the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view.
+This application is based on the [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has been heavily modified. It now only works with Protect v4/5. The chief difference is that this version is designed to allow you to access the Protect application as you normally would without any features removed. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view.
 
 This version removes fewer of the features/elements of UniFi Protect than the original, allowing navigation between different parts of the app. The following features have also been added:
 
 - You can toggle navigation/header by pressing `Escape`
-- A button shows allowing you to easily return to the dashboard view if you leave it
+- A button shows, allowing you to return to the dashboard view after you leave it
 - The configuration and error pages have been redesigned
 - The latest version of Electron is now used (v33)
 
@@ -23,9 +23,9 @@ Copy the finished build to a location of your choice, then start the application
 
 ## Building
 
-Install all dependencies with `npm install`. After this you can build the application yourself for your needed platform.
+Install all dependencies with `npm install`. After this, you can build the application yourself for the platform you need.
 
-For some platforms there are scripts inside the package.json.
+For some platforms, there are scripts inside the package.json.
 
 `npm run build:windows:ia32:windows`
 
@@ -41,7 +41,7 @@ Currently, enhanced codec (h.265) support does not appear to work in Windows (li
 
 ## Usage
 
-After configuration the app will automaticly start the live view after startup. If you want to change the configuration you can press `F10` to reset all settings and restart the configuration process.
+After configuration, the app will automatically start the live view upon startup. If you want to change the configuration, you can press `F10` to reset all settings and restart the configuration process.
 
 - Escape: Toggle Navigation
 - F9: Restart
