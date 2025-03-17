@@ -8,7 +8,7 @@
   <body>
     <main>
       <div class="logo">
-        <img src="../../src/img/512.png" alt="logo">
+        <img src="../../src/img/512.png" alt="logo" />
       </div>
 
       <div>
@@ -38,9 +38,9 @@
         </div>
       </form>
 
-      <div style="margin-top:10px;">
-        <h2 style="font-size:20px; text-align: center;">Hotkeys</h2>
-        <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px;">
+      <div style="margin-top: 10px">
+        <h2 style="font-size: 20px; text-align: center">Hotkeys</h2>
+        <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px">
           <div class="hotkey"><key>Esc</key><span>Toggle Navigation</span></div>
           <div class="hotkey"><key id="fullscreenKey">F11</key><span>Fullscreen</span></div>
           <div class="hotkey"><key>F9</key><span>Restart</span></div>
@@ -50,6 +50,12 @@
     </main>
 
     <script>
+      // Define run function that preload.js expects
+      async function run() {
+        console.log('Config.html run function called')
+        return true
+      }
+
       // Set the appropriate key for fullscreen if the user is on macOS
       if (navigator.platform.toUpperCase().indexOf('MAC') >= 0) {
         document.getElementById('fullscreenKey').innerText = '⌃⌘F'
@@ -69,12 +75,12 @@
               } catch {
                 return 'Please enter a valid URL.'
               }
-            }
+            },
           },
           username: {
             element: document.getElementById('username'),
             errorMessage: 'The username is required.',
-            validate: (value) => !value ? 'The username is required.' : null
+            validate: (value) => (!value ? 'The username is required.' : null),
           },
           password: {
             element: document.getElementById('password'),
@@ -82,8 +88,8 @@
             validate: (value) => {
               if (!value) return 'The password is required.'
               return null
-            }
-          }
+            },
+          },
         }
 
         const errorContainer = document.getElementById('error')
@@ -109,9 +115,7 @@
         // Handle validation errors
         if (errors.length > 0) {
           errorContainer.style.display = 'block'
-          errorContainer.innerHTML = errors
-            .map(error => `<div class="error-item">${error}</div>`)
-            .join('')
+          errorContainer.innerHTML = errors.map((error) => `<div class="error-item">${error}</div>`).join('')
           return
         }
 
