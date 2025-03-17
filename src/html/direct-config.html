@@ -1,0 +1,469 @@
+<html lang="en">
+  <head>
+    <title>UniFi Protect Viewer - Direct Configuration</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #111;
+        color: lightgray;
+        font-family: 'UI Sans', Lato, Arial, sans-serif;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+        width: 320px;
+        margin: auto;
+        padding-top: 20px;
+      }
+
+      .heading {
+        font-weight: 400;
+        font-size: 24px;
+      }
+
+      .logo {
+        display: flex;
+        justify-content: center;
+      }
+
+      .logo img {
+        max-width: 192px;
+      }
+
+      .group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .group button {
+        font-size: 16px;
+        padding: 6px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        line-height: 32px;
+        border-style: none;
+        border-top: 1px solid #2682f9;
+        border-bottom: 1px solid #0045ad;
+        border-radius: 8px;
+        color: #fff;
+        background-color: #0055ce;
+        cursor: pointer;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      .group button.green {
+        background-color: #2c8800;
+        border-top: 1px solid #4cae00;
+        border-bottom: 1px solid #1e5d00;
+      }
+
+      .group button:hover {
+        border-top-color: #3086f7;
+        background-color: #005ce6;
+      }
+
+      .group button.green:hover {
+        background-color: #339900;
+        border-top-color: #5ec700;
+      }
+
+      .group label {
+        font-size: 14px;
+        font-weight: 400;
+        color: #aaa;
+        padding-bottom: 4px;
+      }
+
+      .group input {
+        color: #ddd;
+        outline: none;
+        padding: 10px 8px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(100, 100, 100, 0.3);
+        border-bottom-width: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        font-size: 16px;
+        transition:
+          border-color 0.3s ease,
+          box-shadow 0.3s ease;
+        background-color: #6665;
+      }
+
+      .error {
+        border-left: 10px solid red;
+        padding: 0 16px;
+        line-height: 32px;
+        border-radius: 8px;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <div class="logo">
+        <img src="../img/512.png" alt="logo" />
+      </div>
+
+      <div>
+        <h1 class="heading text-center">UniFi Protect Viewer</h1>
+        <p class="text-center">Direct Connection Mode</p>
+      </div>
+
+      <form id="configForm">
+        <div class="group">
+          <label for="url">UniFi Site URL</label>
+          <input id="url" name="url" placeholder="https://192.168.1.1/protect/" />
+        </div>
+
+        <div class="group">
+          <label for="username">Username</label>
+          <input id="username" name="username" />
+        </div>
+
+        <div class="group">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" />
+        </div>
+
+        <div id="error" class="group error" style="display: none"></div>
+
+        <div class="group">
+          <button type="button" onclick="openURL();" class="green">Connect Directly</button>
+        </div>
+
+        <div class="group">
+          <button type="button" onclick="saveConfig();">Save Configuration Only</button>
+        </div>
+      </form>
+
+      <div style="margin-top: 20px">
+        <p class="text-center">This is a direct connection page that bypasses all app navigation.</p>
+        <p id="statusMessage" class="text-center"></p>
+      </div>
+    </main>
+
+    <script>
+      // With nodeIntegration=true, we can directly use require
+      const { ipcRenderer } = require('electron')
+
+      // Load stored config on page load
+      window.addEventListener('DOMContentLoaded', async () => {
+        try {
+          document.getElementById('statusMessage').textContent = 'Loading configuration...'
+
+          // Get config using ipcRenderer directly
+          ipcRenderer
+            .invoke('configLoad')
+            .then((config) => {
+              if (config && config.url) {
+                document.getElementById('url').value = config.url
+                document.getElementById('username').value = config.username || ''
+                document.getElementById('password').value = config.password || ''
+                document.getElementById('statusMessage').textContent = 'Configuration loaded.'
+              } else {
+                document.getElementById('statusMessage').textContent = 'No saved configuration found.'
+              }
+            })
+            .catch((err) => {
+              document.getElementById('statusMessage').textContent = 'Error loading configuration.'
+              console.error('Failed to load config:', err)
+            })
+        } catch (error) {
+          console.error('Error during initialization:', error)
+          document.getElementById('statusMessage').textContent = 'Error during initialization.'
+        }
+      })
+
+      // Simple validation function
+      function validateForm() {
+        const url = document.getElementById('url').value.trim()
+        const username = document.getElementById('username').value.trim()
+        const password = document.getElementById('password').value.trim()
+        const errors = []
+
+        if (!url) {
+          errors.push('URL is required')
+        } else {
+          try {
+            new URL(url)
+            // Make sure URL ends with slash
+            if (!url.endsWith('/')) {
+              document.getElementById('url').value = url + '/'
+            }
+          } catch (e) {
+            errors.push('URL is invalid')
+          }
+        }
+
+        if (!username) errors.push('Username is required')
+        if (!password) errors.push('Password is required')
+
+        const errorDiv = document.getElementById('error')
+        errorDiv.innerHTML = ''
+
+        if (errors.length > 0) {
+          errorDiv.style.display = 'block'
+          errorDiv.innerHTML = errors.map((err) => `<div>${err}</div>`).join('')
+          return false
+        }
+
+        errorDiv.style.display = 'none'
+        return true
+      }
+
+      // Open URL directly
+      function openURL() {
+        if (!validateForm()) return
+
+        // Save config first
+        saveConfig(false)
+
+        // Open the URL directly
+        const url = document.getElementById('url').value.trim()
+        const username = document.getElementById('username').value.trim()
+        const password = document.getElementById('password').value.trim()
+        document.getElementById('statusMessage').textContent = `Connecting to ${url}...`
+
+        // Simple timeout to ensure config is saved first
+        setTimeout(() => {
+          try {
+            // Use a special key to prevent reload loops
+            localStorage.setItem('upv-direct-navigation', 'true')
+
+            // Use Electron's integration to directly load the URL with an injected script
+            const { BrowserWindow } = require('electron').remote || require('@electron/remote')
+            const mainWindow = BrowserWindow.getFocusedWindow()
+
+            // First, navigate to the URL
+            mainWindow
+              .loadURL(url, {
+                userAgent:
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+              })
+              .then(() => {
+                // Inject the login script to handle authentication
+                mainWindow.webContents.executeJavaScript(`
+                // Function to handle login
+                async function performLogin() {
+                  console.log("Auto-login script running...");
+
+                  // Wait for login form elements to appear
+                  function waitForElement(selector, timeout = 10000) {
+                    return new Promise((resolve) => {
+                      if (document.querySelector(selector)) {
+                        return resolve(document.querySelector(selector));
+                      }
+
+                      const observer = new MutationObserver(() => {
+                        if (document.querySelector(selector)) {
+                          observer.disconnect();
+                          resolve(document.querySelector(selector));
+                        }
+                      });
+
+                      observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                      });
+
+                      // Set timeout
+                      setTimeout(() => {
+                        observer.disconnect();
+                        resolve(null);
+                      }, timeout);
+                    });
+                  }
+
+                  // First check if we're on a login page
+                  if (window.location.href.includes('login')) {
+                    console.log("On login page, attempting to fill form...");
+
+                    // Try multiple selectors for better reliability
+                    console.log("Waiting for username field...");
+                    let usernameField = await waitForElement('#login-username');
+                    if (!usernameField) usernameField = await waitForElement('input[name="username"]');
+
+                    console.log("Waiting for password field...");
+                    let passwordField = await waitForElement('#login-password');
+                    if (!passwordField) passwordField = await waitForElement('input[name="password"]');
+
+                    console.log("Waiting for login button...");
+                    let loginButton = await waitForElement('button[type="submit"]');
+                    if (!loginButton) loginButton = await waitForElement('button.button-primary');
+
+                    console.log("Form elements found:", {
+                      username: !!usernameField,
+                      password: !!passwordField,
+                      button: !!loginButton
+                    });
+
+                    if (usernameField && passwordField && loginButton) {
+                      console.log("Login form found, filling in credentials...");
+
+                      // More comprehensive approach to setting input values
+                      // First clear any existing values
+                      usernameField.value = '';
+                      passwordField.value = '';
+
+                      // Then set new values character by character to simulate typing
+                      function simulateTyping(element, text) {
+                        // Set the value at once for baseline
+                        element.value = text;
+
+                        // Trigger more comprehensive events
+                        element.dispatchEvent(new Event('input', { bubbles: true }));
+                        element.dispatchEvent(new Event('change', { bubbles: true }));
+                        element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+                        element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Tab' }));
+                      }
+
+                      // Simulate typing into the fields
+                      simulateTyping(usernameField, "${username}");
+                      simulateTyping(passwordField, "${password}");
+
+                      // Try to check remember me if it exists
+                      const rememberMe = document.querySelector('#rememberMe');
+                      if (rememberMe) {
+                        console.log("Found Remember Me checkbox, checking it");
+                        // Set both the checked property and aria-checked attribute
+                        rememberMe.checked = true;
+                        rememberMe.setAttribute('aria-checked', 'true');
+
+                        // Dispatch multiple events to ensure the UI updates
+                        rememberMe.dispatchEvent(new Event('change', { bubbles: true }));
+                        rememberMe.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+                        // Try to find and click the parent div as well (UI might use label-like div)
+                        const rememberMeBox = rememberMe.closest('.inputBox__W10ClD5x');
+                        if (rememberMeBox) {
+                          rememberMeBox.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                          console.log("Clicked on the checkbox container");
+                        }
+                        console.log("Remember Me checked");
+                      } else {
+                        console.log("Could not find Remember Me checkbox");
+                      }
+
+                      // Give it a moment for React to process events
+                      console.log("Waiting before clicking login button...");
+                      setTimeout(() => {
+                        console.log("Submitting login form...");
+                        // Try multiple ways to trigger the button
+                        try {
+                          loginButton.click();
+                          console.log("Button clicked via click() method");
+                        } catch(e) {
+                          console.error("Error clicking button:", e);
+                          try {
+                            loginButton.dispatchEvent(new MouseEvent('click', {
+                              bubbles: true, cancelable: true, view: window
+                            }));
+                            console.log("Button clicked via MouseEvent");
+                          } catch(e2) {
+                            console.error("Error dispatching MouseEvent:", e2);
+                          }
+                        }
+                      }, 1000);
+
+                      return true;
+                    } else {
+                      console.error("Could not find all login form elements");
+                      // Add visual error indicator
+                      const errorDisplay = document.createElement('div');
+                      errorDisplay.style.position = 'fixed';
+                      errorDisplay.style.top = '10px';
+                      errorDisplay.style.left = '10px';
+                      errorDisplay.style.backgroundColor = 'red';
+                      errorDisplay.style.color = 'white';
+                      errorDisplay.style.padding = '10px';
+                      errorDisplay.style.zIndex = '9999';
+                      errorDisplay.innerText = 'Failed to find login form elements';
+                      document.body.appendChild(errorDisplay);
+                      return false;
+                    }
+                  } else {
+                    console.log("Not on login page, already logged in or different page");
+                    return false;
+                  }
+                }
+
+                // Execute login attempt
+                performLogin();
+
+                // Also set up a listener for navigation events
+                window.addEventListener('load', () => {
+                  console.log("Page loaded, checking if login is needed");
+                  if (window.location.href.includes('login')) {
+                    performLogin();
+                  }
+                });
+
+                // Monitor for successful login
+                const origLocation = window.location.href;
+                setInterval(() => {
+                  if (window.location.href !== origLocation && !window.location.href.includes('login')) {
+                    console.log("Navigation detected, login likely successful!");
+                  }
+                }, 1000);
+              `)
+                console.log('Injection script complete')
+              })
+              .catch((err) => {
+                console.error('Error loading URL:', err)
+                document.getElementById('statusMessage').textContent = `Error loading ${url}: ${err.message}`
+              })
+          } catch (e) {
+            console.error('Error navigating to URL:', e)
+            document.getElementById('statusMessage').textContent = `Error: ${e.message}`
+          }
+        }, 500)
+      }
+
+      // Save config function
+      function saveConfig(showConfirmation = true) {
+        if (!validateForm()) return
+
+        try {
+          // Collect form data
+          const formData = {
+            url: document.getElementById('url').value.trim(),
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value.trim(),
+          }
+
+          // Use ipcRenderer directly to save
+          ipcRenderer.send('configSave', formData)
+
+          if (showConfirmation) {
+            document.getElementById('statusMessage').textContent = 'Configuration saved successfully!'
+          }
+        } catch (error) {
+          console.error('Error saving config:', error)
+          if (showConfirmation) {
+            document.getElementById('statusMessage').textContent = `Error: ${error.message || 'Unknown error'}`
+          }
+        }
+      }
+
+      // Reset and restart functions
+      function reset() {
+        ipcRenderer.send('reset')
+        document.getElementById('statusMessage').textContent = 'Configuration reset.'
+      }
+
+      function restart() {
+        document.getElementById('statusMessage').textContent = 'Restarting application...'
+        ipcRenderer.send('restart')
+      }
+    </script>
+  </body>
+</html>

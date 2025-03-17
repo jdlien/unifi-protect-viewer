@@ -36,6 +36,10 @@
         <div class="group">
           <button onclick="save()">Save Configuration</button>
         </div>
+
+        <div class="group">
+          <button onclick="directConnect()" style="background-color: #2c8800">Connect Directly</button>
+        </div>
       </form>
 
       <div style="margin-top: 10px">
@@ -61,7 +65,32 @@
         document.getElementById('fullscreenKey').innerText = '⌃⌘F'
       }
 
-      const save = () => {
+      // Add direct connect function to bypass app navigation and directly open the URL
+      function directConnect() {
+        const urlInput = document.getElementById('url')
+        if (!urlInput || !urlInput.value) {
+          alert('Please enter a URL first')
+          return
+        }
+
+        try {
+          // Validate URL
+          const url = new URL(urlInput.value)
+
+          // Save config first
+          save(false) // Don't restart after saving
+
+          // Then directly navigate
+          setTimeout(() => {
+            console.log('Directly connecting to:', url.toString())
+            window.location.href = url.toString()
+          }, 500)
+        } catch (err) {
+          alert('Please enter a valid URL')
+        }
+      }
+
+      const save = (shouldRestart = true) => {
         // Field definitions with validation rules
         const fields = {
           url: {
@@ -70,7 +99,13 @@
             validate: (value) => {
               if (!value) return 'The URL is required.'
               try {
-                new URL(value)
+                const urlObj = new URL(value)
+                // Make sure URL ends with a forward slash
+                if (!urlObj.pathname.endsWith('/')) {
+                  // Normalize the path to end with a slash
+                  urlObj.pathname = urlObj.pathname + '/'
+                  document.getElementById('url').value = urlObj.toString()
+                }
                 return null
               } catch {
                 return 'Please enter a valid URL.'
@@ -121,11 +156,39 @@
 
         // If no errors, save configuration and restart
         try {
+          // Add a status indicator while saving
+          const saveButton = document.querySelector('button')
+          const originalText = saveButton.innerText
+          saveButton.innerText = 'Saving...'
+          saveButton.disabled = true
+
+          console.log('Saving config:', formData)
           window.electronAPI.configSave(formData)
-          window.electronAPI.restart()
+
+          // Add a small delay before restarting to ensure config is saved
+          if (shouldRestart) {
+            setTimeout(() => {
+              console.log('Restarting app')
+              window.electronAPI.restart()
+            }, 1000)
+          } else {
+            // Reset button state but don't restart
+            setTimeout(() => {
+              saveButton.innerText = originalText
+              saveButton.disabled = false
+            }, 500)
+          }
         } catch (error) {
+          console.error('Save error:', error)
           errorContainer.style.display = 'block'
-          errorContainer.innerHTML = `<div class="error-item">Failed to save configuration: ${error.message}</div>`
+          errorContainer.innerHTML = `<div class="error-item">Failed to save configuration: ${error.message || 'Unknown error'}</div>`
+
+          // Re-enable the button
+          const saveButton = document.querySelector('button')
+          if (saveButton) {
+            saveButton.innerText = 'Save Configuration'
+            saveButton.disabled = false
+          }
         }
       }
     </script>

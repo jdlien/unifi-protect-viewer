@@ -5,24 +5,116 @@ const FALLBACK_URL = 'config.html' // Fallback URL for safety
 // Global state to track navigation attempts
 let isNavigating = false
 let navigationTimer = null
+// Add debugging for navigation
+let navigationHistory = []
+let lastUrl = ''
+// Track redirects without overriding location
+let redirectAttempts = 0
+const MAX_REDIRECTS = 3
+
+// Safely track navigation without overriding location
+function trackNavigation(url, type = 'tracked') {
+  redirectAttempts++
+  console.warn(`Navigation #${redirectAttempts} (${type}): ${url}`)
+  navigationHistory.push({
+    type: type,
+    url: url,
+    time: new Date().toISOString(),
+  })
+
+  // Update debug UI if it exists
+  setTimeout(() => {
+    try {
+      const debugElement = document.getElementById('upv-debug-info')
+      if (debugElement) {
+        const historyHTML = navigationHistory
+          .map((entry) => `<div>${entry.time.substr(11, 8)} - [${entry.type}] - ${entry.url}</div>`)
+          .join('')
+
+        debugElement.innerHTML = `
+          <div>URL: ${window.location.href}</div>
+          <div>Redirect attempts: ${redirectAttempts}</div>
+          <div style="margin-top: 10px;">
+            <strong>Navigation History:</strong>
+            ${historyHTML}
+          </div>
+        `
+      }
+    } catch (err) {
+      console.error('Failed to update debug element:', err)
+    }
+  }, 100)
+
+  return redirectAttempts <= MAX_REDIRECTS
+}
+
+// Safer navigation function that respects redirect limits
+function safeNavigate(url) {
+  if (trackNavigation(url, 'redirect')) {
+    console.log(`Navigating to: ${url}`)
+    window.location.href = url
+    return true
+  } else {
+    console.error(`BLOCKED REDIRECT to: ${url} - too many redirects`)
+
+    // Add a visible notification
+    setTimeout(() => {
+      try {
+        const blockNotice = document.createElement('div')
+        blockNotice.style.position = 'fixed'
+        blockNotice.style.top = '0'
+        blockNotice.style.left = '0'
+        blockNotice.style.right = '0'
+        blockNotice.style.padding = '10px'
+        blockNotice.style.backgroundColor = '#ff0000'
+        blockNotice.style.color = '#ffffff'
+        blockNotice.style.textAlign = 'center'
+        blockNotice.style.fontWeight = 'bold'
+        blockNotice.style.zIndex = '10000'
+        blockNotice.innerText = `Redirect loop detected and blocked (${redirectAttempts} attempts)`
+        document.body.appendChild(blockNotice)
+      } catch (err) {
+        console.error('Failed to add redirect notice:', err)
+      }
+    }, 500)
+
+    return false
+  }
+}
 
 // event listeners
 // Enhanced event listeners
 addEventListener(
   'load',
   () => {
+    console.log('*** PAGE LOAD EVENT FIRED ***')
+    console.log('Current URL:', window.location.href)
+    trackNavigation(window.location.href, 'page-load')
+
     // Check if run() function exists
     if (typeof run !== 'function') {
       console.error('run() function is not defined')
-      // Redirect to config page if run doesn't exist
-      window.location.href = FALLBACK_URL
+
+      // Only redirect if we haven't exceeded redirect limit
+      if (redirectAttempts < MAX_REDIRECTS) {
+        console.log('Redirecting to config page (run not defined)')
+        safeNavigate(FALLBACK_URL)
+      } else {
+        console.error('Too many redirects, staying on current page')
+      }
       return
     }
 
     run().catch(async (error) => {
       console.error('Run failed:', error)
-      // If run fails, redirect to config page
-      window.location.href = FALLBACK_URL
+
+      // Only redirect if we haven't exceeded redirect limit
+      if (redirectAttempts < MAX_REDIRECTS) {
+        console.log('Redirecting to config page (run error)')
+        safeNavigate(FALLBACK_URL)
+      } else {
+        console.error('Too many redirects, staying on current page despite run() error')
+      }
     })
   },
   { once: true },
@@ -108,21 +200,94 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 // handle fnc
 async function handleLogin() {
-  // wait until login button is present
-  await waitUntil(() => document.getElementsByTagName('button').length > 0)
+  console.log('Attempting login')
 
-  const config = await configLoad()
+  try {
+    // wait until login button is present with timeout
+    console.log('Waiting for login form elements...')
+    const loginFormFound = await waitUntil(() => document.getElementsByTagName('button').length > 0, 10000)
 
-  setNativeValue(document.getElementsByName('username')[0], config.username)
-  setNativeValue(document.getElementsByName('password')[0], config.password)
+    if (!loginFormFound) {
+      console.error('Login form not found (timeout)')
+      return false
+    }
 
-  // Attempting to check "remember me" so it doesn't ask for login every time
-  const rememberMeCheckbox = document.getElementById('rememberMe')
-  if (rememberMeCheckbox && !rememberMeCheckbox.checked) {
-    clickElement(rememberMeCheckbox)
+    // Take screenshot of login form to debug element for inspection
+    try {
+      const loginForm = document.querySelector('form') || document.body
+      const debugElement = document.getElementById('upv-debug-info')
+      if (debugElement) {
+        debugElement.innerHTML += `
+          <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+            <strong>Login form detected:</strong>
+            <div>Buttons: ${document.getElementsByTagName('button').length}</div>
+            <div>Username field: ${document.getElementsByName('username').length > 0}</div>
+            <div>Password field: ${document.getElementsByName('password').length > 0}</div>
+          </div>
+        `
+      }
+    } catch (err) {
+      console.error('Failed to get login form info:', err)
+    }
+
+    console.log('Login form found, getting credentials')
+    const config = await configLoad()
+
+    // Check if username and password fields exist
+    const usernameField = document.getElementsByName('username')[0]
+    const passwordField = document.getElementsByName('password')[0]
+    const loginButton = document.getElementsByTagName('button')[0]
+
+    if (!usernameField || !passwordField || !loginButton) {
+      console.error('Login elements not found:', {
+        username: !!usernameField,
+        password: !!passwordField,
+        button: !!loginButton,
+      })
+      return false
+    }
+
+    console.log('Setting credentials')
+    setNativeValue(usernameField, config.username)
+    setNativeValue(passwordField, config.password)
+
+    // Attempting to check "remember me" so it doesn't ask for login every time
+    const rememberMeCheckbox = document.getElementById('rememberMe')
+    if (rememberMeCheckbox && !rememberMeCheckbox.checked) {
+      clickElement(rememberMeCheckbox)
+      console.log('Checked "Remember Me" box')
+    }
+
+    console.log('Clicking login button')
+    clickElement(loginButton)
+
+    // Wait briefly to see if we navigate away from login page
+    await wait(5000)
+
+    // Check if we're still on the login page
+    if (checkUrl('login')) {
+      console.error('Still on login page after attempt. Login might have failed.')
+
+      // Check for error messages
+      const errorElements = document.querySelectorAll('.error, .alert, [class*="error"], [class*="Error"]')
+      if (errorElements.length > 0) {
+        console.error(
+          'Login error messages found:',
+          Array.from(errorElements)
+            .map((el) => el.textContent)
+            .join(', '),
+        )
+      }
+
+      return false
+    }
+
+    console.log('Login successful - navigated away from login page')
+    return true
+  } catch (error) {
+    console.error('Login attempt failed with error:', error)
+    return false
   }
-
-  clickElement(document.getElementsByTagName('button')[0])
 }
 
 async function handleLiveviewV4andV5() {
@@ -376,12 +541,38 @@ function setDashboardButtonVisibility(show) {
 // Monitor URL changes using MutationObserver for SPA navigation
 function setupNavigationMonitor() {
   // Track the last known URL to prevent duplicate handling
-  let lastUrl = window.location.href
+  lastUrl = window.location.href
+  navigationHistory.push({ url: lastUrl, time: new Date().toISOString() })
+
+  // Log initial navigation state
+  console.log('Initial URL:', lastUrl)
 
   // Single MutationObserver to watch for DOM changes that might indicate navigation
   const observer = new MutationObserver((mutations) => {
     // Only proceed if the URL has changed
     if (window.location.href !== lastUrl) {
+      console.log(`Navigation detected: ${lastUrl} -> ${window.location.href}`)
+      navigationHistory.push({ url: window.location.href, time: new Date().toISOString() })
+
+      // Update UI debug element if it exists
+      try {
+        const debugElement = document.getElementById('upv-debug-info')
+        if (debugElement) {
+          const historyHTML = navigationHistory
+            .map((entry) => `<div>${entry.time.substr(11, 8)} - ${entry.url}</div>`)
+            .join('')
+
+          debugElement.innerHTML += `
+            <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
+              <strong>Navigation History:</strong>
+              ${historyHTML}
+            </div>
+          `
+        }
+      } catch (err) {
+        console.error('Failed to update debug element:', err)
+      }
+
       lastUrl = window.location.href
       handleDashboardButton()
       handleLiveviewV4andV5()
@@ -401,6 +592,8 @@ function setupNavigationMonitor() {
   navigationEvents.forEach((event) => {
     window.addEventListener(event, () => {
       if (window.location.href !== lastUrl) {
+        console.log(`Navigation event ${event}: ${lastUrl} -> ${window.location.href}`)
+        navigationHistory.push({ url: window.location.href, time: new Date().toISOString(), event })
         lastUrl = window.location.href
         handleDashboardButton()
         handleLiveviewV4andV5()
@@ -409,7 +602,6 @@ function setupNavigationMonitor() {
   })
 
   // Initial call, add a small delay to ensure the page has loaded
-
   setTimeout(() => {
     handleDashboardButton()
   }, 1500)
@@ -425,14 +617,82 @@ function setupNavigationMonitor() {
 
 // logic
 async function run() {
+  console.log('RUN FUNCTION STARTED')
+
+  // Safety check: clear token expiration if needed
+  try {
+    if (localStorage.getItem('portal:localSessionsExpiresAt')) {
+      const expiresAt = +localStorage.getItem('portal:localSessionsExpiresAt')
+      const now = Date.now()
+
+      // If token is already expired or will expire in the next minute,
+      // remove it to prevent reload loops
+      if (expiresAt <= now + 60000) {
+        console.log('Found expired token in localStorage - clearing it')
+        localStorage.removeItem('portal:localSessionsExpiresAt')
+      }
+    }
+  } catch (err) {
+    console.error('Error checking localStorage:', err)
+  }
+
   const config = await configLoad()
+  console.log('Config loaded:', config)
 
   // config/ start page
-  if (checkUrl('index.html') || checkUrl('config.html')) return
+  if (checkUrl('index.html') || checkUrl('config.html')) {
+    console.log('On index.html or config.html page, no redirect needed')
+    return
+  }
+
+  // CRITICAL CHECK: Don't redirect if already at or very near redirect limit
+  if (redirectAttempts >= MAX_REDIRECTS - 1) {
+    console.warn('At redirect limit, skipping all navigation in run()')
+    return
+  }
 
   if (!checkUrl(config.url)) {
-    window.location.href = config.url
+    console.log(`Not on configured URL, would redirect to: ${config.url}`)
+
+    // Use safe navigation
+    if (safeNavigate(config.url)) {
+      // Important: return here to prevent further code execution after redirect
+      return
+    }
   }
+
+  // Only continue if we haven't redirected
+  console.log('No redirect needed, continuing with normal execution')
+
+  // Add a debugger element to show what's happening
+  setTimeout(() => {
+    try {
+      const debugElement = document.createElement('div')
+      debugElement.id = 'upv-debug-info'
+      debugElement.style.position = 'fixed'
+      debugElement.style.bottom = '10px'
+      debugElement.style.right = '10px'
+      debugElement.style.backgroundColor = 'rgba(0,0,0,0.7)'
+      debugElement.style.color = '#fff'
+      debugElement.style.padding = '10px'
+      debugElement.style.borderRadius = '5px'
+      debugElement.style.zIndex = '10000'
+      debugElement.style.fontSize = '12px'
+      debugElement.style.fontFamily = 'monospace'
+      debugElement.style.maxWidth = '400px'
+      debugElement.style.maxHeight = '200px'
+      debugElement.style.overflow = 'auto'
+      debugElement.innerHTML = `
+        <div>URL: ${window.location.href}</div>
+        <div>Has Config: ${!!config}</div>
+        <div>Config URL: ${config?.url || 'None'}</div>
+        <div>Redirect attempts: ${redirectAttempts}</div>
+      `
+      document.body.appendChild(debugElement)
+    } catch (err) {
+      console.error('Failed to add debug element:', err)
+    }
+  }, 5000)
 
   // Watch for navigation changes
   setupNavigationMonitor()
@@ -466,17 +726,44 @@ async function run() {
     // Ensure that we can detect page changes so we can show the dashboard button if needed
   }
 
-  // reload & login when token expires (v3 & v4) and we got the expires at in localstorage
+  // Check for token expiration in localStorage - FIXED VERSION
   if (localStorage.getItem('portal:localSessionsExpiresAt')) {
     const loginExpiresAt = +localStorage.getItem('portal:localSessionsExpiresAt')
+    const currentTime = new Date().getTime()
 
-    // offset 10 minutes before expire
-    const offset = 10 * 60 * 1000
+    console.log('Session expiration info:', {
+      expiresAtTime: new Date(loginExpiresAt).toLocaleString(),
+      currentTime: new Date(currentTime).toLocaleString(),
+      timeUntilExpiry: Math.round((loginExpiresAt - currentTime) / 1000 / 60) + ' minutes',
+    })
 
-    // wait until ~10 minutes before expire or page url changed
-    await waitUntil(() => !checkUrl(config.url) || new Date().getTime() > loginExpiresAt - offset, -1, 60000)
+    // Only set up reload if expiration is far enough in the future
+    // (prevents immediate reload loops)
+    if (loginExpiresAt > currentTime + 60000) {
+      // Must be at least 1 minute in the future
+      // offset 10 minutes before expire
+      const offset = 10 * 60 * 1000
 
-    location.reload()
+      // Only wait if expiration is more than 10 minutes away
+      if (loginExpiresAt > currentTime + offset + 60000) {
+        console.log(
+          `Session will expire in ${Math.round((loginExpiresAt - currentTime) / 1000 / 60)} minutes, setting up wait`,
+        )
+
+        // wait until ~10 minutes before expire or page url changed
+        await waitUntil(() => !checkUrl(config.url) || new Date().getTime() > loginExpiresAt - offset, -1, 60000)
+
+        // Double-check we're still close to expiration before reloading
+        if (new Date().getTime() > loginExpiresAt - offset) {
+          console.log('Session is expiring soon, reloading page')
+          location.reload()
+        }
+      }
+    } else {
+      // Token is already expired or about to expire
+      console.log('Session token is already expired or about to expire, clearing it')
+      localStorage.removeItem('portal:localSessionsExpiresAt')
+    }
   }
 }
 
