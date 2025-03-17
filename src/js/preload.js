@@ -11,6 +11,14 @@ let navigationTimer = null
 addEventListener(
   'load',
   () => {
+    // Check if run() function exists
+    if (typeof run !== 'function') {
+      console.error('run() function is not defined')
+      // Redirect to config page if run doesn't exist
+      window.location.href = FALLBACK_URL
+      return
+    }
+
     run().catch(async (error) => {
       console.error('Run failed:', error)
       // If run fails, redirect to config page
@@ -80,6 +88,7 @@ const forceReset = async () => {
   ipcRenderer.send('restart')
 }
 
+console.log('Exposing API functions to renderer')
 contextBridge.exposeInMainWorld('electronAPI', {
   reset: () => reset(),
   restart: () => restart(),
@@ -87,8 +96,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   configLoad: () => configLoad(),
   showResetConfirmation: () => showResetConfirmation(),
   getURL: async () => {
-    const config = await configLoad()
-    return config?.url || 'No URL found'
+    try {
+      const config = await configLoad()
+      return config?.url || 'No URL found'
+    } catch (error) {
+      console.error('Error in getURL:', error)
+      return 'Error loading URL'
+    }
   },
 })
 
