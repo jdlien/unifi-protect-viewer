@@ -66,18 +66,32 @@ async function handleWindow(mainWindow) {
     setTimeout(() => mainWindow.webContents.openDevTools(), 1000)
   }
 
-  if (store.has('config')) {
-    try {
-      // Load index.html as fallback
-      await mainWindow.loadFile('./src/html/index.html')
+  try {
+    // Always load index.html first
+    await mainWindow.loadFile('./src/html/index.html')
+    console.log('Successfully loaded index.html')
 
-      // Try loading the URL
-      await mainWindow.loadURL(store.get('config').url, {
-        userAgent: chromeConfig.userAgent,
-      })
-    } catch (error) {
-      console.error('Failed to load URL:', error)
-      // Already loaded fallback index.html
+    // Then try loading the URL if config exists
+    if (store.has('config')) {
+      // Config found, attempting to load URL: store.get('config').url)
+      try {
+        await mainWindow.loadURL(store.get('config').url, {
+          userAgent: chromeConfig.userAgent,
+        })
+      } catch (error) {
+        console.error('Failed to load URL:', error)
+      }
+    } else {
+      // Load config.html
+      await mainWindow.loadFile('./src/html/config.html')
+    }
+  } catch (error) {
+    console.error('Failed to load index.html:', error)
+    // Try config.html as a last resort
+    try {
+      await mainWindow.loadFile('./src/html/config.html')
+    } catch (configError) {
+      console.error('Failed to load config.html:', configError)
     }
   }
 
