@@ -24,8 +24,27 @@ async function initializeStore() {
   const Store = (await import('electron-store')).default
   store = new Store()
   if (resetRequested) {
-    console.log('Clearing configuration as requested')
     store.clear()
+  }
+}
+
+// Set up the load failure handler that can be reused
+function setupLoadFailureHandler(window) {
+  if (!window.webContents.listenerCount('did-fail-load')) {
+    window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      // Show error page with option to return to config
+      window.webContents
+        .loadFile('./src/html/error-page.html', {
+          query: {
+            error: errorDescription,
+            url: validatedURL,
+          },
+        })
+        .catch(() => {
+          // Fallback to config page if error page fails
+          window.loadFile('./src/html/config.html')
+        })
+    })
   }
 }
 
@@ -68,6 +87,9 @@ async function createWindow() {
     store.set('bounds', mainWindow.getBounds())
   })
 
+  // Set up error handling
+  setupLoadFailureHandler(mainWindow)
+
   // Load the correct starting page
   await loadStartPage(mainWindow)
 }
@@ -76,40 +98,17 @@ async function createWindow() {
 async function loadStartPage(window) {
   // Check if we have a saved configuration
   const hasConfig = store.has('config') && store.get('config')?.url
-  console.log(`Configuration ${hasConfig ? 'found' : 'needed'}`)
 
   try {
     if (!hasConfig) {
       // No config - load config page
-      console.log('Loading config page for initial setup')
       await window.loadFile('./src/html/config.html')
     } else {
       // We have a config - try to load the URL directly
       const config = store.get('config')
-      console.log(`Loading saved URL: ${config.url}`)
       await window.loadURL(config.url)
-
-      // Set up load failure listener
-      window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-        console.error(`Page load failed: ${errorDescription} (${errorCode}) for URL: ${validatedURL}`)
-
-        // Show error page with option to return to config
-        window.webContents
-          .loadFile('./src/html/error-page.html', {
-            query: {
-              error: errorDescription,
-              url: validatedURL,
-            },
-          })
-          .catch((err) => {
-            console.error('Failed to load error page:', err)
-            // Fallback to config page if error page fails
-            window.loadFile('./src/html/config.html')
-          })
-      })
     }
   } catch (error) {
-    console.error('Loading error:', error)
     // Fall back to the config page
     await window.loadFile('./src/html/config.html')
   }
@@ -132,29 +131,7 @@ function setupIPC() {
   ipcMain.on('loadURL', (event, url) => {
     const mainWindow = BrowserWindow.getFocusedWindow()
     if (mainWindow) {
-      console.log(`Direct navigation to: ${url}`)
-
-      // Set up load failure listener if not already set
-      if (!mainWindow.webContents.listenerCount('did-fail-load')) {
-        mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-          console.error(`Page load failed: ${errorDescription} (${errorCode}) for URL: ${validatedURL}`)
-
-          // Show error page with option to return to config
-          mainWindow.webContents
-            .loadFile('./src/html/error-page.html', {
-              query: {
-                error: errorDescription,
-                url: validatedURL,
-              },
-            })
-            .catch((err) => {
-              console.error('Failed to load error page:', err)
-              // Fallback to config page if error page fails
-              mainWindow.loadFile('./src/html/config.html')
-            })
-        })
-      }
-
+      setupLoadFailureHandler(mainWindow)
       mainWindow.loadURL(url)
     }
   })
@@ -174,12 +151,15 @@ function setupIPC() {
 
 // App initialization
 app.whenReady().then(async () => {
-  // Handle certificate errors for self-signed certificates
+  // Choose one certificate handling approach - either this:
+  /*
   app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
     // Allow all certificates - this is necessary for self-signed certs
     event.preventDefault()
     callback(true)
   })
+  */
+  // OR the app.commandLine.appendSwitch() in createWindow function, not both
 
   await initializeStore()
   setupIPC()

@@ -1,4 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron')
+const fs = require('fs')
+const path = require('path')
 
 // Track login attempts to prevent infinite loops
 let loginAttempts = 0
@@ -157,6 +159,15 @@ function toggleNavigation() {
     const isHidden = header.style.display === 'none'
     header.style.display = isHidden ? 'flex' : 'none'
     nav.style.display = isHidden ? 'flex' : 'none'
+
+    // Save the navigation visibility preference to config
+    ipcRenderer.invoke('configLoad').then((config) => {
+      config = config || {}
+      // The setting is "hideNavigation", so we store the opposite of isHidden
+      config.hideNavigation = !isHidden
+      ipcRenderer.send('configSave', config)
+      // console.log('Navigation preference saved:', config.hideNavigation ? 'Hidden' : 'Visible')
+    })
   }
 
   // Add call to handle dashboard button visibility when toggling navigation
@@ -186,8 +197,15 @@ async function handleLiveviewV4andV5() {
   )
 
   setStyle(document.getElementsByTagName('body')[0], 'background', 'black')
-  setStyle(document.getElementsByTagName('header')[0], 'display', 'none')
-  setStyle(document.getElementsByTagName('nav')[0], 'display', 'none')
+
+  // Get config and check user's navigation visibility preference
+  const config = (await ipcRenderer.invoke('configLoad')) || {}
+  // Default to hiding navigation if setting doesn't exist
+  const hideNavigation = config.hideNavigation !== false
+
+  // Apply navigation visibility based on user preference
+  setStyle(document.getElementsByTagName('header')[0], 'display', hideNavigation ? 'none' : 'flex')
+  setStyle(document.getElementsByTagName('nav')[0], 'display', hideNavigation ? 'none' : 'flex')
 
   setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'gap', '0')
   setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'padding', '0')
@@ -267,40 +285,22 @@ function injectDashboardButton() {
   const button = document.createElement('button')
   button.id = 'dashboard-button'
 
+  // Read the SVG file
+  const svgPath = path.join(__dirname, '../img/dashboard-button.svg')
+  let dashboardSvg
+
+  try {
+    dashboardSvg = fs.readFileSync(svgPath, 'utf8')
+  } catch (error) {
+    console.error('Error reading dashboard SVG:', error)
+    // Fallback to a simple text button if SVG can't be loaded
+    dashboardSvg = '<div>Dashboard</div>'
+  }
+
   const buttonContent = `
   <div style="display: flex;align-items: center;">
     <div style="margin-right:4px; font-size:18px;">←</div>
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24px"
-      height="24px"
-      class=""
-      stroke="currentColor"
-      stroke-width="0"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        fill="currentColor"
-        class="twoTone__1pNlrTNT"
-      ></circle>
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2Zm0 19c-4.96 0-9-4.04-9-9s4.04-9 9-9 9 4.04 9 9-4.04 9-9 9Zm5.66-10.5c-.21 0-.4-.13-.47-.33A5.51 5.51 0 0 0 12 6.5a5.51 5.51 0 0 0-5.19 3.67c-.09.26-.38.4-.64.3a.493.493 0 0 1-.3-.64A6.515 6.515 0 0 1 12 5.5c2.75 0 5.21 1.74 6.13 4.33a.501.501 0 0 1-.47.67Zm-7.04 1.84c.41-.22.89-.34 1.38-.34 1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3c0-.79.32-1.53.82-2.06l-1.69-2.17a.497.497 0 0 1 .09-.7c.21-.17.53-.13.7.09l1.7 2.18ZM10 15c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2c-.44 0-.86.14-1.19.39-.49.37-.81.95-.81 1.61Z"
-        fill="currentColor"
-      ></path>
-      <path
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10ZM6.812 10.167a5.503 5.503 0 0 1 10.375 0 .5.5 0 1 0 .942-.334 6.503 6.503 0 0 0-12.26 0 .5.5 0 1 0 .943.334ZM10 15a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm-1 0a3 3 0 1 0 1.294-2.468l-1.337-2.315a.5.5 0 1 0-.866.5l1.467 2.54A2.986 2.986 0 0 0 9 15Z"
-        fill="currentColor"
-        class="hidden__1pNlrTNT"
-      ></path>
-    </svg>
+    ${dashboardSvg}
   </div>`
 
   button.innerHTML = buttonContent

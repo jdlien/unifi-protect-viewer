@@ -37,7 +37,7 @@
         <div id="error" class="group error" style="display: none"></div>
 
         <div class="group">
-          <button type="button" id="connectBtn">Save and Connect</button>
+          <button type="submit" id="connectBtn">Save and Connect</button>
         </div>
       </form>
 
@@ -64,7 +64,7 @@
             document.getElementById('password').value = config.password || ''
             statusEl.textContent = 'Configuration loaded'
           } else {
-            statusEl.textContent = 'No saved configuration found'
+            statusEl.textContent = ''
           }
         } catch (error) {
           console.error('Error loading config:', error)
@@ -89,7 +89,7 @@
               document.getElementById('url').value = url + '/'
             }
           } catch (e) {
-            errors.push('URL is invalid')
+            errors.push('Invalid URL (must start with https://)')
           }
         }
 
@@ -167,8 +167,12 @@
 
       // Set up button event listeners
       document.getElementById('connectBtn').addEventListener('click', connectToSite)
-      document.getElementById('saveBtn').addEventListener('click', saveConfig)
-      document.getElementById('resetBtn').addEventListener('click', resetApp)
+
+      // Add form submission handler for Enter key
+      document.getElementById('configForm').addEventListener('submit', function (event) {
+        event.preventDefault()
+        connectToSite()
+      })
     </script>
   </body>
 </html>
