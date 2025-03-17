@@ -1,21 +1,24 @@
+<!doctype html>
 <html lang="en">
   <head>
-    <title>UniFi Protect Viewer Configuration</title>
-
-    <link rel="stylesheet" href="../../src/css/styles.css" />
+    <title>UniFi Protect Viewer - Configuration</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/styles.css" />
   </head>
 
   <body>
     <main>
       <div class="logo">
-        <img src="../../src/img/512.png" alt="logo" />
+        <img src="../img/512.png" alt="logo" />
       </div>
 
       <div>
         <h1 class="heading text-center">UniFi Protect Viewer</h1>
+        <p class="text-center">Configuration</p>
       </div>
 
-      <form action="javascript:void(0)">
+      <form id="configForm">
         <div class="group">
           <label for="url">UniFi Site URL</label>
           <input id="url" name="url" placeholder="https://192.168.1.1/protect/" />
@@ -34,163 +37,138 @@
         <div id="error" class="group error" style="display: none"></div>
 
         <div class="group">
-          <button onclick="save()">Save Configuration</button>
-        </div>
-
-        <div class="group">
-          <button onclick="directConnect()" style="background-color: #2c8800">Connect Directly</button>
+          <button type="button" id="connectBtn">Save and Connect</button>
         </div>
       </form>
 
-      <div style="margin-top: 10px">
-        <h2 style="font-size: 20px; text-align: center">Hotkeys</h2>
-        <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px">
-          <div class="hotkey"><key>Esc</key><span>Toggle Navigation</span></div>
-          <div class="hotkey"><key id="fullscreenKey">F11</key><span>Fullscreen</span></div>
-          <div class="hotkey"><key>F9</key><span>Restart</span></div>
-          <div class="hotkey"><key>F10</key><span>Log Out</span></div>
-        </div>
+      <div style="margin-top: 20px">
+        <p id="statusMessage" class="text-center"></p>
       </div>
     </main>
 
     <script>
-      // Define run function that preload.js expects
-      async function run() {
-        console.log('Config.html run function called')
+      // Status message
+      const statusEl = document.getElementById('statusMessage')
+
+      // Load stored config on page load
+      window.addEventListener('DOMContentLoaded', async () => {
+        try {
+          statusEl.textContent = 'Loading configuration...'
+
+          // Get config using the exposed API
+          const config = await window.electronAPI.loadConfig()
+
+          if (config && config.url) {
+            document.getElementById('url').value = config.url
+            document.getElementById('username').value = config.username || ''
+            document.getElementById('password').value = config.password || ''
+            statusEl.textContent = 'Configuration loaded'
+          } else {
+            statusEl.textContent = 'No saved configuration found'
+          }
+        } catch (error) {
+          console.error('Error loading config:', error)
+          statusEl.textContent = 'Error loading configuration'
+        }
+      })
+
+      // Form validation
+      function validateForm() {
+        const url = document.getElementById('url').value.trim()
+        const username = document.getElementById('username').value.trim()
+        const password = document.getElementById('password').value.trim()
+        const errors = []
+
+        if (!url) {
+          errors.push('URL is required')
+        } else {
+          try {
+            new URL(url)
+            // Make sure URL ends with slash
+            if (!url.endsWith('/')) {
+              document.getElementById('url').value = url + '/'
+            }
+          } catch (e) {
+            errors.push('URL is invalid')
+          }
+        }
+
+        if (!username) errors.push('Username is required')
+        if (!password) errors.push('Password is required')
+
+        const errorDiv = document.getElementById('error')
+        errorDiv.innerHTML = ''
+
+        if (errors.length > 0) {
+          errorDiv.style.display = 'block'
+          errorDiv.innerHTML = errors.map((err) => `<div>${err}</div>`).join('')
+          return false
+        }
+
+        errorDiv.style.display = 'none'
         return true
       }
 
-      // Set the appropriate key for fullscreen if the user is on macOS
-      if (navigator.platform.toUpperCase().indexOf('MAC') >= 0) {
-        document.getElementById('fullscreenKey').innerText = '⌃⌘F'
+      // Get form values as config object
+      function getConfigFromForm() {
+        return {
+          url: document.getElementById('url').value.trim(),
+          username: document.getElementById('username').value.trim(),
+          password: document.getElementById('password').value.trim(),
+        }
       }
 
-      // Add direct connect function to bypass app navigation and directly open the URL
-      function directConnect() {
-        const urlInput = document.getElementById('url')
-        if (!urlInput || !urlInput.value) {
-          alert('Please enter a URL first')
-          return
-        }
+      // Save configuration
+      async function saveConfig() {
+        if (!validateForm()) return false
 
         try {
-          // Validate URL
-          const url = new URL(urlInput.value)
-
-          // Save config first
-          save(false) // Don't restart after saving
-
-          // Then directly navigate
-          setTimeout(() => {
-            console.log('Directly connecting to:', url.toString())
-            window.location.href = url.toString()
-          }, 500)
-        } catch (err) {
-          alert('Please enter a valid URL')
+          const config = getConfigFromForm()
+          await window.electronAPI.saveConfig(config)
+          statusEl.textContent = 'Configuration saved successfully'
+          return true
+        } catch (error) {
+          console.error('Error saving config:', error)
+          statusEl.textContent = 'Error saving configuration'
+          return false
         }
       }
 
-      const save = (shouldRestart = true) => {
-        // Field definitions with validation rules
-        const fields = {
-          url: {
-            element: document.getElementById('url'),
-            errorMessage: 'The URL is required.',
-            validate: (value) => {
-              if (!value) return 'The URL is required.'
-              try {
-                const urlObj = new URL(value)
-                // Make sure URL ends with a forward slash
-                if (!urlObj.pathname.endsWith('/')) {
-                  // Normalize the path to end with a slash
-                  urlObj.pathname = urlObj.pathname + '/'
-                  document.getElementById('url').value = urlObj.toString()
-                }
-                return null
-              } catch {
-                return 'Please enter a valid URL.'
-              }
-            },
-          },
-          username: {
-            element: document.getElementById('username'),
-            errorMessage: 'The username is required.',
-            validate: (value) => (!value ? 'The username is required.' : null),
-          },
-          password: {
-            element: document.getElementById('password'),
-            errorMessage: 'The password is required.',
-            validate: (value) => {
-              if (!value) return 'The password is required.'
-              return null
-            },
-          },
-        }
+      // Connect to UniFi Protect site
+      async function connectToSite() {
+        if (await saveConfig()) {
+          statusEl.textContent = 'Connecting to UniFi Protect...'
 
-        const errorContainer = document.getElementById('error')
-
-        // Clear previous errors
-        errorContainer.style.display = 'none'
-        errorContainer.innerHTML = ''
-
-        // Collect form data and validate
-        const formData = {}
-        const errors = []
-
-        for (const [fieldName, field] of Object.entries(fields)) {
-          const value = field.element.value.trim()
-          formData[fieldName] = value
-
-          const error = field.validate(value)
-          if (error) {
-            errors.push(error)
+          try {
+            const config = getConfigFromForm()
+            // Use direct URL loading instead of restart
+            window.electronAPI.loadURL(config.url)
+          } catch (error) {
+            console.error('Error connecting to site:', error)
+            statusEl.textContent = 'Error connecting to site'
           }
         }
+      }
 
-        // Handle validation errors
-        if (errors.length > 0) {
-          errorContainer.style.display = 'block'
-          errorContainer.innerHTML = errors.map((error) => `<div class="error-item">${error}</div>`).join('')
-          return
-        }
-
-        // If no errors, save configuration and restart
+      // Reset application
+      async function resetApp() {
         try {
-          // Add a status indicator while saving
-          const saveButton = document.querySelector('button')
-          const originalText = saveButton.innerText
-          saveButton.innerText = 'Saving...'
-          saveButton.disabled = true
-
-          console.log('Saving config:', formData)
-          window.electronAPI.configSave(formData)
-
-          // Add a small delay before restarting to ensure config is saved
-          if (shouldRestart) {
-            setTimeout(() => {
-              console.log('Restarting app')
-              window.electronAPI.restart()
-            }, 1000)
-          } else {
-            // Reset button state but don't restart
-            setTimeout(() => {
-              saveButton.innerText = originalText
-              saveButton.disabled = false
-            }, 500)
+          const confirmed = await window.electronAPI.confirmReset()
+          if (confirmed) {
+            statusEl.textContent = 'Resetting application...'
+            window.electronAPI.resetApp()
+            window.electronAPI.restartApp()
           }
         } catch (error) {
-          console.error('Save error:', error)
-          errorContainer.style.display = 'block'
-          errorContainer.innerHTML = `<div class="error-item">Failed to save configuration: ${error.message || 'Unknown error'}</div>`
-
-          // Re-enable the button
-          const saveButton = document.querySelector('button')
-          if (saveButton) {
-            saveButton.innerText = 'Save Configuration'
-            saveButton.disabled = false
-          }
+          console.error('Error during reset:', error)
+          statusEl.textContent = 'Error resetting application'
         }
       }
+
+      // Set up button event listeners
+      document.getElementById('connectBtn').addEventListener('click', connectToSite)
+      document.getElementById('saveBtn').addEventListener('click', saveConfig)
+      document.getElementById('resetBtn').addEventListener('click', resetApp)
     </script>
   </body>
 </html>

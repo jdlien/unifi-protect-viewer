@@ -1,160 +1,157 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-const FALLBACK_URL = 'config.html' // Fallback URL for safety
+// Track login attempts to prevent infinite loops
+let loginAttempts = 0
+const MAX_LOGIN_ATTEMPTS = 3
 
-// Global state to track navigation attempts
-let isNavigating = false
-let navigationTimer = null
-// Add debugging for navigation
-let navigationHistory = []
-let lastUrl = ''
-// Track redirects without overriding location
-let redirectAttempts = 0
-const MAX_REDIRECTS = 3
+// Login detector - check if this is a login page
+function isLoginPage() {
+  console.log('Checking if this is a login page:', window.location.href)
 
-// Safely track navigation without overriding location
-function trackNavigation(url, type = 'tracked') {
-  redirectAttempts++
-  console.warn(`Navigation #${redirectAttempts} (${type}): ${url}`)
-  navigationHistory.push({
-    type: type,
-    url: url,
-    time: new Date().toISOString(),
-  })
+  // Check URL patterns
+  const url = window.location.href.toLowerCase()
+  if (url.includes('login') || url.includes('signin') || url.includes('auth') || url.includes('/ui/login')) {
+    return true
+  }
 
-  // Update debug UI if it exists
-  setTimeout(() => {
-    try {
-      const debugElement = document.getElementById('upv-debug-info')
-      if (debugElement) {
-        const historyHTML = navigationHistory
-          .map((entry) => `<div>${entry.time.substr(11, 8)} - [${entry.type}] - ${entry.url}</div>`)
-          .join('')
+  // Check for login form elements
+  const usernameField =
+    document.querySelector('input[name="username"]') || document.querySelector('input[type="email"]')
+  const passwordField = document.querySelector('input[type="password"]')
+  const loginButton =
+    document.querySelector('button[type="submit"]') ||
+    Array.from(document.querySelectorAll('button')).find((btn) => btn.textContent.toLowerCase().includes('login'))
 
-        debugElement.innerHTML = `
-          <div>URL: ${window.location.href}</div>
-          <div>Redirect attempts: ${redirectAttempts}</div>
-          <div style="margin-top: 10px;">
-            <strong>Navigation History:</strong>
-            ${historyHTML}
-          </div>
-        `
-      }
-    } catch (err) {
-      console.error('Failed to update debug element:', err)
-    }
-  }, 100)
-
-  return redirectAttempts <= MAX_REDIRECTS
+  return !!(usernameField && passwordField && loginButton)
 }
 
-// Safer navigation function that respects redirect limits
-function safeNavigate(url) {
-  if (trackNavigation(url, 'redirect')) {
-    console.log(`Navigating to: ${url}`)
-    window.location.href = url
+// Login handler - attempt to fill in credentials and submit
+async function attemptLogin() {
+  console.log(`Login attempt ${loginAttempts + 1}/${MAX_LOGIN_ATTEMPTS}`)
+
+  // Increment attempt counter and check max attempts
+  loginAttempts++
+  if (loginAttempts > MAX_LOGIN_ATTEMPTS) {
+    console.log('Maximum login attempts reached, stopping auto-login')
+    return false
+  }
+
+  try {
+    // Load credentials
+    const config = await ipcRenderer.invoke('configLoad')
+    if (!config?.username || !config?.password) {
+      console.log('No credentials found in config')
+      return false
+    }
+
+    // Find form elements
+    console.log('Searching for login form elements')
+    const usernameField =
+      document.querySelector('input[name="username"]') ||
+      document.querySelector('input[type="email"]') ||
+      document.querySelector('input[type="text"][id*="user"]')
+
+    const passwordField = document.querySelector('input[type="password"]')
+
+    const submitButton =
+      document.querySelector('button[type="submit"]') ||
+      Array.from(document.querySelectorAll('button')).find(
+        (btn) => btn.textContent.toLowerCase().includes('login') || btn.textContent.toLowerCase().includes('sign in'),
+      )
+
+    if (!usernameField || !passwordField || !submitButton) {
+      console.log('Could not find all login form elements:', {
+        username: !!usernameField,
+        password: !!passwordField,
+        button: !!submitButton,
+      })
+      return false
+    }
+
+    console.log('Found all login form elements, filling credentials')
+
+    // Fill in credentials
+    usernameField.value = config.username
+    usernameField.dispatchEvent(new Event('input', { bubbles: true }))
+    usernameField.dispatchEvent(new Event('change', { bubbles: true }))
+
+    passwordField.value = config.password
+    passwordField.dispatchEvent(new Event('input', { bubbles: true }))
+    passwordField.dispatchEvent(new Event('change', { bubbles: true }))
+
+    // Submit form
+    console.log('Clicking login button')
+    submitButton.click()
+
     return true
-  } else {
-    console.error(`BLOCKED REDIRECT to: ${url} - too many redirects`)
-
-    // Add a visible notification
-    setTimeout(() => {
-      try {
-        const blockNotice = document.createElement('div')
-        blockNotice.style.position = 'fixed'
-        blockNotice.style.top = '0'
-        blockNotice.style.left = '0'
-        blockNotice.style.right = '0'
-        blockNotice.style.padding = '10px'
-        blockNotice.style.backgroundColor = '#ff0000'
-        blockNotice.style.color = '#ffffff'
-        blockNotice.style.textAlign = 'center'
-        blockNotice.style.fontWeight = 'bold'
-        blockNotice.style.zIndex = '10000'
-        blockNotice.innerText = `Redirect loop detected and blocked (${redirectAttempts} attempts)`
-        document.body.appendChild(blockNotice)
-      } catch (err) {
-        console.error('Failed to add redirect notice:', err)
-      }
-    }, 500)
-
+  } catch (error) {
+    console.error('Auto-login failed:', error)
     return false
   }
 }
 
-// event listeners
-// Enhanced event listeners
-addEventListener(
-  'load',
-  () => {
-    console.log('*** PAGE LOAD EVENT FIRED ***')
-    console.log('Current URL:', window.location.href)
-    trackNavigation(window.location.href, 'page-load')
+// Run initialization to setup automatic fullscreen and navigation
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('Page loaded, URL:', window.location.href)
 
-    // Check if run() function exists
-    if (typeof run !== 'function') {
-      console.error('run() function is not defined')
+  // Give the page a moment to fully render, then check for login or run setup
+  setTimeout(async () => {
+    if (isLoginPage()) {
+      console.log('Login page detected, attempting auto-login')
+      attemptLogin()
+    } else {
+      console.log('Setting up navigation monitoring and UI customizations')
+      setupNavigationMonitor()
 
-      // Only redirect if we haven't exceeded redirect limit
-      if (redirectAttempts < MAX_REDIRECTS) {
-        console.log('Redirecting to config page (run not defined)')
-        safeNavigate(FALLBACK_URL)
-      } else {
-        console.error('Too many redirects, staying on current page')
+      try {
+        // Wait for the page to be fully loaded
+        await waitForLiveViewReady()
+
+        // Apply UI customizations if we're on the dashboard
+        if (checkUrl('/protect/dashboard')) {
+          handleLiveviewV4andV5()
+        }
+      } catch (error) {
+        console.error('Error setting up UI customizations:', error)
       }
-      return
     }
+  }, 1000)
+})
 
-    run().catch(async (error) => {
-      console.error('Run failed:', error)
+// Set up key event handlers
+window.addEventListener('keydown', (event) => {
+  // F10 for reset
+  if (event.key === 'F10') {
+    if (event.shiftKey) {
+      // Force reset with Shift+F10
+      ipcRenderer.send('reset')
+      ipcRenderer.send('restart')
+    } else {
+      // Show confirmation dialog
+      ipcRenderer.invoke('showResetConfirmation').then((confirmed) => {
+        if (confirmed) {
+          ipcRenderer.send('reset')
+          ipcRenderer.send('restart')
+        }
+      })
+    }
+  }
 
-      // Only redirect if we haven't exceeded redirect limit
-      if (redirectAttempts < MAX_REDIRECTS) {
-        console.log('Redirecting to config page (run error)')
-        safeNavigate(FALLBACK_URL)
-      } else {
-        console.error('Too many redirects, staying on current page despite run() error')
-      }
-    })
-  },
-  { once: true },
-)
-
-addEventListener('keydown', async (event) => {
+  // F9 for restart
   if (event.key === 'F9') {
     ipcRenderer.send('restart')
   }
 
-  if (event.key === 'F10') {
-    if (event.shiftKey) {
-      // Force reset with Shift + F10 (bypasses confirmation)
-      await forceReset()
-    } else {
-      // Normal reset with F10
-      try {
-        const confirmed = await showResetConfirmation()
-        if (confirmed) {
-          await forceReset()
-        }
-      } catch (error) {
-        console.error('Reset confirmation failed, forcing reset:', error)
-        await forceReset()
-      }
-    }
-    return
-  }
-
-  // Escape to toggle navigation and header
+  // Escape to toggle UI elements
   if (event.key === 'Escape') {
     toggleNavigation()
   }
 })
 
-// Toggle the visisbility of the navigation and header elements
+// Toggle navigation UI elements
 function toggleNavigation() {
-  // Toggle between hiding and showing the menu
-  const header = document.getElementsByTagName('header')[0]
-  const nav = document.getElementsByTagName('nav')[0]
+  const header = document.querySelector('header')
+  const nav = document.querySelector('nav')
 
   if (header && nav) {
     const isHidden = header.style.display === 'none'
@@ -162,134 +159,11 @@ function toggleNavigation() {
     nav.style.display = isHidden ? 'flex' : 'none'
   }
 
+  // Add call to handle dashboard button visibility when toggling navigation
   handleDashboardButton()
 }
 
-// electron events
-const reset = () => ipcRenderer.send('reset')
-const restart = () => ipcRenderer.send('restart')
-const configSave = (config) => ipcRenderer.send('configSave', config)
-
-const configLoad = () => ipcRenderer.invoke('configLoad')
-
-const showResetConfirmation = () => ipcRenderer.invoke('showResetConfirmation')
-
-// Safety reset function that doesn't depend on UI state
-const forceReset = async () => {
-  ipcRenderer.send('reset')
-  ipcRenderer.send('restart')
-}
-
-console.log('Exposing API functions to renderer')
-contextBridge.exposeInMainWorld('electronAPI', {
-  reset: () => reset(),
-  restart: () => restart(),
-  configSave: (config) => configSave(config),
-  configLoad: () => configLoad(),
-  showResetConfirmation: () => showResetConfirmation(),
-  getURL: async () => {
-    try {
-      const config = await configLoad()
-      return config?.url || 'No URL found'
-    } catch (error) {
-      console.error('Error in getURL:', error)
-      return 'Error loading URL'
-    }
-  },
-})
-
-// handle fnc
-async function handleLogin() {
-  console.log('Attempting login')
-
-  try {
-    // wait until login button is present with timeout
-    console.log('Waiting for login form elements...')
-    const loginFormFound = await waitUntil(() => document.getElementsByTagName('button').length > 0, 10000)
-
-    if (!loginFormFound) {
-      console.error('Login form not found (timeout)')
-      return false
-    }
-
-    // Take screenshot of login form to debug element for inspection
-    try {
-      const loginForm = document.querySelector('form') || document.body
-      const debugElement = document.getElementById('upv-debug-info')
-      if (debugElement) {
-        debugElement.innerHTML += `
-          <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-            <strong>Login form detected:</strong>
-            <div>Buttons: ${document.getElementsByTagName('button').length}</div>
-            <div>Username field: ${document.getElementsByName('username').length > 0}</div>
-            <div>Password field: ${document.getElementsByName('password').length > 0}</div>
-          </div>
-        `
-      }
-    } catch (err) {
-      console.error('Failed to get login form info:', err)
-    }
-
-    console.log('Login form found, getting credentials')
-    const config = await configLoad()
-
-    // Check if username and password fields exist
-    const usernameField = document.getElementsByName('username')[0]
-    const passwordField = document.getElementsByName('password')[0]
-    const loginButton = document.getElementsByTagName('button')[0]
-
-    if (!usernameField || !passwordField || !loginButton) {
-      console.error('Login elements not found:', {
-        username: !!usernameField,
-        password: !!passwordField,
-        button: !!loginButton,
-      })
-      return false
-    }
-
-    console.log('Setting credentials')
-    setNativeValue(usernameField, config.username)
-    setNativeValue(passwordField, config.password)
-
-    // Attempting to check "remember me" so it doesn't ask for login every time
-    const rememberMeCheckbox = document.getElementById('rememberMe')
-    if (rememberMeCheckbox && !rememberMeCheckbox.checked) {
-      clickElement(rememberMeCheckbox)
-      console.log('Checked "Remember Me" box')
-    }
-
-    console.log('Clicking login button')
-    clickElement(loginButton)
-
-    // Wait briefly to see if we navigate away from login page
-    await wait(5000)
-
-    // Check if we're still on the login page
-    if (checkUrl('login')) {
-      console.error('Still on login page after attempt. Login might have failed.')
-
-      // Check for error messages
-      const errorElements = document.querySelectorAll('.error, .alert, [class*="error"], [class*="Error"]')
-      if (errorElements.length > 0) {
-        console.error(
-          'Login error messages found:',
-          Array.from(errorElements)
-            .map((el) => el.textContent)
-            .join(', '),
-        )
-      }
-
-      return false
-    }
-
-    console.log('Login successful - navigated away from login page')
-    return true
-  } catch (error) {
-    console.error('Login attempt failed with error:', error)
-    return false
-  }
-}
-
+// Fullscreen view modification function
 async function handleLiveviewV4andV5() {
   // wait until liveview is present
   await waitUntil(() => document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0)
@@ -366,8 +240,12 @@ async function handleLiveviewV4andV5() {
 
   // Make the widget panel open/close button less prominent
   setStyle(document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0], 'opacity', '0.5')
+
+  // Show dashboard button after UI modifications
+  handleDashboardButton()
 }
 
+// Helper for dashboard button navigation
 function triggerDashboardNavigation() {
   // Get the URL up to the '/protect/' part
   const protectIndex = document.URL.indexOf('/protect/')
@@ -382,16 +260,12 @@ function triggerDashboardNavigation() {
   else window.location.href = dashboardUrl
 }
 
+// Dashboard button overlay function
 function injectDashboardButton() {
   if (document.getElementById('dashboard-button')) return
 
   const button = document.createElement('button')
   button.id = 'dashboard-button'
-  button.innerText = '← Dashboard'
-
-  button.onclick = () => {
-    triggerDashboardNavigation()
-  }
 
   const buttonContent = `
   <div style="display: flex;align-items: center;">
@@ -430,6 +304,7 @@ function injectDashboardButton() {
   </div>`
 
   button.innerHTML = buttonContent
+  button.onclick = triggerDashboardNavigation
 
   document.body.appendChild(button)
 
@@ -494,8 +369,6 @@ function injectDashboardButton() {
       border: 1px solid rgb(183, 188, 194);
       padding: 1px 2px;
     }
-
-
   `
 
   document.body.appendChild(style)
@@ -509,7 +382,7 @@ function injectDashboardButton() {
   }, 4000)
 }
 
-// Ensure that the dashboard button is visible when on a Protect page that isn't the dashboard
+// Function to handle dashboard button visibility
 function handleDashboardButton() {
   injectDashboardButton()
 
@@ -537,42 +410,15 @@ function setDashboardButtonVisibility(show) {
   else button.style.display = 'none'
 }
 
-// Handle detecting navigation
-// Monitor URL changes using MutationObserver for SPA navigation
+// Setup navigation monitoring to detect URL changes in SPA
 function setupNavigationMonitor() {
   // Track the last known URL to prevent duplicate handling
-  lastUrl = window.location.href
-  navigationHistory.push({ url: lastUrl, time: new Date().toISOString() })
-
-  // Log initial navigation state
-  console.log('Initial URL:', lastUrl)
+  let lastUrl = window.location.href
 
   // Single MutationObserver to watch for DOM changes that might indicate navigation
   const observer = new MutationObserver((mutations) => {
     // Only proceed if the URL has changed
     if (window.location.href !== lastUrl) {
-      console.log(`Navigation detected: ${lastUrl} -> ${window.location.href}`)
-      navigationHistory.push({ url: window.location.href, time: new Date().toISOString() })
-
-      // Update UI debug element if it exists
-      try {
-        const debugElement = document.getElementById('upv-debug-info')
-        if (debugElement) {
-          const historyHTML = navigationHistory
-            .map((entry) => `<div>${entry.time.substr(11, 8)} - ${entry.url}</div>`)
-            .join('')
-
-          debugElement.innerHTML += `
-            <div style="margin-top: 10px; border-top: 1px solid #555; padding-top: 5px;">
-              <strong>Navigation History:</strong>
-              ${historyHTML}
-            </div>
-          `
-        }
-      } catch (err) {
-        console.error('Failed to update debug element:', err)
-      }
-
       lastUrl = window.location.href
       handleDashboardButton()
       handleLiveviewV4andV5()
@@ -592,8 +438,6 @@ function setupNavigationMonitor() {
   navigationEvents.forEach((event) => {
     window.addEventListener(event, () => {
       if (window.location.href !== lastUrl) {
-        console.log(`Navigation event ${event}: ${lastUrl} -> ${window.location.href}`)
-        navigationHistory.push({ url: window.location.href, time: new Date().toISOString(), event })
         lastUrl = window.location.href
         handleDashboardButton()
         handleLiveviewV4andV5()
@@ -604,198 +448,38 @@ function setupNavigationMonitor() {
   // Initial call, add a small delay to ensure the page has loaded
   setTimeout(() => {
     handleDashboardButton()
+    handleLiveviewV4andV5()
   }, 1500)
 
   // Cleanup function
   return () => {
     observer.disconnect()
     navigationEvents.forEach((event) => {
-      window.removeEventListener(event, debouncedHandler)
+      window.removeEventListener(event, () => {})
     })
   }
 }
 
-// logic
-async function run() {
-  console.log('RUN FUNCTION STARTED')
-
-  // Safety check: clear token expiration if needed
-  try {
-    if (localStorage.getItem('portal:localSessionsExpiresAt')) {
-      const expiresAt = +localStorage.getItem('portal:localSessionsExpiresAt')
-      const now = Date.now()
-
-      // If token is already expired or will expire in the next minute,
-      // remove it to prevent reload loops
-      if (expiresAt <= now + 60000) {
-        console.log('Found expired token in localStorage - clearing it')
-        localStorage.removeItem('portal:localSessionsExpiresAt')
-      }
-    }
-  } catch (err) {
-    console.error('Error checking localStorage:', err)
-  }
-
-  const config = await configLoad()
-  console.log('Config loaded:', config)
-
-  // config/ start page
-  if (checkUrl('index.html') || checkUrl('config.html')) {
-    console.log('On index.html or config.html page, no redirect needed')
-    return
-  }
-
-  // CRITICAL CHECK: Don't redirect if already at or very near redirect limit
-  if (redirectAttempts >= MAX_REDIRECTS - 1) {
-    console.warn('At redirect limit, skipping all navigation in run()')
-    return
-  }
-
-  if (!checkUrl(config.url)) {
-    console.log(`Not on configured URL, would redirect to: ${config.url}`)
-
-    // Use safe navigation
-    if (safeNavigate(config.url)) {
-      // Important: return here to prevent further code execution after redirect
-      return
-    }
-  }
-
-  // Only continue if we haven't redirected
-  console.log('No redirect needed, continuing with normal execution')
-
-  // Add a debugger element to show what's happening
-  setTimeout(() => {
-    try {
-      const debugElement = document.createElement('div')
-      debugElement.id = 'upv-debug-info'
-      debugElement.style.position = 'fixed'
-      debugElement.style.bottom = '10px'
-      debugElement.style.right = '10px'
-      debugElement.style.backgroundColor = 'rgba(0,0,0,0.7)'
-      debugElement.style.color = '#fff'
-      debugElement.style.padding = '10px'
-      debugElement.style.borderRadius = '5px'
-      debugElement.style.zIndex = '10000'
-      debugElement.style.fontSize = '12px'
-      debugElement.style.fontFamily = 'monospace'
-      debugElement.style.maxWidth = '400px'
-      debugElement.style.maxHeight = '200px'
-      debugElement.style.overflow = 'auto'
-      debugElement.innerHTML = `
-        <div>URL: ${window.location.href}</div>
-        <div>Has Config: ${!!config}</div>
-        <div>Config URL: ${config?.url || 'None'}</div>
-        <div>Redirect attempts: ${redirectAttempts}</div>
-      `
-      document.body.appendChild(debugElement)
-    } catch (err) {
-      console.error('Failed to add debug element:', err)
-    }
-  }, 5000)
-
-  // Watch for navigation changes
-  setupNavigationMonitor()
-
-  // wait until unifi loading screen visible, timeout 3000
-  await waitUntil(() => document.querySelectorAll('[data-testid="loader-screen"]').length > 0, 1000)
-
-  // wait until unifi loading screen is gone
-  await waitUntil(() => document.querySelectorAll('[data-testid="loader-screen"]').length === 0)
-
-  // unifi stuff - login
-  if (checkUrl('login')) {
-    await handleLogin()
-
-    await waitUntil(() => !checkUrl('login'))
-  }
-
-  // wait until unifi version is visible (for v4), timeout 10000
-  await waitUntil(() => document.querySelectorAll('[class^=Version__Item] > span').length > 0, 10000)
-
-  // get version from screen (v4 has version string, v3 has not)
-  const version =
-    Array.from(document.querySelectorAll('[class^=Version__Item] > span'))
-      .filter((el) => el.innerText.includes('Protect'))
-      .at(0)?.innerHTML ?? 'Protect 3.x'
-
-  // unifi stuff - fullscreen for dashboard (version 4)
-  if (checkUrl('protect/dashboard') && (version.includes('4.') || version.includes('5.'))) {
-    await waitForLiveViewReady()
-    await handleLiveviewV4andV5()
-    // Ensure that we can detect page changes so we can show the dashboard button if needed
-  }
-
-  // Check for token expiration in localStorage - FIXED VERSION
-  if (localStorage.getItem('portal:localSessionsExpiresAt')) {
-    const loginExpiresAt = +localStorage.getItem('portal:localSessionsExpiresAt')
-    const currentTime = new Date().getTime()
-
-    console.log('Session expiration info:', {
-      expiresAtTime: new Date(loginExpiresAt).toLocaleString(),
-      currentTime: new Date(currentTime).toLocaleString(),
-      timeUntilExpiry: Math.round((loginExpiresAt - currentTime) / 1000 / 60) + ' minutes',
-    })
-
-    // Only set up reload if expiration is far enough in the future
-    // (prevents immediate reload loops)
-    if (loginExpiresAt > currentTime + 60000) {
-      // Must be at least 1 minute in the future
-      // offset 10 minutes before expire
-      const offset = 10 * 60 * 1000
-
-      // Only wait if expiration is more than 10 minutes away
-      if (loginExpiresAt > currentTime + offset + 60000) {
-        console.log(
-          `Session will expire in ${Math.round((loginExpiresAt - currentTime) / 1000 / 60)} minutes, setting up wait`,
-        )
-
-        // wait until ~10 minutes before expire or page url changed
-        await waitUntil(() => !checkUrl(config.url) || new Date().getTime() > loginExpiresAt - offset, -1, 60000)
-
-        // Double-check we're still close to expiration before reloading
-        if (new Date().getTime() > loginExpiresAt - offset) {
-          console.log('Session is expiring soon, reloading page')
-          location.reload()
-        }
-      }
-    } else {
-      // Token is already expired or about to expire
-      console.log('Session token is already expired or about to expire, clearing it')
-      localStorage.removeItem('portal:localSessionsExpiresAt')
-    }
-  }
-}
-
-// General purpose functions
-
-async function wait(amount) {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve()
-    }, amount)
-  })
-}
-
+// Helper functions
 async function waitUntil(condition, timeout = 60000, interval = 100) {
   return new Promise((resolve) => {
     function complete(result) {
-      timeoutAd ? clearTimeout(timeoutAd) : {}
-      intervalAd ? clearInterval(intervalAd) : {}
+      timeoutId ? clearTimeout(timeoutId) : {}
+      intervalId ? clearInterval(intervalId) : {}
 
       setTimeout(() => {
         resolve(result)
       }, 20)
     }
 
-    const timeoutAd =
+    const timeoutId =
       timeout !== -1
         ? setTimeout(() => {
             complete(false)
           }, timeout)
         : undefined
 
-    const intervalAd = setInterval(() => {
+    const intervalId = setInterval(() => {
       if (condition()) {
         complete(true)
       }
@@ -803,7 +487,6 @@ async function waitUntil(condition, timeout = 60000, interval = 100) {
   })
 }
 
-// Ensures that the live view is fully loaded and ready to be manipulated
 async function waitForLiveViewReady() {
   // Wait for the loader screen to disappear
   await waitUntil(() => document.querySelectorAll('[data-testid="loader-screen"]').length === 0)
@@ -834,21 +517,17 @@ async function waitForLiveViewReady() {
   return true
 }
 
-function setNativeValue(element, value) {
+async function wait(amount) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve()
+    }, amount)
+  })
+}
+
+function setStyle(element, style, value) {
   if (!element) return
-
-  const lastValue = element.value
-  element.value = value
-  const event = new Event('input', { target: element, bubbles: true })
-
-  event.simulated = true
-
-  // React 16
-  const tracker = element._valueTracker
-  if (tracker) {
-    tracker.setValue(lastValue)
-  }
-  element.dispatchEvent(event)
+  element.style[style] = value
 }
 
 function clickElement(element) {
@@ -867,12 +546,6 @@ function clickElement(element) {
   }
 }
 
-function setStyle(element, style, value) {
-  if (!element) return
-
-  element.style[style] = value
-}
-
 function elementExists(elements, index = 0) {
   return elements.length > 0 && elements[index]
 }
@@ -884,3 +557,28 @@ function hasElements(elements) {
 function checkUrl(urlPart) {
   return document.URL.includes(urlPart)
 }
+
+// Expose API to renderer
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Configuration
+  configLoad: () => ipcRenderer.invoke('configLoad'),
+  configSave: (config) => ipcRenderer.send('configSave', config),
+
+  // App management
+  reset: () => ipcRenderer.send('reset'),
+  restart: () => ipcRenderer.send('restart'),
+  showResetConfirmation: () => ipcRenderer.invoke('showResetConfirmation'),
+
+  // Navigation
+  loadURL: (url) => ipcRenderer.send('loadURL', url),
+
+  // UI functions
+  toggleNavigation: toggleNavigation,
+
+  // Aliases for backward compatibility
+  loadConfig: () => ipcRenderer.invoke('configLoad'),
+  saveConfig: (config) => ipcRenderer.send('configSave', config),
+  resetApp: () => ipcRenderer.send('reset'),
+  restartApp: () => ipcRenderer.send('restart'),
+  confirmReset: () => ipcRenderer.invoke('showResetConfirmation'),
+})

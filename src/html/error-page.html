@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>UniFi Protect Viewer - Connection Error</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <style>
+      /* Custom styles specific to the error page */
+      main {
+        width: 80%;
+        max-width: 600px;
+      }
+
+      .logo img {
+        max-width: 128px;
+      }
+
+      .logo {
+        margin-bottom: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="logo">
+        <img src="../img/512.png" alt="UniFi Protect Viewer Logo" />
+      </div>
+
+      <h1 class="heading">Connection Error</h1>
+      <p>We couldn't connect to the UniFi Protect service at the URL you specified.</p>
+
+      <div class="error-container">
+        <div class="error-title">Error Details:</div>
+        <div id="errorMessage" class="error-details">Unknown error</div>
+        <div class="error-title">URL:</div>
+        <div id="errorUrl" class="error-details">Unknown URL</div>
+      </div>
+
+      <p>This could be due to:</p>
+      <ul>
+        <li>The URL is incorrect</li>
+        <li>The UniFi Protect service is not running</li>
+        <li>Network connectivity issues</li>
+        <li>The server is not responding</li>
+      </ul>
+
+      <p>Please verify the URL and try again.</p>
+
+      <div class="button" id="configButton">Return to Configuration</div>
+      <div class="button" id="retryButton">Retry Connection</div>
+
+      <p id="statusMessage" class="text-center"></p>
+    </main>
+
+    <script>
+      // Parse query parameters to get error details
+      const urlParams = new URLSearchParams(window.location.search)
+      const errorMessage = urlParams.get('error') || 'Connection failed'
+      const targetUrl = urlParams.get('url') || ''
+
+      // Display error details
+      document.getElementById('errorMessage').textContent = errorMessage
+      document.getElementById('errorUrl').textContent = targetUrl
+
+      // Button event handlers
+      document.getElementById('configButton').addEventListener('click', () => {
+        // Go back to config page
+        window.electronAPI
+          .loadConfig()
+          .then((config) => {
+            // Load the configuration page
+            window.location.href = 'config.html'
+          })
+          .catch((err) => {
+            console.error('Error loading config:', err)
+            // Fallback if loading config fails
+            window.location.href = 'config.html'
+          })
+      })
+
+      document.getElementById('retryButton').addEventListener('click', () => {
+        // Retry the connection
+        if (targetUrl) {
+          document.getElementById('statusMessage').textContent = 'Retrying connection...'
+          window.electronAPI.loadURL(targetUrl)
+        } else {
+          document.getElementById('statusMessage').textContent = 'No URL to retry'
+        }
+      })
+    </script>
+  </body>
+</html>
