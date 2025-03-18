@@ -6,11 +6,10 @@ const auth = require('./modules/auth.js')
 const ui = require('./modules/ui.js')
 const navigation = require('./modules/navigation.js')
 const utils = require('./modules/utils.js')
-const { log, logError } = utils
 
 // Run initialization to setup automatic fullscreen and navigation
 window.addEventListener('DOMContentLoaded', () => {
-  log('Page loaded, URL:', window.location.href)
+  utils.log('Page loaded, URL:', window.location.href)
 
   // Clear any connection timeout that might exist from the config page
   if (window.connectionTimeoutId) {
@@ -62,15 +61,15 @@ function initializeDashboardPage() {
         try {
           ui.handleLiveviewV5()
         } catch (error) {
-          logError('Error in UI customizations:', error)
+          utils.logError('Error in UI customizations:', error)
         }
       })
       .catch((error) => {
-        logError('Error waiting for liveview:', error)
+        utils.logError('Error waiting for liveview:', error)
       })
     return true
   } catch (error) {
-    logError('Error initializing dashboard:', error)
+    utils.logError('Error initializing dashboard:', error)
     return false
   }
 }

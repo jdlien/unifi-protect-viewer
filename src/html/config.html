@@ -34,6 +34,12 @@
           <input id="password" type="password" name="password" />
         </div>
 
+        <!-- Ignore SSL certificate errors for this domain only (use for self-hosted or local instances) -->
+        <div class="group">
+          <input id="ignoreCertErrors" name="ignoreCertErrors" type="checkbox" />
+          <label for="ignoreCertErrors" style="padding-bottom: 0">Ignore SSL errors for this domain</label>
+        </div>
+
         <div id="error" class="group error" style="display: none"></div>
 
         <div class="group">
@@ -63,6 +69,7 @@
             document.getElementById('url').value = config.url
             document.getElementById('username').value = config.username || ''
             document.getElementById('password').value = config.password || ''
+            document.getElementById('ignoreCertErrors').checked = config.ignoreCertErrors || false
             statusEl.textContent = 'Configuration loaded'
           } else {
             statusEl.textContent = ''
@@ -116,6 +123,7 @@
           url: document.getElementById('url').value.trim(),
           username: document.getElementById('username').value.trim(),
           password: document.getElementById('password').value.trim(),
+          ignoreCertErrors: document.getElementById('ignoreCertErrors').checked,
         }
       }
 

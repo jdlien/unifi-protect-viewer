@@ -32,18 +32,31 @@
 
       <div class="error-container">
         <div class="error-title">Error Details:</div>
-        <div id="errorMessage" class="error-details">Unknown error</div>
+        <div id="errorDetails" class="error-details">Unknown error</div>
         <div class="error-title">URL:</div>
         <div id="errorUrl" class="error-details">Unknown URL</div>
       </div>
 
-      <p>This could be due to:</p>
-      <ul>
-        <li>The URL is incorrect</li>
-        <li>The UniFi Protect service is not running</li>
-        <li>Network connectivity issues</li>
-        <li>The server is not responding</li>
-      </ul>
+      <div id="general-error">
+        <p>This could be due to:</p>
+        <ul>
+          <li>The URL is incorrect</li>
+          <li>The UniFi Protect service is not running</li>
+          <li>Network connectivity issues</li>
+          <li>The server is not responding</li>
+        </ul>
+      </div>
+
+      <div id="certificate-guidance" style="display: none" class="error-guidance">
+        <h3>SSL Certificate Issue</h3>
+        <p>This error typically occurs with self-hosted or local systems using self-signed certificates.</p>
+        <p>
+          <strong
+            >Fix this by checking the "<em>Ignore SSL errors for this domain</em>" checkbox in the configuration
+            page.</strong
+          >
+        </p>
+      </div>
 
       <p>Please verify the URL and try again.</p>
 
@@ -68,12 +81,23 @@
 
       // Parse query parameters to get error details
       const urlParams = new URLSearchParams(window.location.search)
-      const errorMessage = urlParams.get('error') || 'Connection failed'
-      const targetUrl = urlParams.get('url') || ''
+      const errorText = urlParams.get('error') || 'Unknown error'
+      const errorUrl = urlParams.get('url') || ''
 
       // Display error details
-      document.getElementById('errorMessage').textContent = errorMessage
-      document.getElementById('errorUrl').textContent = targetUrl
+      document.getElementById('errorDetails').textContent = errorText
+      document.getElementById('errorUrl').textContent = errorUrl
+
+      // Check if this is a certificate-related error
+      const certErrorRegex = /ERR_CERT_|CERT_|SSL_ERROR|certificate|ssl invalid/i
+      const isCertError = certErrorRegex.test(errorText)
+
+      // Show certificate guidance message if applicable
+      const certGuidance = document.getElementById('certificate-guidance')
+      if (certGuidance && isCertError) {
+        certGuidance.style.display = 'block'
+        document.getElementById('general-error').style.display = 'none'
+      }
 
       // Button event handlers
       document.getElementById('configButton').addEventListener('click', () => {
@@ -93,7 +117,7 @@
 
       document.getElementById('retryButton').addEventListener('click', () => {
         // Retry the connection
-        if (targetUrl) {
+        if (errorUrl) {
           document.getElementById('statusMessage').textContent = 'Retrying connection...'
 
           // Show spinner and disable retry button
@@ -111,7 +135,7 @@
           window.connectionTimeoutId = connectionTimeout
 
           // Attempt to load the URL
-          window.electronAPI.loadURL(targetUrl)
+          window.electronAPI.loadURL(errorUrl)
         } else {
           document.getElementById('statusMessage').textContent = 'No URL to retry'
         }

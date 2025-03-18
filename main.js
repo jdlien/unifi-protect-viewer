@@ -3,6 +3,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const chromeVersion = require('./src/config/chrome-version')
+const { URL } = require('node:url')
 
 // Constants
 const DEFAULT_WIDTH = 1270
@@ -94,6 +95,33 @@ async function createWindow() {
     mainWindow.webContents.openDevTools()
   }
 
+  // Handle certificate errors - only bypass for configured domain
+  mainWindow.webContents.on('certificate-error', (event, urlString, error, certificate, callback) => {
+    const configUrl = store.get('url')
+    const ignoreCertErrors = store.get('ignoreCertErrors') || false
+
+    if (ignoreCertErrors && configUrl) {
+      try {
+        // Extract domains to compare
+        const configDomain = new URL(configUrl).hostname
+        const requestDomain = new URL(urlString).hostname
+
+        // Only bypass for matching domains
+        if (configDomain === requestDomain) {
+          log(`Bypassing certificate error for configured domain: ${requestDomain}`)
+          event.preventDefault()
+          callback(true) // Trust the certificate
+          return
+        }
+      } catch (err) {
+        log('Error parsing URL when handling certificate error:', err)
+      }
+    }
+
+    // Default: don't trust the certificate
+    callback(false) // Don't trust the certificate
+  })
+
   // Save window position/size on close
   mainWindow.on('close', () => {
     store.set('bounds', mainWindow.getBounds())
@@ -123,6 +151,14 @@ async function createWindow() {
     }
 
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (errorCode !== -3) {
+      // Ignore aborted loads (often just navigation)
+      const errorPage = `file://${path.join(__dirname, 'src/html/error.html')}?error=${encodeURIComponent(errorDescription)}&url=${encodeURIComponent(validatedURL)}`
+      mainWindow.loadURL(errorPage)
+    }
   })
 
   return mainWindow
