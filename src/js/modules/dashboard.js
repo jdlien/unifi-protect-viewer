@@ -1,5 +1,6 @@
 // Import required modules
 const utils = require('./utils.js')
+const ui = require('./ui.js')
 
 /**
  * Check if dashboard is ready by waiting for LiveView to be loaded
@@ -29,10 +30,6 @@ async function initializeDashboard() {
     }
 
     utils.log('LiveView is ready, applying customizations')
-
-    // Need to use require here instead of at the top to avoid circular dependencies
-    // This is a common pattern for breaking circular dependencies
-    const ui = require('./ui.js')
 
     // Apply UI customizations
     ui.handleLiveviewV5()
