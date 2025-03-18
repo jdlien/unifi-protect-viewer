@@ -55,7 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Backward compatibility functions
-  getURL: () => ipcRenderer.invoke('getURL'),
+  getURL: () => ipcRenderer.invoke('getURL'), // DEPRECATED: Use config.load() instead
   reset: () => ipcRenderer.send('reset'),
   restart: () => ipcRenderer.send('restart'),
 })

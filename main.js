@@ -1,7 +1,6 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
-const fs = require('node:fs')
 const version = require('./src/js/modules/version')
 const { URL } = require('node:url')
 
@@ -12,9 +11,7 @@ const isDev = process.env.NODE_ENV === 'development'
 
 // Utility function for logging
 function log(...args) {
-  if (isDev) {
-    console.log(...args)
-  }
+  if (isDev) console.log(...args)
 }
 
 // Enable hot reloading in development mode
@@ -171,7 +168,7 @@ function setupIpcHandlers(mainWindow) {
     return store.store
   })
 
-  // Handle getURL request to return current URL
+  // Handle getURL request to return current URL - DEPRECATED: Use configLoad instead
   ipcMain.handle('getURL', () => {
     return store.get('url') || ''
   })

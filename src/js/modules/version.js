@@ -47,11 +47,13 @@ module.exports = {
   CHROME_VERSION,
   CHROME_FULL_VERSION,
   userAgent: createUserAgent(),
+  // UNUSED: This brands array is not used anywhere in the codebase
   brands: [
     { brand: 'Chromium', version: CHROME_VERSION },
     { brand: 'Google Chrome', version: CHROME_VERSION },
     { brand: 'Not?A_Brand', version: '99' },
   ],
+  // UNUSED: This function is not used anywhere in the codebase
   getHeaders: (existingHeaders) => ({
     ...existingHeaders,
     'Sec-CH-UA': `"Chromium";v="${CHROME_VERSION}", "Google Chrome";v="${CHROME_VERSION}", "Not?A_Brand";v="99"`,
