@@ -26,7 +26,62 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     })
   }
+
+  // Watch for navigation changes, especially after login redirects
+  setupNavigationObserver()
 })
+
+// Watch for URL changes after login redirects to dashboard
+function setupNavigationObserver() {
+  let lastUrl = window.location.href
+
+  // Function to check if we've navigated to the dashboard
+  const checkForDashboard = () => {
+    if (window.location.href !== lastUrl) {
+      utils.log('URL changed from', lastUrl, 'to', window.location.href)
+      lastUrl = window.location.href
+
+      // If we've navigated to the dashboard, initialize it
+      if (window.location.href.includes('/protect/dashboard')) {
+        utils.log('Detected navigation to dashboard, initializing UI')
+        initializeDashboardPage()
+      }
+    }
+  }
+
+  // Set up various ways to detect navigation
+
+  // 1. History API
+  const originalPushState = history.pushState
+  const originalReplaceState = history.replaceState
+
+  history.pushState = function () {
+    originalPushState.apply(this, arguments)
+    checkForDashboard()
+  }
+
+  history.replaceState = function () {
+    originalReplaceState.apply(this, arguments)
+    checkForDashboard()
+  }
+
+  // 2. Listen for popstate events
+  window.addEventListener('popstate', checkForDashboard)
+
+  // 3. Check periodically for a short time after login
+  // This handles cases where the other methods don't catch the transition
+  let checkCount = 0
+  const maxChecks = 20 // Check for 10 seconds maximum
+
+  const intervalCheck = setInterval(() => {
+    checkForDashboard()
+    checkCount++
+
+    if (checkCount >= maxChecks) {
+      clearInterval(intervalCheck)
+    }
+  }, 500)
+}
 
 // Separate functions by page type
 function initializePageByType() {
