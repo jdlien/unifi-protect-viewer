@@ -39,6 +39,31 @@ async function waitUntil(condition, timeout = 20000, interval = 100) {
 }
 
 /**
+ * Utility function for logging that only logs in development mode
+ * @param {...any} args - Arguments to log
+ */
+function log(...args) {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(...args)
+  }
+}
+
+/**
+ * Utility function for error logging
+ * Always logs errors but with different verbosity in production vs development
+ * @param {string} message - Error message
+ * @param {Error} error - Error object
+ */
+function logError(message, error) {
+  if (process.env.NODE_ENV === 'development') {
+    console.error(message, error)
+  } else {
+    // In production, log a simplified version without the stack trace
+    console.error(message, error?.message || error)
+  }
+}
+
+/**
  * Wait for a specified amount of time
  * @param {number} amount - Time to wait in milliseconds
  * @returns {Promise<void>}
@@ -118,4 +143,6 @@ module.exports = {
   waitForLiveViewReady,
   setStyle,
   clickElement,
+  log,
+  logError,
 }

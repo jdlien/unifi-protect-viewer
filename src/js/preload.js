@@ -1,14 +1,16 @@
 const { contextBridge, ipcRenderer } = require('electron')
+const isDev = process.env.NODE_ENV === 'development'
 
 // Import modules
 const auth = require('./modules/auth.js')
 const ui = require('./modules/ui.js')
 const navigation = require('./modules/navigation.js')
 const utils = require('./modules/utils.js')
+const { log, logError } = utils
 
 // Run initialization to setup automatic fullscreen and navigation
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('Page loaded, URL:', window.location.href)
+  log('Page loaded, URL:', window.location.href)
 
   // Clear any connection timeout that might exist from the config page
   if (window.connectionTimeoutId) {
@@ -16,53 +18,62 @@ window.addEventListener('DOMContentLoaded', () => {
     window.connectionTimeoutId = null
   }
 
-  // Use a more intelligent approach to detect page readiness
-  const checkPageReady = () => {
-    if (auth.isLoginPage()) {
-      // For login page: check if the login form elements are rendered
-      const loginElements = document.querySelector('form input[type="password"]')
-      if (loginElements) {
-        // console.log('Login page fully loaded, attempting auto-login')
-        auth.attemptLogin()
-        return true
+  // Check page type and initialize appropriate behaviors
+  if (!initializePageByType()) {
+    // If not ready, poll until ready
+    requestAnimationFrame(function pollForPageReady() {
+      if (!initializePageByType()) {
+        requestAnimationFrame(pollForPageReady)
       }
-    } else {
-      // For other pages
-      navigation.setupNavigationMonitor()
-
-      // Check if we're on the dashboard
-      if (document.URL.includes('/protect/dashboard')) {
-        // Use existing utils function for liveview readiness
-        utils
-          .waitForLiveViewReady()
-          .then(() => {
-            ui.handleLiveviewV5()
-          })
-          .catch((error) => {
-            console.error('Error setting up UI customizations:', error)
-          })
-        return true
-      } else {
-        // For non-dashboard pages, we can consider them ready now
-        return true
-      }
-    }
-
-    // If we reach here, the page isn't ready yet
-    return false
-  }
-
-  // Check if the page is ready immediately
-  if (!checkPageReady()) {
-    // If not ready, use requestAnimationFrame to check again
-    const waitForPageReady = () => {
-      if (!checkPageReady()) {
-        requestAnimationFrame(waitForPageReady)
-      }
-    }
-    requestAnimationFrame(waitForPageReady)
+    })
   }
 })
+
+// Separate functions by page type
+function initializePageByType() {
+  if (auth.isLoginPage()) {
+    return initializeLoginPage()
+  } else if (document.URL.includes('/protect/dashboard')) {
+    return initializeDashboardPage()
+  } else {
+    // For non-dashboard pages
+    navigation.setupNavigationMonitor()
+    return true
+  }
+}
+
+function initializeLoginPage() {
+  const loginElements = document.querySelector('form input[type="password"]')
+  if (loginElements) {
+    auth.attemptLogin()
+    return true
+  }
+  return false
+}
+
+function initializeDashboardPage() {
+  navigation.setupNavigationMonitor()
+
+  // Setup UI customizations when liveview is ready
+  try {
+    utils
+      .waitForLiveViewReady()
+      .then(() => {
+        try {
+          ui.handleLiveviewV5()
+        } catch (error) {
+          logError('Error in UI customizations:', error)
+        }
+      })
+      .catch((error) => {
+        logError('Error waiting for liveview:', error)
+      })
+    return true
+  } catch (error) {
+    logError('Error initializing dashboard:', error)
+    return false
+  }
+}
 
 // Set up key event handlers with modern practices
 const handleKeyDown = (event) => {

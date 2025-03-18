@@ -7,6 +7,26 @@ const chromeVersion = require('./src/config/chrome-version')
 // Constants
 const DEFAULT_WIDTH = 1270
 const DEFAULT_HEIGHT = 750
+const isDev = process.env.NODE_ENV === 'development'
+
+// Utility function for logging
+function log(...args) {
+  if (isDev) {
+    console.log(...args)
+  }
+}
+
+// Enable hot reloading in development mode
+if (isDev) {
+  try {
+    require('electron-reloader')(module, {
+      ignore: ['node_modules', 'builds', 'releases'],
+    })
+    log('Electron hot reloading enabled')
+  } catch (err) {
+    console.error('Failed to enable hot reloading:', err)
+  }
+}
 
 // Store initialization
 let store
@@ -14,10 +34,21 @@ const resetRequested = process.argv.includes('--reset')
 
 // Initialize store
 async function initializeStore() {
-  const Store = (await import('electron-store')).default
-  store = new Store()
-  if (resetRequested) {
-    store.clear()
+  try {
+    const Store = (await import('electron-store')).default
+    store = new Store()
+    if (resetRequested) {
+      store.clear()
+    }
+  } catch (error) {
+    console.error('Failed to initialize store:', error)
+    // Create a memory-only store as fallback
+    store = {
+      get: (key) => null,
+      set: () => {},
+      clear: () => {},
+      store: {},
+    }
   }
 }
 
@@ -26,7 +57,7 @@ function configureApp() {
   // Disable hardware acceleration if requested by config
   if (store.get('disableHardwareAcceleration')) {
     app.disableHardwareAcceleration()
-    console.log('Hardware acceleration disabled')
+    log('Hardware acceleration disabled')
   }
 }
 
@@ -58,18 +89,9 @@ async function createWindow() {
   // Set window title
   mainWindow.setTitle(`UniFi Protect Viewer ${app.getVersion()}`)
 
-  // In development mode, enable hot reloading
-  // No need to use import() here since it's only for development
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      require('electron-reloader')(module, {
-        ignore: ['src', 'node_modules', 'builds'],
-      })
-      console.log('Electron hot reloading enabled')
-
-      // Open DevTools in development mode
-      mainWindow.webContents.openDevTools()
-    } catch {}
+  // Open DevTools in development mode
+  if (isDev) {
+    mainWindow.webContents.openDevTools()
   }
 
   // Save window position/size on close
@@ -79,7 +101,7 @@ async function createWindow() {
 
   // Load the initial URL
   const initialUrl = store.get('url') || 'about:blank'
-  console.log(`Loading initial URL: ${initialUrl}`)
+  log(`Loading initial URL: ${initialUrl}`)
   mainWindow.loadURL(initialUrl)
 
   // If no URL is set, navigate to the config page
@@ -88,11 +110,18 @@ async function createWindow() {
     mainWindow.loadURL(configUrl)
   }
 
-  // Remove window.open() restrictions to make any links work
-  // This would ideally be replaced with a more secure approach
+  // Handle external links securely
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    console.log(`Window open request for ${url}`)
-    mainWindow.loadURL(url)
+    log(`Window open request for ${url}`)
+
+    // Only allow navigation to URLs with expected protocols/domains
+    // For the UniFi Protect application, we should only allow URLs related to the Protect system
+    if (url.startsWith(store.get('url') || '') || url.startsWith('file://')) {
+      mainWindow.loadURL(url)
+    } else {
+      log(`Blocked navigation to external URL: ${url}`)
+    }
+
     return { action: 'deny' }
   })
 
@@ -126,20 +155,20 @@ function setupIpcHandlers(mainWindow) {
 
   // Handle URL loading from renderer
   ipcMain.on('loadURL', (event, url) => {
-    console.log(`Loading URL: ${url}`)
+    log(`Loading URL: ${url}`)
     mainWindow.loadURL(url)
   })
 
   // Handle application restart
   ipcMain.on('restart', (event) => {
-    console.log('Restart requested')
+    log('Restart requested')
     app.relaunch()
     app.exit()
   })
 
   // Handle reset request
   ipcMain.on('reset', (event) => {
-    console.log('Reset requested')
+    log('Reset requested')
     store.clear()
   })
 
@@ -168,11 +197,6 @@ async function start() {
   const mainWindow = await createWindow()
   setupIpcHandlers(mainWindow)
 
-  // Open the DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools()
-  }
-
   // Mac: Re-create window when dock icon is clicked and no windows are open
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -180,13 +204,12 @@ async function start() {
 }
 
 // Start the app
-start().catch((e) => {
-  console.error('Error starting app:', e)
+start().catch((error) => {
+  // Always log critical errors to console regardless of environment
+  console.error('Error starting app:', error)
 })
 
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
-
-// In this file you can include the rest of your app's specific main process code
