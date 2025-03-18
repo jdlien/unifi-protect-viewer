@@ -162,6 +162,18 @@ small {
   border-top-color: #5ec700;
 }
 
+/* Red button styles */
+.group button.red {
+  background-color: #c02020;
+  border-top: 1px solid #e03030;
+  border-bottom: 1px solid #901010;
+}
+
+.group button.red:hover {
+  background-color: #d42525;
+  border-top-color: #f04040;
+}
+
 /* Error page styles */
 .error-container {
   background-color: rgba(200, 40, 40, 0.2);
@@ -201,4 +213,25 @@ small {
 
 .button:hover {
   background-color: #0066f5;
+}
+
+/* Spinner styles */
+/* Add keyframes for spinner animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  margin: 20px auto;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #4688f4;
+  animation: spin 1s linear infinite;
 }

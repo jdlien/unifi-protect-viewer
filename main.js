@@ -2,18 +2,11 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
-// electron-store is now an ESM module, use dynamic import
-// const Store = require('electron-store')
-
-// Initialize remote module for compatibility with existing code
-const remoteMain = require('@electron/remote/main')
-remoteMain.initialize()
+const chromeVersion = require('./src/config/chrome-version')
 
 // Constants
 const DEFAULT_WIDTH = 1270
 const DEFAULT_HEIGHT = 750
-const USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
 
 // Store initialization
 let store
@@ -28,23 +21,12 @@ async function initializeStore() {
   }
 }
 
-// Set up the load failure handler that can be reused
-function setupLoadFailureHandler(window) {
-  if (!window.webContents.listenerCount('did-fail-load')) {
-    window.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      // Show error page with option to return to config
-      window.webContents
-        .loadFile('./src/html/error-page.html', {
-          query: {
-            error: errorDescription,
-            url: validatedURL,
-          },
-        })
-        .catch(() => {
-          // Fallback to config page if error page fails
-          window.loadFile('./src/html/config.html')
-        })
-    })
+// Configure any custom app behavior
+function configureApp() {
+  // Disable hardware acceleration if requested by config
+  if (store.get('disableHardwareAcceleration')) {
+    app.disableHardwareAcceleration()
+    console.log('Hardware acceleration disabled')
   }
 }
 
@@ -61,116 +43,150 @@ async function createWindow() {
       nodeIntegration: false, // Disable direct access
       spellcheck: false,
       sandbox: false, // Needed for some functionality
+      nodeIntegrationInWorker: false,
+      nodeIntegrationInSubFrames: false,
+      webSecurity: true,
     },
     icon: path.join(__dirname, '/src/img/128.png'),
     frame: true,
     autoHideMenuBar: true,
   })
 
-  // Enable remote module for this window for backward compatibility
-  remoteMain.enable(mainWindow.webContents)
-
-  // Set custom user agent
-  mainWindow.webContents.setUserAgent(USER_AGENT)
-
-  // Handle certificate errors (self-signed certs)
-  app.commandLine.appendSwitch('ignore-certificate-errors', 'true')
+  // Set custom user agent using dynamic values from chrome-version
+  mainWindow.webContents.setUserAgent(chromeVersion.userAgent)
 
   // Set window title
-  mainWindow.setTitle('UniFi Protect Viewer')
+  mainWindow.setTitle(`UniFi Protect Viewer ${app.getVersion()}`)
 
-  // Disable automatic app title updates
-  mainWindow.on('page-title-updated', (e) => e.preventDefault())
+  // In development mode, enable hot reloading
+  // No need to use import() here since it's only for development
+  if (process.env.NODE_ENV === 'development') {
+    try {
+      require('electron-reloader')(module, {
+        ignore: ['src', 'node_modules', 'builds'],
+      })
+      console.log('Electron hot reloading enabled')
 
-  // Save window bounds on close
+      // Open DevTools in development mode
+      mainWindow.webContents.openDevTools()
+    } catch {}
+  }
+
+  // Save window position/size on close
   mainWindow.on('close', () => {
     store.set('bounds', mainWindow.getBounds())
   })
 
-  // Set up error handling
-  setupLoadFailureHandler(mainWindow)
+  // Load the initial URL
+  const initialUrl = store.get('url') || 'about:blank'
+  console.log(`Loading initial URL: ${initialUrl}`)
+  mainWindow.loadURL(initialUrl)
 
-  // Load the correct starting page
-  await loadStartPage(mainWindow)
-}
-
-// Load the correct starting page based on configuration
-async function loadStartPage(window) {
-  // Check if we have a saved configuration
-  const hasConfig = store.has('config') && store.get('config')?.url
-
-  try {
-    if (!hasConfig) {
-      // No config - load config page
-      await window.loadFile('./src/html/config.html')
-    } else {
-      // We have a config - try to load the URL directly
-      const config = store.get('config')
-      await window.loadURL(config.url)
-    }
-  } catch (error) {
-    // Fall back to the config page
-    await window.loadFile('./src/html/config.html')
+  // If no URL is set, navigate to the config page
+  if (initialUrl === 'about:blank') {
+    const configUrl = `file://${path.join(__dirname, 'src/html/config.html')}`
+    mainWindow.loadURL(configUrl)
   }
-}
 
-// Set up IPC handlers
-function setupIPC() {
-  // Configuration handlers
-  ipcMain.handle('configLoad', () => store.get('config'))
-  ipcMain.on('configSave', (event, config) => store.set('config', config))
-
-  // App control handlers
-  ipcMain.on('reset', () => store.clear())
-  ipcMain.on('restart', () => {
-    app.quit()
-    app.relaunch()
+  // Remove window.open() restrictions to make any links work
+  // This would ideally be replaced with a more secure approach
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log(`Window open request for ${url}`)
+    mainWindow.loadURL(url)
+    return { action: 'deny' }
   })
 
-  // Add direct URL loading handler
-  ipcMain.on('loadURL', (event, url) => {
-    const mainWindow = BrowserWindow.getFocusedWindow()
-    if (mainWindow) {
-      setupLoadFailureHandler(mainWindow)
-      mainWindow.loadURL(url)
+  return mainWindow
+}
+
+// IPC handlers for communication between renderer and main process
+function setupIpcHandlers(mainWindow) {
+  // Load saved configs and credentials
+  ipcMain.handle('configLoad', () => {
+    return store.store
+  })
+
+  // Handle getURL request to return current URL
+  ipcMain.handle('getURL', () => {
+    return store.get('url') || ''
+  })
+
+  // Save changes to config
+  ipcMain.on('configSave', (event, config) => {
+    // Merge incoming config changes with existing store
+    const updatedConfig = { ...store.store, ...config }
+    store.set(updatedConfig)
+
+    // Only reload the URL if this is a navigation change (has URL and credentials)
+    // and not just a UI preference update
+    if (config.url && config.username && config.password) {
+      mainWindow.loadURL(config.url)
     }
   })
 
-  // Dialog handlers
-  ipcMain.handle('showResetConfirmation', async () => {
-    const result = await dialog.showMessageBox({
-      type: 'question',
+  // Handle URL loading from renderer
+  ipcMain.on('loadURL', (event, url) => {
+    console.log(`Loading URL: ${url}`)
+    mainWindow.loadURL(url)
+  })
+
+  // Handle application restart
+  ipcMain.on('restart', (event) => {
+    console.log('Restart requested')
+    app.relaunch()
+    app.exit()
+  })
+
+  // Handle reset request
+  ipcMain.on('reset', (event) => {
+    console.log('Reset requested')
+    store.clear()
+  })
+
+  // Handle reset confirmation dialog
+  ipcMain.handle('showResetConfirmation', async (event) => {
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: 'Reset Configuration',
+      message: 'Are you sure you want to reset all settings?',
+      detail: 'This will clear all your saved settings including credentials.',
       buttons: ['Cancel', 'Reset'],
       defaultId: 0,
-      title: 'Confirm Reset',
-      message: 'Are you sure you want to reset the app settings?',
+      cancelId: 0,
     })
-    return result.response === 1 // Returns true if 'Reset' was clicked
+
+    return result.response === 1 // Return true if "Reset" was clicked
   })
 }
 
-// App initialization
-app.whenReady().then(async () => {
-  // Choose one certificate handling approach - either this:
-  /*
-  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-    // Allow all certificates - this is necessary for self-signed certs
-    event.preventDefault()
-    callback(true)
-  })
-  */
-  // OR the app.commandLine.appendSwitch() in createWindow function, not both
-
+// Wait until Electron app is ready
+async function start() {
+  await app.whenReady()
   await initializeStore()
-  setupIPC()
-  await createWindow()
+  configureApp()
 
-  app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) await createWindow()
+  const mainWindow = await createWindow()
+  setupIpcHandlers(mainWindow)
+
+  // Open the DevTools in development mode
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools()
+  }
+
+  // Mac: Re-create window when dock icon is clicked and no windows are open
+  app.on('activate', function () {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+}
+
+// Start the app
+start().catch((e) => {
+  console.error('Error starting app:', e)
 })
 
 // Quit when all windows are closed, except on macOS
-app.on('window-all-closed', () => {
+app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
+
+// In this file you can include the rest of your app's specific main process code

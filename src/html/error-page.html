@@ -47,13 +47,25 @@
 
       <p>Please verify the URL and try again.</p>
 
-      <div class="button" id="configButton">Return to Configuration</div>
-      <div class="button" id="retryButton">Retry Connection</div>
+      <div class="group">
+        <button type="button" id="configButton">Return to Configuration</button>
+      </div>
 
+      <div class="group">
+        <button type="button" id="retryButton">Retry Connection</button>
+      </div>
+
+      <div id="spinner" class="spinner" style="display: none"></div>
       <p id="statusMessage" class="text-center"></p>
     </main>
 
     <script>
+      // Clear any connection timeout that might exist from the config page
+      if (window.connectionTimeoutId) {
+        clearTimeout(window.connectionTimeoutId)
+        window.connectionTimeoutId = null
+      }
+
       // Parse query parameters to get error details
       const urlParams = new URLSearchParams(window.location.search)
       const errorMessage = urlParams.get('error') || 'Connection failed'
@@ -66,8 +78,8 @@
       // Button event handlers
       document.getElementById('configButton').addEventListener('click', () => {
         // Go back to config page
-        window.electronAPI
-          .loadConfig()
+        window.electronAPI.config
+          .load()
           .then((config) => {
             // Load the configuration page
             window.location.href = 'config.html'
@@ -83,6 +95,22 @@
         // Retry the connection
         if (targetUrl) {
           document.getElementById('statusMessage').textContent = 'Retrying connection...'
+
+          // Show spinner and disable retry button
+          document.getElementById('spinner').style.display = 'block'
+          document.getElementById('retryButton').disabled = true
+
+          // Set timeout for connection
+          const connectionTimeout = setTimeout(() => {
+            document.getElementById('statusMessage').textContent = 'Connection timed out. Please try again.'
+            document.getElementById('spinner').style.display = 'none'
+            document.getElementById('retryButton').disabled = false
+          }, 15000) // 15 seconds timeout
+
+          // Store the timeout ID
+          window.connectionTimeoutId = connectionTimeout
+
+          // Attempt to load the URL
           window.electronAPI.loadURL(targetUrl)
         } else {
           document.getElementById('statusMessage').textContent = 'No URL to retry'

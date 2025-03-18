@@ -1,35 +1,32 @@
-"use strict";
+#!/usr/bin/env node
+const fs = require('node:fs')
+const path = require('node:path')
 
-const fs = require("node:fs");
+// Get current directory
+const __dirname = path.dirname(require.main.filename)
 
-const packageJSON = JSON.parse(fs.readFileSync("package.json"));
+// Get version from package.json
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'))
+const version = packageJson.version
 
-const baseName = "UniFi Protect Viewer";
-const version = packageJSON["version"];
+const baseName = 'UniFi Protect Viewer'
 
-console.log("rename", baseName, version);
-console.log("=========================");
+console.log('rename', baseName, version)
 
-fs.readdirSync("builds").forEach((file) => {
-  if (!fs.lstatSync("builds/" + file).isDirectory()) {
-    console.log(`skip ${file}, only rename dirs`);
-    return;
-  }
+// List directories under builds/
+const buildDirs = fs.readdirSync('builds').filter((file) => {
+  return fs.statSync(path.join('builds', file)).isDirectory()
+})
 
-  if (file.includes(version)) {
-    console.log(`skip ${file}, version already in name`);
-    return;
-  }
+// Rename each directory to include version
+buildDirs.forEach((file) => {
+  const portable = file.includes('portable')
+  const arch = file.replace(`${baseName}${portable ? '-portable' : ''}-`, '')
 
-  const portable = file.includes("portable");
+  const oldName = path.join('builds', file)
+  const newName = path.join('builds', `${baseName}-${arch}-${version}${portable ? '-portable' : ''}`)
+  console.log(`rename ${oldName} to ${newName}`)
+  fs.renameSync(oldName, newName)
+})
 
-  const arch = file.replace(`${baseName}${portable ? "-portable" : ""}-`, "");
-
-  const oldName = `builds/${file}`;
-  const newName = `builds/${baseName}-${arch}-${version}${portable ? "-portable" : ""}`;
-  console.log(`rename ${oldName} to ${newName}`);
-  fs.renameSync(oldName, newName);
-});
-
-console.log("=========================");
-console.log("rename finished");
+console.log('Done renaming build directories')
