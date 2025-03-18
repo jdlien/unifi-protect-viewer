@@ -158,7 +158,7 @@
             window.electronAPI.loadURL(config.url)
 
             // Set a timeout to show error if connection takes too long
-            window.electronAPI.timeouts.setTimeout(
+            window.electronAPI.timeouts.setTrackedTimeout(
               'connection',
               () => {
                 statusEl.textContent = 'Connection timed out. Please check the URL and try again.'

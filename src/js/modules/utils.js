@@ -1,40 +1,38 @@
 /**
- * Wait until a condition is met
+ * Waiting for DOM elements to be ready
  * @param {Function} condition - Condition function that returns a boolean
  * @param {number} timeout - Maximum time to wait in milliseconds
  * @param {number} interval - Check interval in milliseconds
- * @returns {Promise<boolean>} - Resolves to true if condition is met, false if timed out
+ * @returns {Promise<void>} - Resolves when condition is met, rejects on timeout
  */
-async function waitUntil(condition, timeout = 20000, interval = 100) {
-  return new Promise((resolve, reject) => {
-    // If condition is already true, resolve immediately
-    if (condition()) {
-      return resolve(true)
-    }
+async function waitUntil(condition, timeout = 30000, interval = 20) {
+  // Try the condition immediately first
+  try {
+    if (condition()) return
+  } catch (error) {
+    // Ignore initial errors, will retry
+  }
 
-    // Set up the interval check
+  return new Promise((resolve, reject) => {
+    let startTime = Date.now()
+
     const intervalId = setInterval(() => {
+      // Check if we've timed out
+      if (Date.now() - startTime > timeout) {
+        clearInterval(intervalId)
+        return reject(new Error('Timeout waiting for condition'))
+      }
+
+      // Check the condition safely
       try {
         if (condition()) {
           clearInterval(intervalId)
-          clearTimeout(timeoutId)
-          resolve(true)
+          resolve()
         }
       } catch (error) {
-        clearInterval(intervalId)
-        clearTimeout(timeoutId)
-        reject(error)
+        // Don't fail on transient DOM errors, unless we time out
       }
     }, interval)
-
-    // Set up the timeout
-    const timeoutId =
-      timeout !== -1
-        ? setTimeout(() => {
-            clearInterval(intervalId)
-            resolve(false) // Resolve with false rather than rejecting
-          }, timeout)
-        : null
   })
 }
 
@@ -73,40 +71,6 @@ async function wait(amount) {
 }
 
 /**
- * Wait for live view to be ready by checking for various loading indicators
- * @returns {Promise<boolean>} - Resolves to true when ready
- */
-async function waitForLiveViewReady() {
-  // Wait for the loader screen to disappear
-  await waitUntil(() => document.querySelectorAll('[data-testid="loader-screen"]').length === 0)
-
-  // Wait for the skeleton view to disappear
-  await waitUntil(() => {
-    const skeletonViews = document.querySelectorAll('[class*="Pages__LoadingOverlay"]')
-    return skeletonViews.length === 0
-  })
-
-  // Wait for key elements to be present
-  await waitUntil(
-    () =>
-      document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0 &&
-      document.querySelectorAll('[class^=dashboard__Content]').length > 0 &&
-      document.querySelectorAll('[data-testid="option"]').length > 0,
-  )
-
-  // Additional check: wait for any loading indicators to disappear
-  await waitUntil(() => {
-    const loadingElements = document.querySelectorAll('[class*="loading"], [class*="Loading"]')
-    return loadingElements.length === 0
-  })
-
-  // Wait a short moment to ensure any final rendering is complete
-  await wait(500)
-
-  return true
-}
-
-/**
  * Set a style property on an element
  * @param {HTMLElement} element - The element to style
  * @param {string} style - The CSS property to set
@@ -140,7 +104,6 @@ function clickElement(element) {
 module.exports = {
   waitUntil,
   wait,
-  waitForLiveViewReady,
   setStyle,
   clickElement,
   log,

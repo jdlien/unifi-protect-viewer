@@ -8,7 +8,13 @@ const ui = require('./ui.js')
  */
 async function waitForDashboardReady() {
   try {
-    return await utils.waitForLiveViewReady()
+    await utils.waitUntil(
+      () =>
+        document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0 &&
+        document.querySelectorAll('[class^=dashboard__Content]').length > 0,
+    )
+
+    return true
   } catch (error) {
     utils.logError('Error waiting for LiveView readiness:', error)
     return false

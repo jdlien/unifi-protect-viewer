@@ -49,7 +49,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Timeout management
   timeouts: {
-    setTimeout: timeouts.setTimeout,
+    setTrackedTimeout: timeouts.setTrackedTimeout,
     clearTimeout: timeouts.clearTimeout,
     clearAllTimeouts: timeouts.clearAllTimeouts,
   },

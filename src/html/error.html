@@ -110,7 +110,7 @@
           document.getElementById('retryButton').disabled = true
 
           // Set timeout for connection
-          window.electronAPI.timeouts.setTimeout(
+          window.electronAPI.timeouts.setTrackedTimeout(
             'connection',
             () => {
               document.getElementById('statusMessage').textContent = 'Connection timed out. Please try again.'

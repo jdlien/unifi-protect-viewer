@@ -15,7 +15,7 @@ const activeTimeouts = {
  * @param {number} duration - Time in milliseconds
  * @returns {number} - The timeout ID
  */
-function setTimeout(purpose, callback, duration) {
+function setTrackedTimeout(purpose, callback, duration) {
   // Clear any existing timeout for this purpose
   clearTimeout(purpose)
 
@@ -53,7 +53,7 @@ function clearAllTimeouts() {
 }
 
 module.exports = {
-  setTimeout,
+  setTrackedTimeout,
   clearTimeout,
   clearAllTimeouts,
 }
