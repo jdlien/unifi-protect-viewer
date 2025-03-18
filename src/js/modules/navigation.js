@@ -2,6 +2,7 @@
 const ui = require('./ui.js')
 const utils = require('./utils.js')
 const auth = require('./auth.js')
+const dashboard = require('./dashboard.js')
 
 /**
  * Setup navigation monitoring to detect URL changes in SPA
@@ -39,16 +40,10 @@ function setupNavigationMonitor() {
   // Apply dashboard customizations with retry mechanism
   const applyDashboardCustomizations = async () => {
     try {
-      // First check if LiveView is already ready
-      const isReady = await utils.waitForLiveViewReady().catch(() => false)
-
-      if (isReady) {
-        utils.log('LiveView is ready, applying customizations')
-        ui.handleLiveviewV5()
-        ui.handleDashboardButton()
-      } else {
-        utils.log('LiveView not ready yet, will retry')
-        // If not ready, try again in a moment
+      // Use the new dashboard module instead of direct implementation
+      const success = await dashboard.initializeDashboard()
+      if (!success) {
+        utils.log('Dashboard not ready yet, will retry')
         setTimeout(applyDashboardCustomizations, 500)
       }
     } catch (error) {

@@ -282,26 +282,16 @@ function toggleNavigation() {
  * @returns {boolean} True if initialization was successful
  */
 function initializeDashboardPage() {
-  // This function now delegates to navigation module which will be imported in the implementation
-  // We can't require navigation.js here due to circular dependencies
+  // This function now defers to the centralized dashboard module
+  const dashboard = require('./dashboard.js')
 
-  // Setup UI customizations when liveview is ready
+  // Delegate to the dashboard module for initialization
+  // But return true immediately as dashboard module will handle retries
   try {
-    utils
-      .waitForLiveViewReady()
-      .then(() => {
-        try {
-          handleLiveviewV5()
-        } catch (error) {
-          utils.logError('Error in UI customizations:', error)
-        }
-      })
-      .catch((error) => {
-        utils.logError('Error waiting for liveview:', error)
-      })
+    dashboard.initializeDashboard()
     return true
   } catch (error) {
-    utils.logError('Error initializing dashboard:', error)
+    utils.logError('Error delegating to dashboard module:', error)
     return false
   }
 }
