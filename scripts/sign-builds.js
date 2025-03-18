@@ -9,6 +9,14 @@ const buildsDir = path.resolve(__dirname, '../builds')
 // Code signing identity
 const DEVELOPER_ID = 'Developer ID Application: Joseph Lien (A93Q7MKECL)'
 
+// Clear any existing notarization log
+const notarizationLogPath = path.resolve(__dirname, '../notarization-log.json')
+if (fs.existsSync(notarizationLogPath)) {
+  console.log('Clearing previous notarization log...')
+  fs.writeFileSync(notarizationLogPath, '{}')
+  console.log('Previous notarization log cleared')
+}
+
 // Helper: Sign macOS app bundle
 function signMacOSApp(appPath) {
   console.log(`Signing app bundle: ${appPath}`)
@@ -69,6 +77,38 @@ function signMacOSApp(appPath) {
       }
     }
 
+    // Sign the problematic libraries that were flagged in notarization
+    console.log('Signing problematic libraries...')
+
+    // libEGL.dylib
+    const libEGLPath = `${appPath}/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libEGL.dylib`
+    if (fs.existsSync(libEGLPath)) {
+      console.log('Signing libEGL.dylib...')
+      execSync(`codesign --force --options runtime --timestamp --sign "${DEVELOPER_ID}" --no-strict "${libEGLPath}"`, {
+        stdio: 'inherit',
+      })
+    }
+
+    // libGLESv2.dylib
+    const libGLESv2Path = `${appPath}/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libGLESv2.dylib`
+    if (fs.existsSync(libGLESv2Path)) {
+      console.log('Signing libGLESv2.dylib...')
+      execSync(
+        `codesign --force --options runtime --timestamp --sign "${DEVELOPER_ID}" --no-strict "${libGLESv2Path}"`,
+        { stdio: 'inherit' },
+      )
+    }
+
+    // Sign the Squirrel ShipIt executable
+    const shipItPath = `${appPath}/Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt`
+    if (fs.existsSync(shipItPath)) {
+      console.log('Signing Squirrel ShipIt...')
+      execSync(
+        `codesign --force --options runtime --entitlements "${entitlementsPath}" --timestamp --sign "${DEVELOPER_ID}" "${shipItPath}"`,
+        { stdio: 'inherit' },
+      )
+    }
+
     // Sign the Electron Framework - Do this next
     console.log('Signing Electron Framework...')
     execSync(
@@ -76,12 +116,25 @@ function signMacOSApp(appPath) {
       { stdio: 'inherit' },
     )
 
+    // Sign Squirrel framework specifically
+    console.log('Signing Squirrel Framework...')
+    const squirrelFrameworkPath = `${appPath}/Contents/Frameworks/Squirrel.framework`
+    if (fs.existsSync(squirrelFrameworkPath)) {
+      execSync(
+        `codesign --force --deep --options runtime --entitlements "${entitlementsPath}" --timestamp --sign "${DEVELOPER_ID}" "${squirrelFrameworkPath}"`,
+        { stdio: 'inherit' },
+      )
+    }
+
     // Sign all other frameworks
     console.log('Signing other frameworks...')
     const frameworksDir = `${appPath}/Contents/Frameworks`
     const frameworks = fs
       .readdirSync(frameworksDir)
-      .filter((item) => item.endsWith('.framework') && item !== 'Electron Framework.framework')
+      .filter(
+        (item) =>
+          item.endsWith('.framework') && item !== 'Electron Framework.framework' && item !== 'Squirrel.framework',
+      )
       .map((item) => path.join(frameworksDir, item))
 
     for (const framework of frameworks) {
@@ -136,22 +189,33 @@ function notarizeMacOSApp(appPath, bundleId) {
 
     // Submit for notarization with additional options
     console.log(`Submitting for notarization (this may take a while)...`)
-    const result = execSync(`xcrun notarytool submit "${tempZipPath}" --keychain-profile "notarytool-profile" --wait`, {
+
+    // Step 1: Show upload progress by using inherit for stdio
+    execSync(`xcrun notarytool submit "${tempZipPath}" --keychain-profile "notarytool-profile" --wait`, {
+      stdio: 'inherit',
+    })
+
+    // Step 2: Get the submission ID by requesting the most recent submission
+    console.log('Getting submission info...')
+    const submissionInfo = execSync(`xcrun notarytool history --keychain-profile "notarytool-profile" --limit 1`, {
       stdio: 'pipe',
       encoding: 'utf-8',
     })
 
-    console.log(result)
+    const submissionIdMatch = submissionInfo.match(/id:[\s]+([a-f0-9-]+)/)
+    const statusMatch = submissionInfo.match(/status:[\s]+(\w+)/)
 
-    // Extract submission ID from the result
-    const submissionIdMatch = result.match(/id: ([a-f0-9-]+)/)
     const submissionId = submissionIdMatch ? submissionIdMatch[1] : null
+    const status = statusMatch ? statusMatch[1] : null
 
-    if (submissionId) {
-      // Check if the notarization was successful
-      if (result.includes('status: Invalid')) {
-        console.log('Notarization failed. Fetching detailed logs...')
+    console.log(`Recent submission ID: ${submissionId || 'Unknown'}`)
+    console.log(`Submission status: ${status || 'Unknown'}`)
 
+    // Check if notarization was successful
+    if (status !== 'Accepted') {
+      console.log('Notarization not successful. Fetching detailed logs...')
+
+      if (submissionId) {
         // Get detailed log for the failed notarization
         const logPath = path.resolve(__dirname, '../notarization-log.json')
         execSync(`xcrun notarytool log ${submissionId} --keychain-profile "notarytool-profile" ${logPath}`, {
@@ -161,7 +225,6 @@ function notarizeMacOSApp(appPath, bundleId) {
         console.log('Detailed notarization logs saved to notarization-log.json')
         console.log('Please check this file to see why notarization failed.')
 
-        // Add some common issues and solutions
         console.log('\nCommon notarization issues:')
         console.log('1. Info.plist missing required entries (CFBundleIdentifier, CFBundleVersion)')
         console.log('2. App not signed with hardened runtime')
@@ -169,6 +232,8 @@ function notarizeMacOSApp(appPath, bundleId) {
         console.log('4. Signing problems with embedded binaries')
 
         throw new Error('Notarization failed - see log for details')
+      } else {
+        throw new Error('Notarization failed and submission ID could not be determined')
       }
     }
 
