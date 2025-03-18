@@ -189,6 +189,15 @@ function setupIpcHandlers(mainWindow) {
     }
   })
 
+  // Handle partial config updates (for things like login attempts)
+  ipcMain.handle('configSavePartial', (event, partialConfig) => {
+    // Update only the specified config values
+    Object.entries(partialConfig).forEach(([key, value]) => {
+      store.set(key, value)
+    })
+    return true
+  })
+
   // Handle URL loading from renderer
   ipcMain.on('loadURL', (event, url) => {
     log(`Loading URL: ${url}`)

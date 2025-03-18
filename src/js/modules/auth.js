@@ -1,8 +1,10 @@
 const { ipcRenderer } = require('electron')
 
-// Track login attempts to prevent infinite loops
-let loginAttempts = 0
+// Constants
 const MAX_LOGIN_ATTEMPTS = 3
+const LOGIN_ATTEMPTS_KEY = 'loginAttempts'
+const ATTEMPTS_RESET_TIME_KEY = 'loginAttemptsResetTime'
+const RESET_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 /**
  * Check if this is a login page
@@ -27,20 +29,62 @@ function isLoginPage() {
 }
 
 /**
+ * Get current login attempts from store
+ * @returns {Promise<{attempts: number, resetTime: number}>} Current attempts and reset timestamp
+ */
+async function getLoginAttempts() {
+  const config = await ipcRenderer.invoke('configLoad')
+  const attempts = config?.[LOGIN_ATTEMPTS_KEY] || 0
+  const resetTime = config?.[ATTEMPTS_RESET_TIME_KEY] || 0
+
+  // Check if the reset time has passed
+  const now = Date.now()
+  if (resetTime > 0 && now > resetTime) {
+    // Reset attempts if timeout has passed
+    await updateLoginAttempts(0, 0)
+    return { attempts: 0, resetTime: 0 }
+  }
+
+  return { attempts, resetTime }
+}
+
+/**
+ * Update login attempts in the store
+ * @param {number} attempts - Number of attempts
+ * @param {number} resetTime - Timestamp when attempts should reset
+ */
+async function updateLoginAttempts(attempts, resetTime) {
+  const updates = {
+    [LOGIN_ATTEMPTS_KEY]: attempts,
+    [ATTEMPTS_RESET_TIME_KEY]: resetTime,
+  }
+  await ipcRenderer.invoke('configSavePartial', updates)
+}
+
+/**
  * Login handler - attempt to fill in credentials and submit
  * @returns {Promise<boolean>} True if login attempted successfully
  */
 async function attemptLogin() {
-  console.log(`Login attempt ${loginAttempts + 1}/${MAX_LOGIN_ATTEMPTS}`)
-
-  // Increment attempt counter and check max attempts
-  loginAttempts++
-  if (loginAttempts > MAX_LOGIN_ATTEMPTS) {
-    console.error('Maximum login attempts reached, stopping auto-login')
-    return false
-  }
-
   try {
+    // Get current login attempts from persistent storage
+    const { attempts } = await getLoginAttempts()
+    const currentAttempts = attempts + 1
+
+    console.log(`Login attempt ${currentAttempts}/${MAX_LOGIN_ATTEMPTS}`)
+
+    // Check max attempts
+    if (currentAttempts > MAX_LOGIN_ATTEMPTS) {
+      console.error('Maximum login attempts reached, stopping auto-login')
+      return false
+    }
+
+    // Set reset time if this is the first attempt
+    const resetTime = currentAttempts === 1 ? Date.now() + RESET_TIMEOUT_MS : Date.now() + RESET_TIMEOUT_MS
+
+    // Update attempt counter in persistent storage
+    await updateLoginAttempts(currentAttempts, resetTime)
+
     // Load credentials
     const config = await ipcRenderer.invoke('configLoad')
     if (!config?.username || !config?.password) {
@@ -71,8 +115,6 @@ async function attemptLogin() {
       })
       return false
     }
-
-    // console.log('Found all login form elements, filling credentials')
 
     // Fill in credentials
     usernameField.value = config.username
@@ -107,7 +149,16 @@ async function attemptLogin() {
   }
 } // end attemptLogin
 
+/**
+ * Reset login attempts counter
+ * Call after successful login
+ */
+async function resetLoginAttempts() {
+  await updateLoginAttempts(0, 0)
+}
+
 module.exports = {
   isLoginPage,
   attemptLogin,
+  resetLoginAttempts,
 }

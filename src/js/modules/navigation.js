@@ -1,6 +1,7 @@
 // Import the UI functions we need
 const ui = require('./ui.js')
 const utils = require('./utils.js')
+const auth = require('./auth.js')
 
 /**
  * Setup navigation monitoring to detect URL changes in SPA
@@ -19,8 +20,14 @@ function setupNavigationMonitor() {
 
       // Handle different navigation scenarios
       if (lastUrl.includes('/protect/dashboard')) {
-        // Navigated to dashboard
+        // Navigated to dashboard - this means login was successful
         utils.log('Dashboard page detected, applying UI customizations')
+
+        // Reset login attempts counter on successful login
+        auth.resetLoginAttempts().catch((err) => {
+          utils.logError('Failed to reset login attempts counter:', err)
+        })
+
         applyDashboardCustomizations()
       } else {
         // For non-dashboard pages, just update the dashboard button
