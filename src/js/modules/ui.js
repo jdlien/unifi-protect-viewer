@@ -277,6 +277,82 @@ function toggleNavigation() {
   handleDashboardButton()
 }
 
+/**
+ * Initialize dashboard page with UI customizations
+ * @returns {boolean} True if initialization was successful
+ */
+function initializeDashboardPage() {
+  // This function now delegates to navigation module which will be imported in the implementation
+  // We can't require navigation.js here due to circular dependencies
+
+  // Setup UI customizations when liveview is ready
+  try {
+    utils
+      .waitForLiveViewReady()
+      .then(() => {
+        try {
+          handleLiveviewV5()
+        } catch (error) {
+          utils.logError('Error in UI customizations:', error)
+        }
+      })
+      .catch((error) => {
+        utils.logError('Error waiting for liveview:', error)
+      })
+    return true
+  } catch (error) {
+    utils.logError('Error initializing dashboard:', error)
+    return false
+  }
+}
+
+/**
+ * Handle keyboard shortcuts
+ * @param {KeyboardEvent} event - Keyboard event
+ */
+function handleKeyboardShortcuts(event) {
+  // F10 for reset
+  if (event.key === 'F10') {
+    if (event.shiftKey) {
+      // Force reset with Shift+F10
+      ipcRenderer.send('reset')
+      ipcRenderer.send('restart')
+    } else {
+      // Show confirmation dialog
+      ipcRenderer.invoke('showResetConfirmation').then((confirmed) => {
+        if (confirmed) {
+          ipcRenderer.send('reset')
+          ipcRenderer.send('restart')
+        }
+      })
+    }
+  }
+
+  // F9 for restart
+  if (event.key === 'F9') {
+    ipcRenderer.send('restart')
+  }
+
+  // Escape to toggle UI elements
+  if (event.key === 'Escape') {
+    // Prevent page reload
+    event.preventDefault()
+    toggleNavigation()
+  }
+}
+
+/**
+ * Set up keyboard shortcut handling
+ */
+function setupKeyboardShortcuts() {
+  window.addEventListener('keydown', handleKeyboardShortcuts)
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('keydown', handleKeyboardShortcuts)
+  }
+}
+
 // Export the functions
 module.exports = {
   handleLiveviewV5,
@@ -285,4 +361,6 @@ module.exports = {
   handleDashboardButton,
   setDashboardButtonVisibility,
   toggleNavigation,
+  initializeDashboardPage,
+  setupKeyboardShortcuts,
 }

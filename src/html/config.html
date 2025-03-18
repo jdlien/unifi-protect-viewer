@@ -158,16 +158,17 @@
             window.electronAPI.loadURL(config.url)
 
             // Set a timeout to show error if connection takes too long
-            const connectionTimeout = setTimeout(() => {
-              statusEl.textContent = 'Connection timed out. Please check the URL and try again.'
+            window.electronAPI.timeouts.setTimeout(
+              'connection',
+              () => {
+                statusEl.textContent = 'Connection timed out. Please check the URL and try again.'
 
-              // Hide spinner and reset form buttons
-              document.getElementById('spinner').style.display = 'none'
-              document.getElementById('connectBtn').disabled = false
-            }, 15000) // 15 seconds timeout
-
-            // Store the timeout ID in window so it can be cleared if needed
-            window.connectionTimeoutId = connectionTimeout
+                // Hide spinner and reset form buttons
+                document.getElementById('spinner').style.display = 'none'
+                document.getElementById('connectBtn').disabled = false
+              },
+              15000,
+            ) // 15 seconds timeout
           } catch (error) {
             console.error('Error connecting to site:', error)
             statusEl.textContent = 'Error connecting to site'
@@ -183,9 +184,7 @@
       async function resetApp() {
         try {
           // Clear any existing connection timeout
-          if (window.connectionTimeoutId) {
-            clearTimeout(window.connectionTimeoutId)
-          }
+          window.electronAPI.timeouts.clearTimeout('connection')
 
           const confirmed = await window.electronAPI.showResetConfirmation()
           if (confirmed) {

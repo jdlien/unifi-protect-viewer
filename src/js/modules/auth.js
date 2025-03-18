@@ -157,8 +157,22 @@ async function resetLoginAttempts() {
   await updateLoginAttempts(0, 0)
 }
 
+/**
+ * Initialize the login page by finding and auto-filling login form
+ * @returns {boolean} True if login form was found and filled
+ */
+function initializeLoginPage() {
+  const loginElements = document.querySelector('form input[type="password"]')
+  if (loginElements) {
+    attemptLogin()
+    return true
+  }
+  return false
+}
+
 module.exports = {
   isLoginPage,
   attemptLogin,
   resetLoginAttempts,
+  initializeLoginPage,
 }

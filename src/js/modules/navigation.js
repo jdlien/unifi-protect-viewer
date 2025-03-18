@@ -49,7 +49,7 @@ function setupNavigationMonitor() {
       } else {
         utils.log('LiveView not ready yet, will retry')
         // If not ready, try again in a moment
-        setTimeout(applyDashboardCustomizations, 1000)
+        setTimeout(applyDashboardCustomizations, 500)
       }
     } catch (error) {
       utils.logError('Error applying dashboard customizations:', error)
@@ -78,14 +78,34 @@ function setupNavigationMonitor() {
     window.addEventListener(event, listener)
   })
 
-  // Initial call to set up UI
-  setTimeout(() => {
-    if (window.location.href.includes('/protect/dashboard')) {
-      applyDashboardCustomizations()
+  // Initialize UI based on page readiness
+  function initializeUI() {
+    // Check if document is already interactive or complete
+    if (document.readyState !== 'loading') {
+      // DOM already ready, initialize immediately
+      if (window.location.href.includes('/protect/dashboard')) {
+        applyDashboardCustomizations()
+      } else {
+        ui.handleDashboardButton()
+      }
     } else {
-      ui.handleDashboardButton()
+      // Wait for DOM to be ready before initializing
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+          if (window.location.href.includes('/protect/dashboard')) {
+            applyDashboardCustomizations()
+          } else {
+            ui.handleDashboardButton()
+          }
+        },
+        { once: true },
+      )
     }
-  }, 1000)
+  }
+
+  // Replace the setTimeout call with the new function
+  initializeUI()
 
   // The cleanup function is not currently used, but we'll improve it anyway
   // for future maintainability
@@ -95,8 +115,46 @@ function setupNavigationMonitor() {
       window.removeEventListener(event, eventListeners[event])
     })
   }
-}
+} // End of setupNavigationMonitor
+
+/**
+ * Initialize the application based on the current page type
+ * @returns {boolean} True if initialization was successful
+ */
+function initializePageByType() {
+  // Check the current page type and initialize accordingly
+  if (auth.isLoginPage()) {
+    return auth.initializeLoginPage()
+  } else if (window.location.href.includes('/protect/dashboard')) {
+    // Set up navigation monitoring first
+    setupNavigationMonitor()
+
+    // Then initialize dashboard UI
+    return ui.initializeDashboardPage()
+  } else {
+    // For other pages, just set up navigation monitoring
+    setupNavigationMonitor()
+    return true
+  }
+} // End of initializePageByType
+
+/**
+ * Initialize page with readiness polling if needed
+ */
+function initializeWithPolling() {
+  // First attempt at initialization
+  if (!initializePageByType()) {
+    // If not ready, poll until ready
+    requestAnimationFrame(function pollForPageReady() {
+      if (!initializePageByType()) {
+        requestAnimationFrame(pollForPageReady)
+      }
+    })
+  }
+} // End of initializeWithPolling
 
 module.exports = {
   setupNavigationMonitor,
+  initializePageByType,
+  initializeWithPolling,
 }

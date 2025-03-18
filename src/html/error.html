@@ -110,14 +110,15 @@
           document.getElementById('retryButton').disabled = true
 
           // Set timeout for connection
-          const connectionTimeout = setTimeout(() => {
-            document.getElementById('statusMessage').textContent = 'Connection timed out. Please try again.'
-            document.getElementById('spinner').style.display = 'none'
-            document.getElementById('retryButton').disabled = false
-          }, 15000) // 15 seconds timeout
-
-          // Store the timeout ID
-          window.connectionTimeoutId = connectionTimeout
+          window.electronAPI.timeouts.setTimeout(
+            'connection',
+            () => {
+              document.getElementById('statusMessage').textContent = 'Connection timed out. Please try again.'
+              document.getElementById('spinner').style.display = 'none'
+              document.getElementById('retryButton').disabled = false
+            },
+            15000,
+          ) // 15 seconds timeout
 
           // Attempt to load the URL
           window.electronAPI.loadURL(errorUrl)
