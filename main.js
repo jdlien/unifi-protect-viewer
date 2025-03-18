@@ -3,16 +3,12 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
 const version = require('./src/js/modules/version')
 const { URL } = require('node:url')
+const utils = require('./src/js/modules/utils')
 
 // Constants
 const DEFAULT_WIDTH = 1270
 const DEFAULT_HEIGHT = 750
 const isDev = process.env.NODE_ENV === 'development'
-
-// Utility function for logging
-function log(...args) {
-  if (isDev) console.log(...args)
-}
 
 // Enable hot reloading in development mode
 if (isDev) {
@@ -20,7 +16,7 @@ if (isDev) {
     require('electron-reloader')(module, {
       ignore: ['node_modules', 'builds', 'releases'],
     })
-    log('Electron hot reloading enabled')
+    utils.log('Electron hot reloading enabled')
   } catch (err) {
     console.error('Failed to enable hot reloading:', err)
   }
@@ -55,7 +51,7 @@ function configureApp() {
   // Disable hardware acceleration if requested by config
   if (store.get('disableHardwareAcceleration')) {
     app.disableHardwareAcceleration()
-    log('Hardware acceleration disabled')
+    utils.log('Hardware acceleration disabled')
   }
 }
 
@@ -105,13 +101,13 @@ async function createWindow() {
 
         // Only bypass for matching domains
         if (configDomain === requestDomain) {
-          log(`Bypassing certificate error for configured domain: ${requestDomain}`)
+          utils.log(`Bypassing certificate error for configured domain: ${requestDomain}`)
           event.preventDefault()
           callback(true) // Trust the certificate
           return
         }
       } catch (err) {
-        log('Error parsing URL when handling certificate error:', err)
+        utils.log('Error parsing URL when handling certificate error:', err)
       }
     }
 
@@ -126,7 +122,7 @@ async function createWindow() {
 
   // Load the initial URL
   const initialUrl = store.get('url') || 'about:blank'
-  log(`Loading initial URL: ${initialUrl}`)
+  utils.log(`Loading initial URL: ${initialUrl}`)
   mainWindow.loadURL(initialUrl)
 
   // If no URL is set, navigate to the config page
@@ -137,14 +133,14 @@ async function createWindow() {
 
   // Handle external links securely
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    log(`Window open request for ${url}`)
+    utils.log(`Window open request for ${url}`)
 
     // Only allow navigation to URLs with expected protocols/domains
     // For the UniFi Protect application, we should only allow URLs related to the Protect system
     if (url.startsWith(store.get('url') || '') || url.startsWith('file://')) {
       mainWindow.loadURL(url)
     } else {
-      log(`Blocked navigation to external URL: ${url}`)
+      utils.log(`Blocked navigation to external URL: ${url}`)
     }
 
     return { action: 'deny' }
@@ -192,21 +188,30 @@ function setupIpcHandlers(mainWindow) {
 
   // Handle URL loading from renderer
   ipcMain.on('loadURL', (event, url) => {
-    log(`Loading URL: ${url}`)
+    utils.log(`Loading URL: ${url}`)
     mainWindow.loadURL(url)
   })
 
   // Handle application restart
   ipcMain.on('restart', (event) => {
-    log('Restart requested')
+    utils.log('Restart requested')
     app.relaunch()
     app.exit()
   })
 
   // Handle reset request
   ipcMain.on('reset', (event) => {
-    log('Reset requested')
+    utils.log('Reset requested')
     store.clear()
+  })
+
+  // Handle fullscreen toggle
+  ipcMain.on('toggleFullscreen', (event) => {
+    utils.log('Fullscreen toggle requested')
+    if (mainWindow) {
+      const isFullScreen = mainWindow.isFullScreen()
+      mainWindow.setFullScreen(!isFullScreen)
+    }
   })
 
   // Handle reset confirmation dialog

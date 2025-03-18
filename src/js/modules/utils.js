@@ -41,8 +41,12 @@ async function waitUntil(condition, timeout = 30000, interval = 20) {
  * @param {...any} args - Arguments to log
  */
 function log(...args) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(...args)
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(...args)
+    }
+  } catch (err) {
+    console.error('Error in log function:', err)
   }
 }
 
@@ -53,11 +57,21 @@ function log(...args) {
  * @param {Error} error - Error object
  */
 function logError(message, error) {
-  if (process.env.NODE_ENV === 'development') {
-    console.error(message, error)
-  } else {
-    // In production, log a simplified version without the stack trace
-    console.error(message, error?.message || error)
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      console.error(message, error)
+    } else {
+      // In production, log a simplified version without the stack trace
+      console.error(message, error?.message || error)
+    }
+  } catch (err) {
+    // Last resort fallback if even error logging fails
+    console.error('Error in logError function:', err)
+    try {
+      console.error('Original error message:', message)
+    } catch (_) {
+      // Silently fail if nothing works
+    }
   }
 }
 
