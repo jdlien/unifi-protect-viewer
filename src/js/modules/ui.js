@@ -123,7 +123,7 @@ function injectDashboardButton() {
   button.id = 'dashboard-button'
 
   // Read the SVG file
-  const svgPath = path.join(__dirname, '../../img/dashboard-button.svg')
+  const svgPath = path.join(__dirname, '../../img/dashboard-icon.svg')
   let dashboardSvg
 
   try {
