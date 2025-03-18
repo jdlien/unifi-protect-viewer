@@ -168,11 +168,6 @@ function setupIpcHandlers(mainWindow) {
     return store.store
   })
 
-  // Handle getURL request to return current URL - DEPRECATED: Use configLoad instead
-  ipcMain.handle('getURL', () => {
-    return store.get('url') || ''
-  })
-
   // Save changes to config
   ipcMain.on('configSave', (event, config) => {
     // Merge incoming config changes with existing store

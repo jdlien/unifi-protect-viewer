@@ -32,8 +32,8 @@
       async function run() {
         console.log('Index.html run function called')
         // This is a placeholder - simply display the URL if available
-        const url = await window.electronAPI.getURL()
-        document.getElementById('url').innerText = url
+        const config = await window.electronAPI.config.load()
+        document.getElementById('url').innerText = config?.url || ''
         return true
       }
 
@@ -42,8 +42,8 @@
         window.electronAPI.restart()
       }
 
-      window.electronAPI.getURL().then((url) => {
-        document.getElementById('url').innerText = url
+      window.electronAPI.config.load().then((config) => {
+        document.getElementById('url').innerText = config?.url || ''
       })
     </script>
   </body>
