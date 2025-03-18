@@ -20,6 +20,7 @@
     "build:macos:arm64": "electron-packager ./ 'UniFi Protect Viewer' --overwrite --asar --platform darwin --arch arm64 --icon ./src/img/icon.icns --prune=true --out=builds --ignore=\"(builds|releases|scripts|__tests__|test|coverage|README.md|\\.git|\\.vscode)\"",
     "build:linux:x64": "electron-packager ./ unifi-protect-viewer --overwrite --asar --platform linux --arch=x64 --icon=./src/img/256.png --prune=true --out=builds --ignore=\"(builds|releases|scripts|__tests__|test|coverage|README.md|\\.git|\\.vscode)\"",
     "build:linux:x64:portable": "electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform linux --arch x64 --icon ./src/img/256.png --prune=true --out builds --ignore=\"(builds|releases|scripts|__tests__|test|coverage|README.md|\\.git|\\.vscode)\"",
+    "sign": "node scripts/sign-builds.js",
     "compress": "node scripts/compress-builds.js",
     "rename": "node scripts/rename-builds.js"
   },

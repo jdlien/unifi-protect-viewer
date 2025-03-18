@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const archiver = require('archiver')
 const glob = require('glob')
+const { execSync } = require('child_process')
 
 // Paths
 const buildsDir = path.resolve(__dirname, '../builds')
@@ -100,7 +101,7 @@ function zipDirectory(sourceDir, outPath, customName = null, isAppBundle = false
   archive.finalize()
 }
 
-// Step 3 & 4: Compress .app and Windows folders with user-friendly names
+// Compress macOS app bundles (assuming they are already signed and notarized)
 const macosBuilds = [
   {
     arch: 'x64',
@@ -114,16 +115,23 @@ const macosBuilds = [
   },
 ]
 
+console.log('Compressing macOS app bundles...')
+
 macosBuilds.forEach(({ arch, folder, customName }) => {
   const appBundlePath = path.join(buildsDir, folder)
   if (fs.existsSync(appBundlePath)) {
+    // Create the zip with the app
     const zipName = `UniFi.Protect.Viewer.${process.env.npm_package_version}.macOS.${arch}.zip`
     const zipPath = path.join(releasesDir, zipName)
-    zipDirectory(appBundlePath, zipPath, customName, true) // Pass custom name and true for isAppBundle
+    zipDirectory(appBundlePath, zipPath, customName, true)
+    console.log(`Compressed ${customName} for ${arch}`)
+  } else {
+    console.warn(`App bundle not found: ${appBundlePath}`)
   }
 })
 
-// Step: Automatically compress all win32 builds
+// Compress Windows builds
+console.log('Compressing Windows builds...')
 const windowsBuilds = glob.sync(`${buildsDir}/unifi-protect-viewer-win32-*`)
 
 windowsBuilds.forEach((buildFolder) => {
