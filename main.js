@@ -2,7 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
-const chromeVersion = require('./src/config/chrome-version')
+const version = require('./src/js/modules/version')
 const { URL } = require('node:url')
 
 // Constants
@@ -84,8 +84,8 @@ async function createWindow() {
     autoHideMenuBar: true,
   })
 
-  // Set custom user agent using dynamic values from chrome-version
-  mainWindow.webContents.setUserAgent(chromeVersion.userAgent)
+  // Set custom user agent using dynamic values from version
+  mainWindow.webContents.setUserAgent(version.userAgent)
 
   // Set window title
   mainWindow.setTitle(`UniFi Protect Viewer ${app.getVersion()}`)

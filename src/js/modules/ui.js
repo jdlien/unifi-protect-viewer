@@ -323,7 +323,7 @@ function handleKeyboardShortcuts(event) {
     ipcRenderer.send('restart')
   }
 
-  // Escape to toggle UI elements
+  // Escape to toggle Navigation (nav & header elements)
   if (event.key === 'Escape') {
     // Prevent page reload
     event.preventDefault()
