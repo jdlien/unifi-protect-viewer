@@ -323,6 +323,13 @@ function handleKeyboardShortcuts(event) {
     ipcRenderer.send('restart')
   }
 
+  // F11 for fullscreen
+  if (event.key === 'F11') {
+    event.preventDefault() // Prevent default browser fullscreen
+    // Request fullscreen via IPC
+    ipcRenderer.send('toggleFullscreen')
+  }
+
   // Escape to toggle Navigation (nav & header elements)
   if (event.key === 'Escape') {
     // Prevent page reload

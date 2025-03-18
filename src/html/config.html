@@ -15,7 +15,7 @@
 
       <div>
         <h1 class="heading text-center">UniFi Protect Viewer</h1>
-        <p class="text-center">Configuration</p>
+        <h2 style="font-size: 20px; text-align: center">Configuration</h2>
       </div>
 
       <form id="configForm">
@@ -50,6 +50,17 @@
       <div id="spinner" class="spinner" style="display: none"></div>
       <div style="margin-top: 20px">
         <p id="statusMessage" class="text-center"></p>
+      </div>
+
+      <!-- TODO: Make this a floating window in the bottom right corner -->
+      <div>
+        <h2 style="font-size: 20px; text-align: center">Hotkeys</h2>
+        <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px">
+          <div class="hotkey"><key>Esc</key><span>Toggle Navigation</span></div>
+          <div class="hotkey"><key id="fullscreenKey">F11</key><span>Fullscreen</span></div>
+          <div class="hotkey"><key>F9</key><span>Restart</span></div>
+          <div class="hotkey"><key>F10</key><span>Reset Configuration</span></div>
+        </div>
       </div>
     </main>
 
