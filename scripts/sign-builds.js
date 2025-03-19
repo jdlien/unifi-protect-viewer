@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const glob = require('glob')
+const { glob } = require('glob')
 const { execSync } = require('child_process')
 
 // Paths
@@ -18,7 +18,7 @@ if (fs.existsSync(notarizationLogPath)) {
 }
 
 // Helper: Sign macOS app bundle
-function signMacOSApp(appPath) {
+async function signMacOSApp(appPath) {
   console.log(`Signing app bundle: ${appPath}`)
   try {
     // Create a hardened runtime entitlements file
@@ -146,7 +146,7 @@ function signMacOSApp(appPath) {
 
     // Sign all helper apps
     console.log('Signing helper apps...')
-    const helperApps = glob.sync(`${appPath}/Contents/Frameworks/*.app`)
+    const helperApps = await glob(`${appPath}/Contents/Frameworks/*.app`)
     for (const helperApp of helperApps) {
       console.log(`Signing helper app: ${path.basename(helperApp)}`)
       execSync(
@@ -327,35 +327,41 @@ const macosBuilds = [
 // Main execution
 console.log('Starting macOS app signing and notarization process...')
 
-macosBuilds.forEach(({ arch, folder, bundleId }) => {
-  const appBundlePath = path.join(buildsDir, folder)
-  if (fs.existsSync(appBundlePath)) {
-    console.log(`Processing ${arch} build...`)
+// Convert to an async IIFE (Immediately Invoked Function Expression)
+;(async () => {
+  for (const { arch, folder, bundleId } of macosBuilds) {
+    const appBundlePath = path.join(buildsDir, folder)
+    if (fs.existsSync(appBundlePath)) {
+      console.log(`Processing ${arch} build...`)
 
-    // Step 1: Verify and update Info.plist if needed
-    if (!verifyInfoPlist(appBundlePath, bundleId)) {
-      console.error(`Failed to verify Info.plist for ${appBundlePath}`)
-      return
-    }
+      // Step 1: Verify and update Info.plist if needed
+      if (!verifyInfoPlist(appBundlePath, bundleId)) {
+        console.error(`Failed to verify Info.plist for ${appBundlePath}`)
+        continue
+      }
 
-    // Step 2: Sign the app bundle
-    const isSigned = signMacOSApp(appBundlePath)
+      // Step 2: Sign the app bundle
+      const isSigned = await signMacOSApp(appBundlePath)
 
-    if (isSigned) {
-      // Step 3: Notarize the app
-      const isNotarized = notarizeMacOSApp(appBundlePath, bundleId)
+      if (isSigned) {
+        // Step 3: Notarize the app
+        const isNotarized = notarizeMacOSApp(appBundlePath, bundleId)
 
-      if (isNotarized) {
-        console.log(`Successfully signed and notarized ${appBundlePath}`)
+        if (isNotarized) {
+          console.log(`Successfully signed and notarized ${appBundlePath}`)
+        } else {
+          console.error(`Failed to notarize ${appBundlePath}`)
+        }
       } else {
-        console.error(`Failed to notarize ${appBundlePath}`)
+        console.error(`Failed to sign ${appBundlePath}`)
       }
     } else {
-      console.error(`Failed to sign ${appBundlePath}`)
+      console.warn(`App bundle not found: ${appBundlePath}`)
     }
-  } else {
-    console.warn(`App bundle not found: ${appBundlePath}`)
   }
-})
 
-console.log('Signing and notarization process completed.')
+  console.log('Signing and notarization process completed.')
+})().catch((err) => {
+  console.error('Error in signing process:', err)
+  process.exit(1)
+})
