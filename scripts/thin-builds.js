@@ -3,10 +3,20 @@ const path = require('path')
 const { glob } = require('glob')
 const { execSync } = require('child_process')
 
+// Paths
+const rootDir = path.resolve(__dirname, '..')
+
+// Add a log file path
+const logFilePath = path.resolve(rootDir, 'thinning-log.txt')
+
+// Clear the log file at the start
+fs.writeFileSync(logFilePath, '')
+
 // Process command line arguments
 const args = process.argv.slice(2)
 const MINIMAL_MODE = args.includes('--minimal') || args.includes('-m')
 const VERBOSE = args.includes('--verbose') || args.includes('-v') || args.includes('--debug') || args.includes('-d')
+const SKIP_UNIVERSAL = args.includes('--skip-universal')
 
 // Add debug mode for extra verbose logging
 const DEBUG = args.includes('--debug') || args.includes('-d')
@@ -31,109 +41,43 @@ const colors = {
 }
 
 // Paths
-const rootDir = path.resolve(__dirname, '..')
 const buildsDir = path.resolve(rootDir, 'builds')
 const buildDir = buildsDir // For compatibility with both variable names
+
+// Helper: Log message to file
+function logToFile(message) {
+  fs.appendFileSync(logFilePath, message + '\n')
+}
 
 // Define files and directories to remove from different platforms
 const commonRemovables = [
   // License files (keep one master copy somewhere if needed)
   '**/LICENSES.chromium.html',
-  '**/LICENSE.txt',
   '**/LICENSE',
-  '**/CREDITS.html',
-  // Map files for debugging
-  '**/*.map',
-  // Debug files that aren't essential
-  '**/*.debug',
-  '**/*.pdb',
-  // Default app files that are not needed
-  '**/default_app.asar',
-  // Source code files that aren't needed in production
-  // Be careful with these as they might be part of native modules
-  // '**/node_modules/**/*.ts',
-  // '**/node_modules/**/*.coffee',
+  // The following patterns had minimal impact and have been removed:
+  // '**/LICENSE.txt',
+  // '**/CREDITS.html',
+  // '**/default_app.asar',
+  // '**/*.map',
+  // '**/*.debug',
+  // '**/*.pdb',
 ]
 
 const macOSRemovables = [
   // Locales (keep only en-US if that's all you support)
   '**/Contents/Resources/locales/!(en-US).pak',
-  // Unused resources
-  '**/Contents/Resources/default_app.asar',
-  // Debug symbols
-  '**/*.dSYM',
-  '**/*.pdb',
-  // Unused frameworks or components
-  '**/Contents/Frameworks/**/Resources/inspector',
-  '**/Contents/Frameworks/Electron Framework.framework/Versions/*/Resources/inspector',
-  // We're NOT removing any dylib files to avoid permission issues
-  // '**/Contents/Frameworks/Electron Framework.framework/Versions/*/Libraries/!(libffmpeg|libvk_swiftshader|libEGL|libGLESv2).dylib',
-  '**/Contents/Frameworks/Electron Framework.framework/**/*-symbol-file',
-  // PDF extension files if not needed
-  '**/Contents/Frameworks/Electron Framework.framework/Versions/*/Resources/pdf*.bundle',
-  // Chrome dev tools if not needed in production
-  '**/Contents/Frameworks/Electron Framework.framework/Versions/*/Resources/inspector',
-  // Unused Node modules from unpacked asar
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/!(build|dist|lib)',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/!(build|dist|lib)/**',
-  // Unnecessary documentation
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/docs/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/doc/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/example/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/examples/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/test/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/tests/**',
-  '**/Contents/Resources/electron.asar.unpacked/node_modules/*/.github/**',
-  // Typescript definition files
-  '**/Contents/Resources/app.asar/**/*.d.ts',
-  // Development-only files
-  '**/Contents/Resources/app.asar/**/.npmignore',
-  '**/Contents/Resources/app.asar/**/.travis.yml',
-  '**/Contents/Resources/app.asar/**/.eslintrc*',
-  '**/Contents/Resources/app.asar/**/tsconfig.json',
-  // Source maps
-  '**/Contents/Resources/app.asar/**/*.js.map',
 ]
 
 const windowsRemovables = [
   // Locales
   '**/locales/!(en-US).pak',
-  // Debug symbols
-  '**/*.pdb',
-  // Unused resources
-  '**/resources/default_app.asar',
-  // PDF extension files if not needed (but keep essential media DLLs)
-  '**/pdf*.dll',
+  // DLL files - significant space savings
   '**/*.dll',
   '!**/ffmpeg.dll',
   '!**/vk_swiftshader.dll',
   '!**/d3dcompiler_47.dll',
   '!**/libEGL.dll',
   '!**/libGLESv2.dll',
-  // Chrome dev tools if not needed in production
-  '**/resources/inspector/**',
-  // Unused Node modules from unpacked asar
-  '**/resources/electron.asar.unpacked/node_modules/*/!(build|dist|lib)',
-  '**/resources/electron.asar.unpacked/node_modules/*/!(build|dist|lib)/**',
-  // Unnecessary documentation
-  '**/resources/electron.asar.unpacked/node_modules/*/docs/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/doc/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/example/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/examples/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/test/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/tests/**',
-  '**/resources/electron.asar.unpacked/node_modules/*/.github/**',
-  // Typescript definition files
-  '**/resources/app.asar/**/*.d.ts',
-  // Development-only files
-  '**/resources/app.asar/**/.npmignore',
-  '**/resources/app.asar/**/.travis.yml',
-  '**/resources/app.asar/**/.eslintrc*',
-  '**/resources/app.asar/**/tsconfig.json',
-  // Source maps
-  '**/resources/app.asar/**/*.js.map',
-  // Native modules for unused platforms (if any exist)
-  '**/resources/app.asar.unpacked/**/*(mac|darwin|osx)*.node',
 ]
 
 // Additional safe removables specifically for universal binaries
@@ -143,7 +87,7 @@ const universalMacOSRemovables = [
   '**/Contents/Resources/locales/!(en-US).pak',
 
   // Crash reporter resources that are duplicated
-  '**/Contents/Frameworks/Electron Framework.framework/Resources/crashpad_handler',
+  '**/Contents/Frameworks/Electron Framework.framework/Resources/crashpad_handler', // COULD POTENTIALLY CAUSE ISSUES WITH UNIVERSAL BUILD - might remove crash handlers
 
   // Extra language resources
   '**/Contents/Resources/*.lproj/!(MainMenu.nib)',
@@ -163,39 +107,19 @@ const universalMacOSRemovables = [
   '**/Contents/Resources/electron.asar/**/*.jpg',
   '**/Contents/Resources/electron.asar/**/*.svg',
 
-  // Debug metadata
-  '**/Contents/Resources/app.asar/**/*.map',
-  '**/Contents/Resources/app.asar/**/*.d.ts',
+  // Documentation files - only safe ones
+  '**/Contents/Resources/electron.asar/**/README.md',
+  '**/Contents/Resources/electron.asar/**/CHANGELOG.md',
+  '**/Contents/Resources/electron.asar/**/CONTRIBUTING.md',
 
-  // Non-functional web files
-  '**/Contents/Resources/app.asar/**/*.md',
-  '**/Contents/Resources/app.asar/**/*.markdown',
-  '**/Contents/Resources/app.asar/**/README',
-  '**/Contents/Resources/app.asar/**/.npmignore',
-  '**/Contents/Resources/app.asar/**/.gitignore',
-
-  // License files (already bundled at the app level)
-  '**/Contents/Resources/app.asar/**/LICENSE',
-  '**/Contents/Resources/app.asar/**/LICENSE.*',
-  '**/Contents/Resources/app.asar/**/license',
-
-  // TypeScript files (not needed at runtime)
-  '**/Contents/Resources/app.asar/**/*.ts',
-  '**/Contents/Resources/app.asar/**/*.tsx',
-
-  // Test files and directories
-  '**/Contents/Resources/app.asar/**/__tests__/**',
-  '**/Contents/Resources/app.asar/**/__mocks__/**',
-  '**/Contents/Resources/app.asar/**/test/**',
-  '**/Contents/Resources/app.asar/**/tests/**',
-  '**/Contents/Resources/app.asar/**/*.test.js',
-  '**/Contents/Resources/app.asar/**/*.spec.js',
-
-  // Build configuration files
-  '**/Contents/Resources/app.asar/**/.babelrc',
-  '**/Contents/Resources/app.asar/**/.eslintrc*',
-  '**/Contents/Resources/app.asar/**/tsconfig.json',
-  '**/Contents/Resources/app.asar/**/webpack.config.js',
+  // VSCode files that might have been included
+  '**/.vscode/**',
+  '**/.vs/**',
+  // Git files
+  '**/.git/**',
+  '**/.github/**',
+  '**/.gitignore',
+  '**/.gitattributes',
 ]
 
 // Helper: Delete a single file
@@ -283,32 +207,23 @@ async function optimizeUniversalBinary(buildPath) {
     // 1. Remove extra architecture-specific resource files
     // These patterns target files that might be duplicated across architectures
     const universalSpecificPatterns = [
-      // Duplicated resource files
+      // Duplicated resource files - more conservative list
       '**/Contents/Frameworks/**/*.nib',
       '**/Contents/Frameworks/**/*.strings',
-      // Keep only one copy of translation files
-      '**/Contents/Resources/electron.asar/**/*.json',
-      // Additional universal-specific optimizations
+
+      // // Additional universal-specific optimizations
       '**/Contents/Frameworks/**/*.so',
-      '**/Contents/Frameworks/**/*.pak',
-      '**/Contents/Frameworks/**/*.bin',
-      '**/Contents/Frameworks/**/*.dat',
+      // REMOVING **/Contents/Frameworks/**/*.bin' and *.dat CAUSES ISSUES WITH UNIVERSAL BUILD - removes binary files needed at runtime
+
       '**/Contents/Resources/electron.asar/**/*.png',
       '**/Contents/Resources/electron.asar/**/*.jpg',
       '**/Contents/Resources/electron.asar/**/*.gif',
-      '**/Contents/Resources/electron.asar/**/*.svg',
-      '**/Contents/Frameworks/**/Resources/*.pak',
-      // Documentation files
-      '**/Contents/Resources/electron.asar/**/*.md',
-      '**/Contents/Resources/electron.asar/**/*.markdown',
-      '**/Contents/Resources/electron.asar/**/README',
-      '**/Contents/Resources/electron.asar/**/README.*',
-      '**/Contents/Resources/electron.asar/**/CHANGELOG.*',
-      '**/Contents/Resources/electron.asar/**/CONTRIBUTING.*',
-      // Source files
-      '**/Contents/Resources/electron.asar/**/*.ts',
-      '**/Contents/Resources/electron.asar/**/*.tsx',
-      '**/Contents/Resources/electron.asar/**/*.coffee',
+
+      // Documentation files - only safe ones
+      '**/Contents/Resources/electron.asar/**/README.md',
+      '**/Contents/Resources/electron.asar/**/CHANGELOG.md',
+      '**/Contents/Resources/electron.asar/**/CONTRIBUTING.md',
+
       // VSCode files that might have been included
       '**/.vscode/**',
       '**/.vs/**',
@@ -336,7 +251,9 @@ async function optimizeUniversalBinary(buildPath) {
             match.includes('en-US') ||
             match.includes('index.') ||
             match.includes('/api/') ||
-            match.includes('/lib/')
+            match.includes('/lib/') ||
+            match.includes('.asar') || // Add extra protection for asar files
+            match.includes('node_modules') // Add protection for node_modules
           ) {
             if (VERBOSE) {
               console.log(`${colors.yellow}Skipping critical file:${colors.reset} ${path.relative(buildPath, match)}`)
@@ -453,12 +370,15 @@ async function processRemovables(buildPath, removables) {
         console.log(`Pattern ${colors.yellow}${pattern}${colors.reset} matched ${matches.length} files/dirs`)
       }
 
+      let patternSizeBefore = 0
+
       for (const match of matches) {
         if (DEBUG) {
           console.log(`Processing match: ${match}`)
         }
 
         const stats = fs.statSync(match)
+        patternSizeBefore += stats.size
 
         if (stats.isDirectory()) {
           if (deleteDirectory(match)) {
@@ -474,6 +394,9 @@ async function processRemovables(buildPath, removables) {
           }
         }
       }
+
+      const savedSpace = patternSizeBefore
+      logToFile(`Pattern: ${pattern}, Space saved: ${formatSize(savedSpace)}`)
     } catch (err) {
       console.error(`${colors.red}Error processing pattern ${pattern}:${colors.reset}`, err.message)
     }

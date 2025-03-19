@@ -40,8 +40,8 @@ const DEVELOPER_ID = 'Developer ID Application: Joseph Lien (A93Q7MKECL)'
 const version = process.env.npm_package_version || '1.1.0'
 const macosBuilds = [
   {
-    arch: 'x64',
-    folder: `UniFi Protect Viewer-darwin-x64/UniFi Protect Viewer.app`,
+    arch: 'universal',
+    folder: `UniFi Protect Viewer-darwin-universal/UniFi Protect Viewer.app`,
     bundleId: 'com.jdlien.unifi-protect-viewer',
   },
   {
@@ -50,8 +50,8 @@ const macosBuilds = [
     bundleId: 'com.jdlien.unifi-protect-viewer',
   },
   {
-    arch: 'universal',
-    folder: `UniFi Protect Viewer-darwin-universal/UniFi Protect Viewer.app`,
+    arch: 'x64',
+    folder: `UniFi Protect Viewer-darwin-x64/UniFi Protect Viewer.app`,
     bundleId: 'com.jdlien.unifi-protect-viewer',
   },
 ]
