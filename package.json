@@ -24,6 +24,8 @@
     "build:linux:x64:portable": "npx electron-packager ./ unifi-protect-viewer-portable --overwrite --asar --platform linux --arch x64 --icon ./src/img/256.png --prune=true --out builds --ignore=\"(builds|releases|scripts|__tests__|test|coverage|README.md|\\.git|\\.vscode|\\*\\.zip)\"",
     "sign": "node scripts/sign-builds.js",
     "thin": "node scripts/thin-builds.js",
+    "thin:minimal": "node scripts/thin-builds.js --minimal",
+    "thin:verbose": "node scripts/thin-builds.js --verbose",
     "compress": "node scripts/compress-builds.js"
   },
   "keywords": [
