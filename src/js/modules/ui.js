@@ -36,9 +36,36 @@ async function handleLiveviewV5() {
   // Default to hiding navigation if setting doesn't exist
   const hideNavigation = config.hideNavigation !== false
 
-  // Apply navigation visibility based on user preference
-  utils.setStyle(document.getElementsByTagName('header')[0], 'display', hideNavigation ? 'none' : 'flex')
-  utils.setStyle(document.getElementsByTagName('nav')[0], 'display', hideNavigation ? 'none' : 'flex')
+  // Wait for navigation elements to be fully loaded
+  try {
+    await utils.waitUntil(
+      () => document.getElementsByTagName('header').length > 0 && document.getElementsByTagName('nav').length > 0,
+      5000,
+    )
+  } catch (error) {
+    utils.logError('Navigation elements not found within timeout', error)
+  }
+
+  // Apply navigation visibility with retry mechanism
+  const applyNavigationVisibility = async () => {
+    const header = document.getElementsByTagName('header')[0]
+    const nav = document.getElementsByTagName('nav')[0]
+
+    if (header && nav) {
+      // Apply navigation visibility based on user preference
+      utils.setStyle(header, 'display', hideNavigation ? 'none' : 'flex')
+      utils.setStyle(nav, 'display', hideNavigation ? 'none' : 'flex')
+      return true
+    }
+    return false
+  }
+
+  // Try applying navigation visibility, retry if necessary
+  if (!(await applyNavigationVisibility())) {
+    // Wait a bit and try again
+    await utils.wait(500)
+    await applyNavigationVisibility()
+  }
 
   utils.setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'gap', '0')
   utils.setStyle(document.querySelectorAll('[class^=dashboard__Content]')[0], 'padding', '0')
@@ -231,11 +258,11 @@ function handleDashboardButton() {
     return
   }
 
-  // Check if the nav is visible. If not, show the dashboard button
-  const nav = document.getElementsByTagName('nav')[0]
+  // More robustly check if the nav is visible
+  const nav = document.querySelector('nav')
+  // Show dashboard button if nav doesn't exist or is hidden
   if (!nav || nav.style.display === 'none') {
     setDashboardButtonVisibility(true)
-    return
   } else {
     setDashboardButtonVisibility(false)
   }
@@ -255,7 +282,18 @@ function setDashboardButtonVisibility(show) {
 /**
  * Toggle navigation UI elements
  */
-function toggleNavigation() {
+async function toggleNavigation() {
+  // Wait for navigation elements to be ready
+  try {
+    await utils.waitUntil(
+      () => document.querySelector('header') !== null && document.querySelector('nav') !== null,
+      3000,
+    )
+  } catch (error) {
+    utils.logError('Navigation elements not found for toggle', error)
+    return false
+  }
+
   const header = document.querySelector('header')
   const nav = document.querySelector('nav')
 
@@ -275,6 +313,8 @@ function toggleNavigation() {
 
   // Add call to handle dashboard button visibility when toggling navigation
   handleDashboardButton()
+
+  return true
 }
 
 /**
@@ -334,7 +374,9 @@ function handleKeyboardShortcuts(event) {
   if (event.key === 'Escape') {
     // Prevent page reload
     event.preventDefault()
-    toggleNavigation()
+    toggleNavigation().catch((error) => {
+      utils.logError('Error toggling navigation:', error)
+    })
   }
 }
 

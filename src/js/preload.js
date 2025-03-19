@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // UI controls
   ui: {
-    toggleNavigation: ui.toggleNavigation,
+    toggleNavigation: () => ui.toggleNavigation(),
   },
 
   // Timeout management
