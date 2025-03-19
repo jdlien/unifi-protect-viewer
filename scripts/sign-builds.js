@@ -99,6 +99,26 @@ async function signMacOSApp(appPath) {
       )
     }
 
+    // libvk_swiftshader.dylib - Flagged in notarization log
+    const libVkSwiftshaderPath = `${appPath}/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libvk_swiftshader.dylib`
+    if (fs.existsSync(libVkSwiftshaderPath)) {
+      console.log('Signing libvk_swiftshader.dylib...')
+      execSync(
+        `codesign --force --options runtime --timestamp --sign "${DEVELOPER_ID}" --no-strict "${libVkSwiftshaderPath}"`,
+        { stdio: 'inherit' },
+      )
+    }
+
+    // libffmpeg.dylib - Flagged in notarization log
+    const libFfmpegPath = `${appPath}/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries/libffmpeg.dylib`
+    if (fs.existsSync(libFfmpegPath)) {
+      console.log('Signing libffmpeg.dylib...')
+      execSync(
+        `codesign --force --options runtime --timestamp --sign "${DEVELOPER_ID}" --no-strict "${libFfmpegPath}"`,
+        { stdio: 'inherit' },
+      )
+    }
+
     // Sign the Squirrel ShipIt executable
     const shipItPath = `${appPath}/Contents/Frameworks/Squirrel.framework/Versions/A/Resources/ShipIt`
     if (fs.existsSync(shipItPath)) {
@@ -107,6 +127,23 @@ async function signMacOSApp(appPath) {
         `codesign --force --options runtime --entitlements "${entitlementsPath}" --timestamp --sign "${DEVELOPER_ID}" "${shipItPath}"`,
         { stdio: 'inherit' },
       )
+    }
+
+    // Sign all dylib files in Libraries directory
+    const librariesDir = `${appPath}/Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries`
+    if (fs.existsSync(librariesDir)) {
+      console.log('Signing all remaining dylib files in Libraries directory...')
+      const libraryFiles = fs.readdirSync(librariesDir)
+      for (const library of libraryFiles) {
+        if (library.endsWith('.dylib')) {
+          const libraryPath = path.join(librariesDir, library)
+          console.log(`Signing library: ${library}`)
+          execSync(
+            `codesign --force --options runtime --timestamp --sign "${DEVELOPER_ID}" --no-strict "${libraryPath}"`,
+            { stdio: 'inherit' },
+          )
+        }
+      }
     }
 
     // Sign the Electron Framework - Do this next
@@ -187,53 +224,70 @@ function notarizeMacOSApp(appPath, bundleId) {
     console.log('Creating temporary zip for notarization...')
     execSync(`ditto -c -k --keepParent "${appPath}" "${tempZipPath}"`, { stdio: 'inherit' })
 
-    // Submit for notarization with additional options
+    // Submit for notarization
     console.log(`Submitting for notarization (this may take a while)...`)
 
-    // Step 1: Show upload progress by using inherit for stdio
-    execSync(`xcrun notarytool submit "${tempZipPath}" --keychain-profile "notarytool-profile" --wait`, {
-      stdio: 'inherit',
-    })
+    // Use notarytool submit with wait flag to submit and wait for results in one command
+    const submitResult = execSync(
+      `xcrun notarytool submit "${tempZipPath}" --keychain-profile "notarytool-profile" --wait`,
+      { stdio: 'pipe', encoding: 'utf-8' },
+    )
 
-    // Step 2: Get the submission ID by requesting the most recent submission
-    console.log('Getting submission info...')
-    const submissionInfo = execSync(`xcrun notarytool history --keychain-profile "notarytool-profile" --limit 1`, {
-      stdio: 'pipe',
-      encoding: 'utf-8',
-    })
+    console.log('Notarization submission result:')
+    console.log(submitResult)
 
-    const submissionIdMatch = submissionInfo.match(/id:[\s]+([a-f0-9-]+)/)
-    const statusMatch = submissionInfo.match(/status:[\s]+(\w+)/)
+    // Check if the submission was successful by looking for "status: Accepted" in the output (case insensitive)
+    const acceptedMatch = submitResult.match(/status:[\s]*(Accepted)/i)
+    const statusMatch = submitResult.match(/status:[\s]*(\w+)/i)
+    const status = statusMatch ? statusMatch[1] : 'Unknown'
 
-    const submissionId = submissionIdMatch ? submissionIdMatch[1] : null
-    const status = statusMatch ? statusMatch[1] : null
+    if (!acceptedMatch) {
+      console.log(`Notarization not successful. Status: ${status}`)
 
-    console.log(`Recent submission ID: ${submissionId || 'Unknown'}`)
-    console.log(`Submission status: ${status || 'Unknown'}`)
-
-    // Check if notarization was successful
-    if (status !== 'Accepted') {
-      console.log('Notarization not successful. Fetching detailed logs...')
+      // Extract submission ID from the output
+      const submissionIdMatch = submitResult.match(/id:[\s]+([a-f0-9-]+)/i)
+      const submissionId = submissionIdMatch ? submissionIdMatch[1] : null
 
       if (submissionId) {
         // Get detailed log for the failed notarization
         const logPath = path.resolve(__dirname, '../notarization-log.json')
-        execSync(`xcrun notarytool log ${submissionId} --keychain-profile "notarytool-profile" ${logPath}`, {
-          stdio: 'inherit',
-        })
+        console.log(`Getting detailed log for submission ID: ${submissionId}`)
 
-        console.log('Detailed notarization logs saved to notarization-log.json')
-        console.log('Please check this file to see why notarization failed.')
+        try {
+          execSync(`xcrun notarytool log "${submissionId}" --keychain-profile "notarytool-profile" "${logPath}"`, {
+            stdio: 'inherit',
+          })
 
-        console.log('\nCommon notarization issues:')
-        console.log('1. Info.plist missing required entries (CFBundleIdentifier, CFBundleVersion)')
-        console.log('2. App not signed with hardened runtime')
-        console.log('3. Missing entitlements for necessary capabilities')
-        console.log('4. Signing problems with embedded binaries')
+          console.log('Detailed notarization logs saved to notarization-log.json')
 
-        throw new Error('Notarization failed - see log for details')
+          // Try to read and display the top-level errors from the log
+          try {
+            const logContent = fs.readFileSync(logPath, 'utf-8')
+            const logData = JSON.parse(logContent)
+
+            if (logData.issues && logData.issues.length > 0) {
+              console.log('\nNotarization issues found:')
+              logData.issues.forEach((issue, index) => {
+                console.log(`Issue ${index + 1}: ${issue.message} - Path: ${issue.path}`)
+              })
+            }
+          } catch (logReadError) {
+            console.log('Could not parse the notarization log file:', logReadError.message)
+          }
+
+          console.log('\nCommon notarization issues:')
+          console.log('1. Info.plist missing required entries (CFBundleIdentifier, CFBundleVersion)')
+          console.log('2. App not signed with hardened runtime')
+          console.log('3. Missing entitlements for necessary capabilities')
+          console.log('4. Signing problems with embedded binaries')
+
+          throw new Error(`Notarization failed with status: ${status} - see log for details`)
+        } catch (logError) {
+          console.error(`Error getting notarization log: ${logError.message}`)
+          throw new Error(`Notarization failed with status: ${status}`)
+        }
       } else {
-        throw new Error('Notarization failed and submission ID could not be determined')
+        throw new Error(`Notarization failed with status: ${status} and submission ID could not be determined`)
       }
     }
 
@@ -248,6 +302,9 @@ function notarizeMacOSApp(appPath, bundleId) {
     return true
   } catch (error) {
     console.error(`Notarization failed: ${error.message}`)
+    console.error(
+      'For help with notarization issues, visit: https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/resolving_common_notarization_issues',
+    )
     return false
   }
 }
@@ -311,15 +368,21 @@ function verifyInfoPlist(appPath, bundleId) {
 }
 
 // Configuration for macOS builds
+const version = process.env.npm_package_version || '1.1.0'
 const macosBuilds = [
   {
     arch: 'x64',
-    folder: 'UniFi Protect Viewer-darwin-x64/UniFi Protect Viewer.app',
+    folder: `UniFi Protect Viewer-darwin-x64-${version}/UniFi Protect Viewer.app`,
     bundleId: 'com.jdlien.unifi-protect-viewer',
   },
   {
     arch: 'arm64',
-    folder: 'UniFi Protect Viewer-darwin-arm64/UniFi Protect Viewer.app',
+    folder: `UniFi Protect Viewer-darwin-arm64-${version}/UniFi Protect Viewer.app`,
+    bundleId: 'com.jdlien.unifi-protect-viewer',
+  },
+  {
+    arch: 'universal',
+    folder: `UniFi Protect Viewer-darwin-universal-${version}/UniFi Protect Viewer.app`,
     bundleId: 'com.jdlien.unifi-protect-viewer',
   },
 ]
@@ -329,39 +392,73 @@ console.log('Starting macOS app signing and notarization process...')
 
 // Convert to an async IIFE (Immediately Invoked Function Expression)
 ;(async () => {
+  let hasErrors = false
+  let errorDetails = []
+
   for (const { arch, folder, bundleId } of macosBuilds) {
     const appBundlePath = path.join(buildsDir, folder)
     if (fs.existsSync(appBundlePath)) {
       console.log(`Processing ${arch} build...`)
 
-      // Step 1: Verify and update Info.plist if needed
-      if (!verifyInfoPlist(appBundlePath, bundleId)) {
-        console.error(`Failed to verify Info.plist for ${appBundlePath}`)
-        continue
-      }
-
-      // Step 2: Sign the app bundle
-      const isSigned = await signMacOSApp(appBundlePath)
-
-      if (isSigned) {
-        // Step 3: Notarize the app
-        const isNotarized = notarizeMacOSApp(appBundlePath, bundleId)
-
-        if (isNotarized) {
-          console.log(`Successfully signed and notarized ${appBundlePath}`)
-        } else {
-          console.error(`Failed to notarize ${appBundlePath}`)
+      try {
+        // Step 1: Verify and update Info.plist if needed
+        if (!verifyInfoPlist(appBundlePath, bundleId)) {
+          console.error(`Failed to verify Info.plist for ${appBundlePath}`)
+          errorDetails.push(`Failed to verify Info.plist for ${arch} build`)
+          hasErrors = true
+          continue
         }
-      } else {
-        console.error(`Failed to sign ${appBundlePath}`)
+
+        // Step 2: Sign the app bundle
+        const isSigned = await signMacOSApp(appBundlePath)
+
+        if (isSigned) {
+          console.log(`Successfully signed ${appBundlePath}`)
+
+          // Step 3: Try to notarize the app, but continue even if it fails
+          try {
+            const isNotarized = notarizeMacOSApp(appBundlePath, bundleId)
+            if (isNotarized) {
+              console.log(`Successfully notarized ${appBundlePath}`)
+            } else {
+              console.warn(`⚠️ Notarization failed for ${appBundlePath}, but continuing with signing process`)
+              errorDetails.push(`Notarization failed for ${arch} build`)
+              hasErrors = true
+            }
+          } catch (notarizeError) {
+            console.error(`Error during notarization: ${notarizeError.message}`)
+            console.warn(`⚠️ Continuing with next build despite notarization failure`)
+            errorDetails.push(`Notarization error for ${arch} build: ${notarizeError.message}`)
+            hasErrors = true
+          }
+        } else {
+          console.error(`Failed to sign ${appBundlePath}`)
+          errorDetails.push(`Signing failed for ${arch} build`)
+          hasErrors = true
+        }
+      } catch (error) {
+        console.error(`Error processing ${arch} build: ${error.message}`)
+        errorDetails.push(`Error processing ${arch} build: ${error.message}`)
+        hasErrors = true
       }
     } else {
       console.warn(`App bundle not found: ${appBundlePath}`)
     }
   }
 
-  console.log('Signing and notarization process completed.')
+  if (hasErrors) {
+    console.log('\n⚠️ Signing process completed with errors:')
+    errorDetails.forEach((error, index) => {
+      console.log(`  ${index + 1}. ${error}`)
+    })
+    console.log('\nYou may still be able to use the signed apps for testing purposes.')
+    console.log(
+      'For distribution on the Mac App Store or via direct download, all builds must be properly signed and notarized.',
+    )
+  } else {
+    console.log('\n✅ Signing and notarization process completed successfully.')
+  }
 })().catch((err) => {
-  console.error('Error in signing process:', err)
+  console.error('Unhandled error in signing process:', err)
   process.exit(1)
 })

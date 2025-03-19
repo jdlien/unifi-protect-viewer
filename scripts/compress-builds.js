@@ -4,11 +4,14 @@ const archiver = require('archiver')
 const { glob } = require('glob')
 const { execSync } = require('child_process')
 
+// Get version from package.json
+const version = process.env.npm_package_version || '1.1.0'
+
 // Wrap the entire script in an async IIFE
 ;(async () => {
   // Paths
   const buildsDir = path.resolve(__dirname, '../builds')
-  const releasesDir = path.resolve(__dirname, `../releases/${process.env.npm_package_version}`)
+  const releasesDir = path.resolve(__dirname, `../releases/${version}`)
   const platforms = ['macOS', 'Windows'] // Add any other platforms if needed
 
   // Ensure releases/version folder exists
@@ -34,48 +37,6 @@ const { execSync } = require('child_process')
   }
 
   // Helper: Zip directories
-  function zipDirectory(sourceDir, outPath) {
-    const output = fs.createWriteStream(outPath)
-    const archive = archiver('zip', { zlib: { level: 9 } })
-
-    output.on('close', () => {
-      console.log(`Created zip: ${outPath} (${archive.pointer()} total bytes)`)
-    })
-
-    archive.on('error', (err) => {
-      throw err
-    })
-
-    archive.pipe(output)
-    archive.directory(sourceDir, false)
-    archive.finalize()
-  }
-
-  // Step 1: Remove LICENSES.chromium.html
-  const files = await glob(`${buildsDir}/**/LICENSES.chromium.html`)
-
-  files.forEach((file) => {
-    fs.unlinkSync(file)
-    console.log(`Deleted: ${file}`)
-  })
-
-  console.log('Removed all instances of LICENSES.chromium.html')
-
-  // Step 2: Remove locales/*.pak except en-US.pak
-  const localeDirs = [
-    path.join(buildsDir, 'unifi-protect-viewer-linux-x64/locales'),
-    path.join(buildsDir, 'unifi-protect-viewer-win32-x64/locales'),
-    path.join(buildsDir, 'UniFi Protect Viewer-darwin-x64/UniFi Protect Viewer.app/Contents/Resources/locales'),
-    path.join(buildsDir, 'UniFi Protect Viewer-darwin-arm64/UniFi Protect Viewer.app/Contents/Resources/locales'),
-  ]
-
-  localeDirs.forEach((localeDir) => {
-    if (fs.existsSync(localeDir)) {
-      cleanLocales(localeDir)
-    }
-  })
-
-  // Helper: Zip directories, with custom folder names for user-friendly naming
   function zipDirectory(sourceDir, outPath, customName = null, isAppBundle = false) {
     const output = fs.createWriteStream(outPath)
     const archive = archiver('zip', { zlib: { level: 9 } })
@@ -103,16 +64,52 @@ const { execSync } = require('child_process')
     archive.finalize()
   }
 
+  // Step 1: Remove LICENSES.chromium.html
+  const files = await glob(`${buildsDir}/**/LICENSES.chromium.html`)
+
+  files.forEach((file) => {
+    fs.unlinkSync(file)
+    console.log(`Deleted: ${file}`)
+  })
+
+  console.log('Removed all instances of LICENSES.chromium.html')
+
+  // Step 2: Remove locales/*.pak except en-US.pak
+  const localeDirs = [
+    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-x64-${version}/locales`),
+    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-ia32-${version}/locales`),
+    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-arm64-${version}/locales`),
+    path.join(
+      buildsDir,
+      `UniFi Protect Viewer-darwin-x64-${version}/UniFi Protect Viewer.app/Contents/Resources/locales`,
+    ),
+    path.join(
+      buildsDir,
+      `UniFi Protect Viewer-darwin-arm64-${version}/UniFi Protect Viewer.app/Contents/Resources/locales`,
+    ),
+  ]
+
+  localeDirs.forEach((localeDir) => {
+    if (fs.existsSync(localeDir)) {
+      cleanLocales(localeDir)
+    }
+  })
+
   // Compress macOS app bundles (assuming they are already signed and notarized)
   const macosBuilds = [
     {
       arch: 'x64',
-      folder: 'UniFi Protect Viewer-darwin-x64/UniFi Protect Viewer.app',
+      folder: `UniFi Protect Viewer-darwin-x64-${version}/UniFi Protect Viewer.app`,
       customName: 'UniFi Protect Viewer',
     },
     {
       arch: 'arm64',
-      folder: 'UniFi Protect Viewer-darwin-arm64/UniFi Protect Viewer.app',
+      folder: `UniFi Protect Viewer-darwin-arm64-${version}/UniFi Protect Viewer.app`,
+      customName: 'UniFi Protect Viewer',
+    },
+    {
+      arch: 'universal',
+      folder: `UniFi Protect Viewer-darwin-universal-${version}/UniFi Protect Viewer.app`,
       customName: 'UniFi Protect Viewer',
     },
   ]
@@ -123,7 +120,7 @@ const { execSync } = require('child_process')
     const appBundlePath = path.join(buildsDir, folder)
     if (fs.existsSync(appBundlePath)) {
       // Create the zip with the app
-      const zipName = `UniFi.Protect.Viewer.${process.env.npm_package_version}.macOS.${arch}.zip`
+      const zipName = `UniFi.Protect.Viewer.${version}.macOS.${arch}.zip`
       const zipPath = path.join(releasesDir, zipName)
       zipDirectory(appBundlePath, zipPath, customName, true)
       console.log(`Compressed ${customName} for ${arch}`)
@@ -134,11 +131,14 @@ const { execSync } = require('child_process')
 
   // Compress Windows builds
   console.log('Compressing Windows builds...')
-  const windowsBuilds = await glob(`${buildsDir}/unifi-protect-viewer-win32-*`)
+  // Find all Windows builds
+  const windowsBuildsPattern = `${buildsDir}/UniFi Protect Viewer-unifi-protect-viewer-win32-*-${version}`
+  const windowsBuilds = await glob(windowsBuildsPattern)
 
   windowsBuilds.forEach((buildFolder) => {
-    const architecture = path.basename(buildFolder).split('-').pop() // Extract architecture (e.g., x64, ia32, arm64)
-    const zipName = `UniFi.Protect.Viewer.${process.env.npm_package_version}.Windows.${architecture}.zip`
+    // Extract architecture from folder name (e.g., x64, ia32, arm64)
+    const architecture = path.basename(buildFolder).split('win32-')[1].split('-')[0]
+    const zipName = `UniFi.Protect.Viewer.${version}.Windows.${architecture}.zip`
     const zipPath = path.join(releasesDir, zipName)
 
     zipDirectory(buildFolder, zipPath, 'UniFi Protect Viewer') // Custom name for Windows folder
