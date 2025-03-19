@@ -5,5 +5,4 @@ builds
 releases
 store
 **/.DS_Store
-app-to-notarize.zip
 notarization-log.json

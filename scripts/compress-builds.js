@@ -75,19 +75,27 @@ const version = process.env.npm_package_version || '1.1.0'
   console.log('Removed all instances of LICENSES.chromium.html')
 
   // Step 2: Remove locales/*.pak except en-US.pak
-  const localeDirs = [
-    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-x64-${version}/locales`),
-    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-ia32-${version}/locales`),
-    path.join(buildsDir, `UniFi Protect Viewer-unifi-protect-viewer-win32-arm64-${version}/locales`),
-    path.join(
+  const macOSPatterns = ['x64', 'arm64', 'universal']
+
+  const windowsPatterns = ['x64', 'ia32', 'arm64']
+
+  // Define locale directories dynamically based on build patterns
+  const localeDirs = []
+
+  // Add macOS locale directories
+  macOSPatterns.forEach((arch) => {
+    const localeDir = path.join(
       buildsDir,
-      `UniFi Protect Viewer-darwin-x64-${version}/UniFi Protect Viewer.app/Contents/Resources/locales`,
-    ),
-    path.join(
-      buildsDir,
-      `UniFi Protect Viewer-darwin-arm64-${version}/UniFi Protect Viewer.app/Contents/Resources/locales`,
-    ),
-  ]
+      `UniFi Protect Viewer-darwin-${arch}/UniFi Protect Viewer.app/Contents/Resources/locales`,
+    )
+    localeDirs.push(localeDir)
+  })
+
+  // Add Windows locale directories
+  windowsPatterns.forEach((arch) => {
+    const localeDir = path.join(buildsDir, `unifi-protect-viewer-win32-${arch}/locales`)
+    localeDirs.push(localeDir)
+  })
 
   localeDirs.forEach((localeDir) => {
     if (fs.existsSync(localeDir)) {
@@ -96,23 +104,16 @@ const version = process.env.npm_package_version || '1.1.0'
   })
 
   // Compress macOS app bundles (assuming they are already signed and notarized)
-  const macosBuilds = [
-    {
-      arch: 'x64',
-      folder: `UniFi Protect Viewer-darwin-x64-${version}/UniFi Protect Viewer.app`,
+  const macosBuilds = []
+
+  // Use the same patterns defined earlier
+  macOSPatterns.forEach((arch) => {
+    macosBuilds.push({
+      arch,
+      folder: `UniFi Protect Viewer-darwin-${arch}/UniFi Protect Viewer.app`,
       customName: 'UniFi Protect Viewer',
-    },
-    {
-      arch: 'arm64',
-      folder: `UniFi Protect Viewer-darwin-arm64-${version}/UniFi Protect Viewer.app`,
-      customName: 'UniFi Protect Viewer',
-    },
-    {
-      arch: 'universal',
-      folder: `UniFi Protect Viewer-darwin-universal-${version}/UniFi Protect Viewer.app`,
-      customName: 'UniFi Protect Viewer',
-    },
-  ]
+    })
+  })
 
   console.log('Compressing macOS app bundles...')
 
@@ -131,18 +132,23 @@ const version = process.env.npm_package_version || '1.1.0'
 
   // Compress Windows builds
   console.log('Compressing Windows builds...')
-  // Find all Windows builds
-  const windowsBuildsPattern = `${buildsDir}/UniFi Protect Viewer-unifi-protect-viewer-win32-*-${version}`
-  const windowsBuilds = await glob(windowsBuildsPattern)
 
-  windowsBuilds.forEach((buildFolder) => {
-    // Extract architecture from folder name (e.g., x64, ia32, arm64)
-    const architecture = path.basename(buildFolder).split('win32-')[1].split('-')[0]
-    const zipName = `UniFi.Protect.Viewer.${version}.Windows.${architecture}.zip`
+  // Process each Windows architecture
+  for (const arch of windowsPatterns) {
+    const buildFolder = path.join(buildsDir, `unifi-protect-viewer-win32-${arch}`)
+
+    // Skip if this architecture build doesn't exist
+    if (!fs.existsSync(buildFolder)) {
+      console.warn(`Windows ${arch} build not found at: ${buildFolder}`)
+      continue
+    }
+
+    const zipName = `UniFi.Protect.Viewer.${version}.Windows.${arch}.zip`
     const zipPath = path.join(releasesDir, zipName)
 
     zipDirectory(buildFolder, zipPath, 'UniFi Protect Viewer') // Custom name for Windows folder
-  })
+    console.log(`Compressed Windows ${arch} build`)
+  }
 
   console.log('Windows builds compressed.')
 
