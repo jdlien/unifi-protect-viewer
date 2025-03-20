@@ -19,8 +19,11 @@ function setupNavigationMonitor() {
       lastUrl = window.location.href
       utils.log('Navigation detected:', oldUrl, '->', lastUrl)
 
+      // Check if we're on a dashboard page and update menu state
+      const isDashboardPage = dashboard.isDashboardPage()
+
       // Handle different navigation scenarios
-      if (lastUrl.includes('/protect/dashboard')) {
+      if (isDashboardPage) {
         // Navigated to dashboard - this means login was successful
         utils.log('Dashboard page detected, applying UI customizations')
 

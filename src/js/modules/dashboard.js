@@ -1,6 +1,7 @@
 // Import required modules
 const utils = require('./utils.js')
 const ui = require('./ui.js')
+const { ipcRenderer } = require('electron')
 
 /**
  * Check if dashboard is ready by waiting for LiveView to be loaded
@@ -55,7 +56,14 @@ async function initializeDashboard() {
  * @returns {boolean} True if current page is a dashboard
  */
 function isDashboardPage() {
-  return window.location.href.includes('/protect/dashboard')
+  const isOnDashboard = window.location.href.includes('/protect/dashboard')
+  // Report status to main process for menu state update
+  try {
+    ipcRenderer.send('update-dashboard-state', isOnDashboard)
+  } catch (error) {
+    // Silently ignore errors as this is just a UI enhancement
+  }
+  return isOnDashboard
 }
 
 module.exports = {

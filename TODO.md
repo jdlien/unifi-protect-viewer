@@ -7,12 +7,11 @@
   - switching between views
   - zoom in and out
   - mute and unmute audio
-- [ ] Automatic updates using electron-updater
 
 ## Known Bugs
 
-- [x] Cannot copy and paste in the configuration page for some reason
-- [ ] Update check always fails
+- [ ] Update check sometimes showed twice
+- [ ] Kind of ugly update check status dialog
 
 ## Optimization
 

@@ -225,6 +225,17 @@ function setupIpcHandlers(mainWindow) {
     }
   })
 
+  // Handle menu state updates from renderer
+  ipcMain.on('update-dashboard-state', (event, isDashboardPage) => {
+    const viewMenu = mainMenu?.items.find((item) => item.label === 'View')
+    if (viewMenu && viewMenu.submenu) {
+      const dashboardItem = viewMenu.submenu.items.find((item) => item.label === 'Return to Dashboard')
+      if (dashboardItem) {
+        dashboardItem.enabled = !isDashboardPage
+      }
+    }
+  })
+
   // Handle reset confirmation dialog
   ipcMain.handle('showResetConfirmation', async (event) => {
     const result = await dialog.showMessageBox(mainWindow, {
@@ -240,6 +251,8 @@ function setupIpcHandlers(mainWindow) {
     return result.response === 1 // Return true if "Reset" was clicked
   })
 }
+
+let mainMenu // Declare at the top level to access it later
 
 // Setup application menu
 function setupApplicationMenu(mainWindow) {
@@ -295,6 +308,14 @@ function setupApplicationMenu(mainWindow) {
             mainWindow.webContents.send('toggle-navigation')
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Return to Dashboard',
+          accelerator: 'Home',
+          click: () => {
+            mainWindow.webContents.send('return-to-dashboard')
+          },
+        },
       ],
     },
     {
@@ -316,8 +337,46 @@ function setupApplicationMenu(mainWindow) {
     },
   ]
 
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
+  mainMenu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(mainMenu)
+
+  // Set up a listener for navigation events to update menu
+  mainWindow.webContents.on('did-navigate', () => {
+    updateMenuState(mainWindow)
+  })
+
+  // Also update on page load completion for SPAs
+  mainWindow.webContents.on('did-finish-load', () => {
+    updateMenuState(mainWindow)
+  })
+
+  // Initial menu state update
+  updateMenuState(mainWindow)
+}
+
+// Update menu items based on current page
+function updateMenuState(mainWindow) {
+  // Check if we're on a dashboard page
+  mainWindow.webContents
+    .executeJavaScript(
+      `
+    // Use the dashboard module to check if we're on a dashboard page
+    window.location.href.includes('/protect/dashboard')
+  `,
+    )
+    .then((isDashboardPage) => {
+      // Find the Return to Dashboard menu item
+      const viewMenu = mainMenu.items.find((item) => item.label === 'View')
+      if (viewMenu && viewMenu.submenu) {
+        const dashboardItem = viewMenu.submenu.items.find((item) => item.label === 'Return to Dashboard')
+        if (dashboardItem) {
+          dashboardItem.enabled = !isDashboardPage
+        }
+      }
+    })
+    .catch((error) => {
+      utils.logError('Error updating menu state:', error)
+    })
 }
 
 // Show native About dialog
@@ -328,7 +387,7 @@ function showAboutDialog(mainWindow) {
     .showMessageBox(mainWindow, {
       title: 'About UniFi Protect Viewer',
       message: 'UniFi Protect Viewer',
-      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.`,
+      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.\nDeveloped by JD Lien.`,
       buttons: ['Check for Updates', 'View on GitHub', 'Close'],
       defaultId: 2,
       cancelId: 2,

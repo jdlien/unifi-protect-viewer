@@ -32,6 +32,11 @@ window.addEventListener('DOMContentLoaded', () => {
       utils.logError('Error toggling navigation from menu:', error)
     })
   })
+
+  // Listen for return-to-dashboard events from the main process
+  ipcRenderer.on('return-to-dashboard', () => {
+    ui.triggerDashboardNavigation()
+  })
 })
 
 // Expose API to renderer using modern structure
@@ -52,11 +57,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Navigation
   navigation: {
     loadURL: (url) => ipcRenderer.send('loadURL', url),
+    updateDashboardState: (isDashboardPage) => ipcRenderer.send('update-dashboard-state', isDashboardPage),
   },
 
   // UI controls
   ui: {
     toggleNavigation: () => ui.toggleNavigation(),
+    returnToDashboard: () => ui.triggerDashboardNavigation(),
   },
 
   // Update management
