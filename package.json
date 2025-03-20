@@ -42,8 +42,7 @@
     "protect",
     "viewer"
   ],
-  "author": "JD Lien",
-  "email": "jd@jdlien.com",
+  "author": "JD Lien <jd@jdlien.com>",
   "license": "",
   "devDependencies": {
     "@electron/notarize": "^2.3.0",

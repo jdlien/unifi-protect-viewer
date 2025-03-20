@@ -88,19 +88,22 @@ try {
 // Build for all platforms
 console.log('\n=== Starting super build for all platforms ===\n')
 
+// Set build environment
+process.env.NODE_ENV = 'production'
+
 const builds = [
   // macOS builds
   {
     name: 'macOS Universal (arm64+x64)',
-    command: 'electron-builder --mac --universal --publish always',
+    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --universal --publish always`,
   },
   {
     name: 'macOS arm64 (Apple Silicon)',
-    command: 'electron-builder --mac --arm64 --publish always',
+    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --arm64 --publish always`,
   },
   {
     name: 'macOS x64 (Intel)',
-    command: 'electron-builder --mac --x64 --publish always',
+    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --x64 --publish always`,
   },
 
   // Windows builds

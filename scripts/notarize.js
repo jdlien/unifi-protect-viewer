@@ -58,15 +58,19 @@ exports.default = async function notarizing(context) {
 
   console.log(`Notarizing ${appPath} with bundle ID ${appBundleId}`)
 
-  // Additional check for required values
-  if (!APPLE_ID || !APPLE_ID_PASSWORD || !APPLE_TEAM_ID) {
-    console.error('❌ Missing required Apple credentials for notarization')
-    return
-  }
-
   try {
     console.log('Uploading to Apple notarization service...')
     console.log(`Using team ID: ${APPLE_TEAM_ID}`)
+
+    // Make sure we have the required properties
+    if (!APPLE_ID || !APPLE_ID_PASSWORD || !APPLE_TEAM_ID) {
+      console.error('❌ Missing required Apple credentials for notarization')
+      console.error(`APPLE_ID: ${Boolean(APPLE_ID)}`)
+      console.error(`APPLE_ID_PASSWORD: ${Boolean(APPLE_ID_PASSWORD)}`)
+      console.error(`APPLE_TEAM_ID: ${Boolean(APPLE_TEAM_ID)}`)
+      return
+    }
+
     await notarize({
       appPath,
       appBundleId,
