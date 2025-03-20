@@ -1,7 +1,7 @@
 {
   "name": "unifi-protect-viewer",
   "productName": "UniFi Protect Viewer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Electron app for UniFi Protect",
   "main": "main.js",
   "scripts": {
@@ -9,11 +9,14 @@
     "dev": "NODE_ENV=development electron .",
     "clean": "rm -rf builds dist",
     "build": "electron-builder --config",
-    "build:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac",
-    "build:mac:x64": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --x64 --arm64=false",
-    "build:mac:arm64": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --x64=false",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac --universal",
+    "build:mac-arm64": "electron-builder --mac --arm64",
+    "build:mac-x64": "electron-builder --mac --x64",
+    "build:win-arm64": "electron-builder --win --arm64",
+    "build:win-ia32": "electron-builder --win --ia32",
+    "build:win-x64": "electron-builder --win --x64",
+    "build:linux": "electron-builder --linux --x64",
+    "build:linux-arm64": "electron-builder --linux --arm64",
     "dist": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run clean && electron-builder --mac --win --publish never",
     "dist:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run clean && electron-builder --mac --publish never",
     "notarize:mac:x64": "NODE_ENV=production npm run clean && APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --x64 --arm64=false",
@@ -26,7 +29,11 @@
     "release:mac": "npm run release:mac:x64 && npm run release:mac:arm64 && npm run release:mac:universal",
     "release:win": "npm run clean && npm version patch && electron-builder --win --publish always",
     "release:linux": "npm run clean && npm version patch && electron-builder --linux --publish always",
-    "release": "npm run release:mac && npm run release:win && npm run release:linux"
+    "release": "npm run release:mac && npm run release:win && npm run release:linux",
+    "super-release": "node scripts/release.js",
+    "release:major": "node scripts/release.js major",
+    "release:minor": "node scripts/release.js minor",
+    "release:patch": "node scripts/release.js patch"
   },
   "keywords": [
     "app",
@@ -45,7 +52,9 @@
     "electron-builder": "^24.13.3",
     "electron-reloader": "^1.2.3",
     "glob": "^11.0.1",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "readline-sync": "^1.4.10",
+    "semver": "^7.7.1"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
