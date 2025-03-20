@@ -23,6 +23,9 @@ const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || 'A93Q7MKECL'
 // Set APPLE_APP_SPECIFIC_PASSWORD as it might be needed for some builds
 process.env.APPLE_APP_SPECIFIC_PASSWORD = APPLE_ID_PASSWORD
 
+// Explicitly set the teamId in the environment for the notarization process
+process.env.APPLE_TEAM_ID = APPLE_TEAM_ID
+
 exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context
 
@@ -63,6 +66,7 @@ exports.default = async function notarizing(context) {
 
   try {
     console.log('Uploading to Apple notarization service...')
+    console.log(`Using team ID: ${APPLE_TEAM_ID}`)
     await notarize({
       appPath,
       appBundleId,
