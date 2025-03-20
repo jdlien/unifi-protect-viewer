@@ -264,10 +264,29 @@ function setupApplicationMenu(mainWindow) {
       ],
     },
     {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
       label: 'View',
       submenu: [
         { role: 'reload' },
-        { role: 'togglefullscreen' },
+        { role: 'togglefullscreen', accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : null },
+        {
+          label: 'Toggle Fullscreen (F11)',
+          accelerator: 'F11',
+          click: () => {
+            mainWindow.setFullScreen(!mainWindow.isFullScreen())
+          },
+        },
         { type: 'separator' },
         {
           label: 'Toggle Navigation',

@@ -363,9 +363,14 @@ function handleKeyboardShortcuts(event) {
     ipcRenderer.send('restart')
   }
 
-  // F11 for fullscreen
-  if (event.key === 'F11') {
-    event.preventDefault() // Prevent default browser fullscreen
+  // Fullscreen toggle shortcuts
+  if (
+    // F11 for all platforms
+    event.key === 'F11' ||
+    // macOS native Ctrl+Cmd+F
+    (process.platform === 'darwin' && event.key.toLowerCase() === 'f' && event.ctrlKey && event.metaKey)
+  ) {
+    event.preventDefault() // Prevent default browser behavior
     // Request fullscreen via IPC
     ipcRenderer.send('toggleFullscreen')
   }

@@ -4,10 +4,36 @@
  */
 const { notarize } = require('@electron/notarize')
 const { build } = require('../package.json')
-require('dotenv').config()
+const path = require('path')
+const fs = require('fs')
+
+// Load dotenv if available
+try {
+  require('dotenv').config()
+} catch (err) {
+  console.log('dotenv not available, using hardcoded values')
+}
+
+// IMPORTANT: If environment variables aren't working, you can hardcode them here
+// These will be used as a fallback if the environment variables don't work
+const APPLE_ID = process.env.APPLE_ID || 'jd@jdlien.com'
+const APPLE_ID_PASSWORD = process.env.APPLE_ID_PASSWORD || 'liee-exkd-xmlv-cclh'
+const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || 'A93Q7MKECL'
+
+// Set APPLE_APP_SPECIFIC_PASSWORD as it might be needed for some builds
+process.env.APPLE_APP_SPECIFIC_PASSWORD = APPLE_ID_PASSWORD
 
 exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context
+
+  // Log environment information for debugging
+  console.log('Notarization environment (with fallbacks):')
+  console.log(`- NODE_ENV: "${process.env.NODE_ENV}"`)
+  console.log(`- Using APPLE_ID: ${APPLE_ID}`)
+  console.log(`- APPLE_ID_PASSWORD is set: ${Boolean(APPLE_ID_PASSWORD)}`)
+  console.log(`- APPLE_APP_SPECIFIC_PASSWORD is set: ${Boolean(process.env.APPLE_APP_SPECIFIC_PASSWORD)}`)
+  console.log(`- Using APPLE_TEAM_ID: ${APPLE_TEAM_ID}`)
+  console.log(`- Current directory: ${process.cwd()}`)
 
   // Only notarize macOS builds
   if (electronPlatformName !== 'darwin') {
@@ -21,37 +47,33 @@ exports.default = async function notarizing(context) {
     return
   }
 
-  // Check for required environment variables
-  if (
-    !process.env.APPLE_ID ||
-    !process.env.APPLE_ID_PASSWORD ||
-    !process.env.APPLE_TEAM_ID ||
-    process.env.APPLE_ID === 'your.email@example.com' ||
-    process.env.APPLE_ID_PASSWORD === 'app-specific-password-here' ||
-    process.env.APPLE_TEAM_ID === 'your-team-id-here'
-  ) {
-    console.log('Skipping notarization: APPLE_ID, APPLE_ID_PASSWORD, or APPLE_TEAM_ID not properly set')
-    console.log('Update the values in your .env file with real credentials to enable notarization')
-    return
-  }
-
-  console.log('Notarizing macOS application...')
+  console.log('Starting macOS notarization process...')
 
   const appName = context.packager.appInfo.productFilename
   const appPath = `${appOutDir}/${appName}.app`
   const appBundleId = build.appId
 
+  console.log(`Notarizing ${appPath} with bundle ID ${appBundleId}`)
+
+  // Additional check for required values
+  if (!APPLE_ID || !APPLE_ID_PASSWORD || !APPLE_TEAM_ID) {
+    console.error('❌ Missing required Apple credentials for notarization')
+    return
+  }
+
   try {
+    console.log('Uploading to Apple notarization service...')
     await notarize({
       appPath,
       appBundleId,
-      appleId: process.env.APPLE_ID,
-      appleIdPassword: process.env.APPLE_ID_PASSWORD,
-      teamId: process.env.APPLE_TEAM_ID,
+      appleId: APPLE_ID,
+      appleIdPassword: APPLE_ID_PASSWORD,
+      teamId: APPLE_TEAM_ID,
     })
-    console.log(`Notarization completed for ${appName}`)
+    console.log(`✅ Notarization completed successfully for ${appName}`)
   } catch (error) {
-    console.error('Notarization failed:', error)
+    console.error('❌ Notarization failed:', error)
+    console.error('Error details:', error.message || error)
     // Don't throw the error to allow the build to continue
   }
 }

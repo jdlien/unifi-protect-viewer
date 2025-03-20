@@ -11,6 +11,9 @@
 
 ## Known Bugs
 
+- [x] Cannot copy and paste in the configuration page for some reason
+- [ ] Update check always fails
+
 ## Optimization
 
 - [ ] Consider switching to ES modules
