@@ -6,11 +6,32 @@ const navigation = require('./modules/navigation.js')
 const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
 
+// Only import renderer-specific functions from updates module
+// to avoid loading electron-updater in the renderer process
+const {
+  initializeUpdateListeners,
+  showUpdateNotification,
+  removeUpdateNotification,
+  checkForUpdates,
+} = require('./modules/updates.js')
+
 window.addEventListener('DOMContentLoaded', () => {
   utils.log('Page loaded, URL:', window.location.href)
   timeouts.clearTimeout('connection')
   navigation.initializeWithPolling()
   ui.setupKeyboardShortcuts()
+
+  // Initialize updates - after a delay to ensure UI is ready
+  setTimeout(() => {
+    initializeUpdateListeners()
+  }, 5000)
+
+  // Listen for toggle-navigation events from the main process
+  ipcRenderer.on('toggle-navigation', () => {
+    ui.toggleNavigation().catch((error) => {
+      utils.logError('Error toggling navigation from menu:', error)
+    })
+  })
 })
 
 // Expose API to renderer using modern structure
@@ -38,6 +59,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleNavigation: () => ui.toggleNavigation(),
   },
 
+  // Update management
+  updates: {
+    onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
+    onUpdateError: (callback) => ipcRenderer.on('update-error', (_, message) => callback(message)),
+    onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (_, progress) => callback(progress)),
+    onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_, info) => callback(info)),
+    checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+    downloadUpdate: () => ipcRenderer.send('download-update'),
+    installUpdate: () => ipcRenderer.send('install-update'),
+  },
+
   // Timeout management
   timeouts: {
     setTrackedTimeout: timeouts.setTrackedTimeout,
@@ -48,4 +80,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Backward compatibility functions
   reset: () => ipcRenderer.send('reset'),
   restart: () => ipcRenderer.send('restart'),
+
+  // App version - accessed by About page
+  appVersion: ipcRenderer.sendSync('get-app-version'),
 })

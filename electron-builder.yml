@@ -1,0 +1,32 @@
+appId: 'com.jdlien.unifi-protect-viewer'
+productName: 'UniFi Protect Viewer'
+directories:
+  output: 'releases'
+  buildResources: 'resources'
+files:
+  - 'main.js'
+  - 'src/**/*'
+  - 'node_modules/**/*'
+  - 'package.json'
+publish:
+  provider: 'github'
+  owner: 'jdlien'
+  repo: 'unifi-protect-viewer'
+  releaseType: 'release'
+  vPrefixedTagName: true
+mac:
+  category: 'public.app-category.utilities'
+  target:
+    - 'zip'
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: 'build/entitlements.mac.plist'
+  entitlementsInherit: 'build/entitlements.mac.plist'
+  darkModeSupport: true
+win:
+  target:
+    - 'zip'
+linux:
+  target:
+    - 'zip'
+  category: 'Utility'

@@ -1,14 +1,4 @@
 // Modules to control application life and create native browser window
-// Load environment variables from .env file
-try {
-  require('dotenv').config()
-  if (process.env.GH_TOKEN) {
-    console.log('GitHub token found in environment variables')
-  }
-} catch (err) {
-  console.error('Error loading .env file:', err)
-}
-
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron')
 const path = require('node:path')
 const version = require('./src/js/modules/version')
@@ -241,99 +231,10 @@ function setupIpcHandlers(mainWindow) {
   })
 }
 
-// Setup application menu
-function setupApplicationMenu(mainWindow) {
-  const template = [
-    {
-      label: 'File',
-      submenu: [
-        {
-          label: 'About UniFi Protect Viewer',
-          click: () => {
-            showAboutDialog(mainWindow)
-          },
-        },
-        {
-          label: 'Check for Updates',
-          click: () => {
-            checkForUpdatesWithDialog(mainWindow)
-          },
-        },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    },
-    {
-      label: 'View',
-      submenu: [
-        { role: 'reload' },
-        { role: 'togglefullscreen' },
-        { type: 'separator' },
-        {
-          label: 'Toggle Navigation',
-          accelerator: 'Escape',
-          click: () => {
-            mainWindow.webContents.send('toggle-navigation')
-          },
-        },
-      ],
-    },
-    {
-      label: 'Help',
-      submenu: [
-        {
-          label: 'Check for Updates',
-          click: () => {
-            checkForUpdatesWithDialog(mainWindow)
-          },
-        },
-        {
-          label: 'View on GitHub',
-          click: () => {
-            shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
-          },
-        },
-      ],
-    },
-  ]
-
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
-}
-
-// Show native About dialog
-function showAboutDialog(mainWindow) {
-  const appVersion = app.getVersion()
-
-  dialog
-    .showMessageBox(mainWindow, {
-      title: 'About UniFi Protect Viewer',
-      message: 'UniFi Protect Viewer',
-      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.`,
-      buttons: ['Check for Updates', 'View on GitHub', 'Close'],
-      defaultId: 2,
-      cancelId: 2,
-      noLink: true,
-      icon: path.join(__dirname, '/src/img/128.png'),
-    })
-    .then(({ response }) => {
-      if (response === 0) {
-        // Check for updates
-        checkForUpdatesWithDialog(mainWindow)
-      } else if (response === 1) {
-        // View on GitHub
-        shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
-      }
-    })
-    .catch((err) => {
-      utils.logError('Error showing About dialog:', err)
-    })
-}
-
 // Check for updates and show results in a dialog
 function checkForUpdatesWithDialog(mainWindow) {
   try {
-    utils.log('Manually checking for updates from dialog')
+    utils.log('Manually checking for updates from About dialog')
 
     // Get the auto-updater instance
     const autoUpdater = updates.getAutoUpdater()
@@ -344,9 +245,7 @@ function checkForUpdatesWithDialog(mainWindow) {
         type: 'info',
         title: 'Updates',
         message: 'Update System Not Available',
-        detail: isDev
-          ? 'Updates are disabled in development mode. Set FORCE_DEV_UPDATES=true in your .env file to test updates.'
-          : 'The update system is not available due to initialization errors.',
+        detail: 'The update system is not available in development mode or there was an error initializing it.',
         buttons: ['OK'],
       })
       return
@@ -365,7 +264,7 @@ function checkForUpdatesWithDialog(mainWindow) {
       return
     }
 
-    // Show initial checking dialog
+    // Show initial checking dialog with more modern UI
     let checkingDialog = new BrowserWindow({
       parent: mainWindow,
       modal: true,
@@ -379,14 +278,14 @@ function checkForUpdatesWithDialog(mainWindow) {
       title: 'Checking for Updates',
       vibrancy: 'under-window', // MacOS vibrancy effect
       visualEffectState: 'active', // For macOS
-      backgroundColor: '#00000000', // Transparent background for proper theme support
+      backgroundColor: '#00000000', // Transparent background
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
       },
     })
 
-    // Use our HTML file for the checking dialog
+    // Use the new HTML file for the checking dialog
     checkingDialog.loadFile(path.join(__dirname, 'src/html/update-checking.html'))
 
     checkingDialog.once('ready-to-show', () => {
@@ -412,7 +311,7 @@ function checkForUpdatesWithDialog(mainWindow) {
         })
         .then(({ response }) => {
           if (response === 0) {
-            // Create a download progress dialog
+            // Create a download progress dialog with the new HTML file
             let downloadDialog = new BrowserWindow({
               parent: mainWindow,
               modal: true,
@@ -500,144 +399,126 @@ function checkForUpdatesWithDialog(mainWindow) {
         })
     }
 
-    const updateNotAvailableHandler = () => {
-      if (checkingDialog && !checkingDialog.isDestroyed()) {
-        checkingDialog.close()
-        checkingDialog = null
-      }
-
-      // Show no updates dialog
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'No Updates',
-        message: 'You have the latest version',
-        detail: `Version ${app.getVersion()} is the latest version available.`,
-        buttons: ['OK'],
-      })
-    }
-
-    const updateErrorHandler = (err) => {
-      if (checkingDialog && !checkingDialog.isDestroyed()) {
-        checkingDialog.close()
-        checkingDialog = null
-      }
-
-      utils.logError('Error checking for updates:', err)
-
-      // Check for GitHub authentication errors
-      const errorMessage = err.message || String(err)
-      let detailMessage = `Unable to check for updates: ${errorMessage}`
-
-      if (
-        errorMessage.includes('API rate limit exceeded') ||
-        errorMessage.includes('Not Found') ||
-        errorMessage.includes('Bad credentials') ||
-        errorMessage.includes('Unauthorized')
-      ) {
-        detailMessage =
-          'GitHub authentication error detected.\n\n' +
-          'To enable updates, you need to set up a GitHub Personal Access Token (PAT):\n\n' +
-          '1. Create a PAT at https://github.com/settings/tokens with "repo" scope\n' +
-          '2. Set the token as GH_TOKEN environment variable\n' +
-          '3. Or add it to your .env file: GH_TOKEN=your_token\n\n' +
-          'Also verify releases exist at: https://github.com/jdlien/unifi-protect-viewer/releases\n\n' +
-          'Then restart the application to enable updates.'
-      }
-
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update Error',
-        message: 'Error Checking for Updates',
-        detail: detailMessage,
-        buttons: ['OK'],
-      })
-    }
-
-    // Register temporary event listeners
-    autoUpdater.once('update-available', updateAvailableHandler)
-    autoUpdater.once('update-not-available', updateNotAvailableHandler)
-    autoUpdater.once('error', updateErrorHandler)
-
-    // Log that we're about to check for updates
-    utils.log(`Starting update check with forceDevUpdateConfig=${autoUpdater.forceDevUpdateConfig}`)
-
-    // Perform the update check
+    // Set up update checking
     autoUpdater
       .checkForUpdates()
-      .then((result) => {
-        // Log the result object to see what's happening
-        utils.log(
-          'Update check initial result:',
-          result
-            ? {
-                updateInfo: result.updateInfo
-                  ? {
-                      version: result.updateInfo.version,
-                      files: result.updateInfo.files,
-                      path: result.updateInfo.path,
-                    }
-                  : 'none',
-              }
-            : 'no result',
-        )
-      })
+      .then(updateAvailableHandler)
       .catch((err) => {
-        // Handle errors that don't go through the event system
-        utils.logError('Direct update check error:', err)
-        updateErrorHandler(err)
-      })
+        if (checkingDialog && !checkingDialog.isDestroyed()) {
+          checkingDialog.close()
+          checkingDialog = null
+        }
 
-    // Set a timeout to close the checking dialog if no response is received
-    setTimeout(() => {
-      if (checkingDialog && !checkingDialog.isDestroyed()) {
-        checkingDialog.close()
-        checkingDialog = null
-
-        // Remove the event listeners if the timeout is triggered
-        autoUpdater.removeListener('update-available', updateAvailableHandler)
-        autoUpdater.removeListener('update-not-available', updateNotAvailableHandler)
-        autoUpdater.removeListener('error', updateErrorHandler)
-
+        utils.logError('Error checking for updates:', err)
         dialog.showMessageBox(mainWindow, {
-          type: 'warning',
-          title: 'Update Check Timeout',
-          message: 'Update Check Timed Out',
-          detail: 'Unable to check for updates. Please check your internet connection and try again.',
+          type: 'error',
+          title: 'Update Error',
+          message: 'Error Checking for Updates',
+          detail: `Unable to check for updates: ${err.message || err}`,
           buttons: ['OK'],
         })
-      }
-    }, 60000) // 60 second timeout
+      })
   } catch (err) {
-    utils.logError('Error initiating update check:', err)
-
-    // Check for GitHub authentication errors
-    const errorMessage = err.message || String(err)
-    let detailMessage = `An unexpected error occurred: ${errorMessage}`
-
-    if (
-      errorMessage.includes('API rate limit exceeded') ||
-      errorMessage.includes('Not Found') ||
-      errorMessage.includes('Bad credentials') ||
-      errorMessage.includes('Unauthorized')
-    ) {
-      detailMessage =
-        'GitHub authentication error detected.\n\n' +
-        'To enable updates, you need to set up a GitHub Personal Access Token (PAT):\n\n' +
-        '1. Create a PAT at https://github.com/settings/tokens with "repo" scope\n' +
-        '2. Set the token as GH_TOKEN environment variable\n' +
-        '3. Or add it to your .env file: GH_TOKEN=your_token\n\n' +
-        'Also verify releases exist at: https://github.com/jdlien/unifi-protect-viewer/releases\n\n' +
-        'Then restart the application to enable updates.'
-    }
-
+    utils.logError('Error in checkForUpdatesWithDialog:', err)
     dialog.showMessageBox(mainWindow, {
       type: 'error',
       title: 'Update Error',
       message: 'Error Checking for Updates',
-      detail: detailMessage,
+      detail: `Unable to check for updates: ${err.message || err}`,
       buttons: ['OK'],
     })
   }
+}
+
+// Setup application menu
+function setupApplicationMenu(mainWindow) {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'About UniFi Protect Viewer',
+          click: () => {
+            showAboutDialog(mainWindow)
+          },
+        },
+        {
+          label: 'Check for Updates',
+          click: () => {
+            checkForUpdatesWithDialog(mainWindow)
+          },
+        },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'togglefullscreen' },
+        { type: 'separator' },
+        {
+          label: 'Toggle Navigation',
+          accelerator: 'Escape',
+          click: () => {
+            mainWindow.webContents.send('toggle-navigation')
+          },
+        },
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        {
+          label: 'Check for Updates',
+          click: () => {
+            checkForUpdatesWithDialog(mainWindow)
+          },
+        },
+        {
+          label: 'View on GitHub',
+          click: () => {
+            const { shell } = require('electron')
+            shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
+          },
+        },
+      ],
+    },
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
+// Show native About dialog
+function showAboutDialog(mainWindow) {
+  const appVersion = app.getVersion()
+
+  dialog
+    .showMessageBox(mainWindow, {
+      title: 'About UniFi Protect Viewer',
+      message: 'UniFi Protect Viewer',
+      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.\n\nCheck for updates: GitHub > jdlien/unifi-protect-viewer`,
+      buttons: ['Check for Updates', 'View on GitHub', 'Close'],
+      defaultId: 2,
+      cancelId: 2,
+      noLink: true,
+      icon: path.join(__dirname, '/src/img/128.png'),
+    })
+    .then(({ response }) => {
+      if (response === 0) {
+        // Check for updates
+        checkForUpdatesWithDialog(mainWindow)
+      } else if (response === 1) {
+        // View on GitHub
+        const { shell } = require('electron')
+        shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
+      }
+    })
+    .catch((err) => {
+      utils.logError('Error showing About dialog:', err)
+    })
 }
 
 // Wait until Electron app is ready

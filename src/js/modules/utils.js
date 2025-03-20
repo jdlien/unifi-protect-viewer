@@ -115,6 +115,27 @@ function clickElement(element) {
   }
 }
 
+/**
+ * Logger interface for electron-updater
+ * Implements the expected methods: info, warn, error, debug
+ */
+const logger = {
+  info(...args) {
+    log('[INFO]', ...args)
+  },
+  warn(...args) {
+    log('[WARN]', ...args)
+  },
+  error(...args) {
+    logError('[ERROR]', args.length > 0 ? args[0] : 'Unknown error')
+  },
+  debug(...args) {
+    if (process.env.NODE_ENV === 'development') {
+      log('[DEBUG]', ...args)
+    }
+  },
+}
+
 module.exports = {
   waitUntil,
   wait,
@@ -122,4 +143,5 @@ module.exports = {
   clickElement,
   log,
   logError,
+  logger,
 }
