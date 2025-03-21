@@ -9,6 +9,7 @@
 // Import utilities that work in both main and renderer
 const utils = require('./utils')
 const isDev = process.env.NODE_ENV === 'development'
+const path = require('node:path')
 
 // Get environment variable configurations with defaults
 const disableAutoUpdates = process.env.DISABLE_AUTO_UPDATES === 'true'
@@ -17,20 +18,44 @@ const initialUpdateDelay = parseInt(process.env.INITIAL_UPDATE_DELAY || '10000',
 
 // MAIN PROCESS CODE
 // These functions are only used in the main process
-let autoUpdater, dialog, app, ipcMain
+let autoUpdater, dialog, app, ipcMain, BrowserWindow
+
+/**
+ * Handle GitHub authentication error messages
+ * @param {string} errorMessage - The error message to check
+ * @returns {string} Formatted GitHub error message or original message
+ */
+function getGitHubErrorMessage(errorMessage) {
+  if (
+    errorMessage.includes('API rate limit exceeded') ||
+    errorMessage.includes('Not Found') ||
+    errorMessage.includes('Bad credentials') ||
+    errorMessage.includes('Unauthorized')
+  ) {
+    return (
+      'GitHub authentication error detected.\n\n' +
+      'To enable updates, you need to set up a GitHub Personal Access Token (PAT):\n\n' +
+      '1. Create a PAT at https://github.com/settings/tokens with "repo" scope\n' +
+      '2. Set the token as GH_TOKEN environment variable\n' +
+      '3. Or add it to your .env file: GH_TOKEN=your_token\n\n' +
+      'Then restart the application to enable updates.'
+    )
+  }
+  return errorMessage
+}
 
 // Lazy-load electron-updater in main process only
 function getAutoUpdater() {
   if (!autoUpdater) {
     try {
       // Only load these modules in main process context
-      utils.log(`Loading electron-updater in ${isDev ? 'development' : 'production'} mode`)
       autoUpdater = require('electron-updater').autoUpdater
       dialog = require('electron').dialog
       app = require('electron').app
       ipcMain = require('electron').ipcMain
+      BrowserWindow = require('electron').BrowserWindow
 
-      // Make sure we can use the logger
+      // Setup logger
       if (autoUpdater && !autoUpdater.logger) {
         autoUpdater.logger = utils.logger
       }
@@ -39,99 +64,79 @@ function getAutoUpdater() {
       if (isDev && process.env.FORCE_DEV_UPDATES === 'true') {
         utils.log('Forcing updates in development mode for testing')
         autoUpdater.forceDevUpdateConfig = true
-        // Also set allowPrerelease to true to help with testing
         autoUpdater.allowPrerelease = true
-        utils.log('forceDevUpdateConfig and allowPrerelease set to true')
-      } else if (isDev) {
-        utils.log('Development mode detected but FORCE_DEV_UPDATES is not enabled')
       }
 
-      // Log the update configuration
-      utils.log('Auto-updater configuration:', {
-        forceDevUpdateConfig: autoUpdater.forceDevUpdateConfig,
-        allowPrerelease: autoUpdater.allowPrerelease,
-        allowDowngrade: autoUpdater.allowDowngrade,
-        autoDownload: autoUpdater.autoDownload,
-        channel: autoUpdater.channel,
-        isUpdaterActive: autoUpdater.isUpdaterActive(),
-      })
-
-      // Double-check we have all required methods
+      // Validate autoUpdater instance
       if (!autoUpdater || typeof autoUpdater.checkForUpdates !== 'function') {
         throw new Error('Invalid autoUpdater instance - missing methods')
       }
     } catch (err) {
       utils.logError('Failed to load auto-updater:', err)
 
-      // Create a dummy auto-updater with all required methods
-      // that properly handles event listeners
-      const dummyEventEmitter = {
-        _events: {},
-        on: function (event, listener) {
-          if (!this._events[event]) this._events[event] = []
-          this._events[event].push(listener)
-          return this
-        },
-        once: function (event, listener) {
-          const onceWrapper = (...args) => {
-            this.removeListener(event, onceWrapper)
-            listener.apply(this, args)
-          }
-          this.on(event, onceWrapper)
-          return this
-        },
-        removeListener: function (event, listener) {
-          if (this._events[event]) {
-            this._events[event] = this._events[event].filter((l) => l !== listener)
-          }
-          return this
-        },
-        emit: function (event, ...args) {
-          if (this._events[event]) {
-            this._events[event].forEach((listener) => listener(...args))
-          }
-          return true
-        },
-      }
-
-      // Return a dummy auto-updater to prevent crashes
-      return Object.assign(dummyEventEmitter, {
-        logger: utils.logger,
-        autoDownload: false,
-        checkForUpdates: () => {
-          utils.log('[Dummy] Check for updates called')
-          setTimeout(() => {
-            dummyEventEmitter.emit('update-not-available')
-          }, 500)
-          return Promise.resolve()
-        },
-        downloadUpdate: () => {
-          utils.log('[Dummy] Download update called')
-          return Promise.resolve()
-        },
-        quitAndInstall: () => {
-          utils.log('[Dummy] Quit and install called')
-        },
-      })
+      // Create a simple dummy auto-updater with required methods
+      return createDummyAutoUpdater()
     }
   }
   return autoUpdater
 }
 
 /**
+ * Create a dummy auto-updater for when the real one can't be loaded
+ * @returns {Object} A dummy auto-updater with required methods
+ */
+function createDummyAutoUpdater() {
+  const dummyEventEmitter = {
+    _events: {},
+    on: function (event, listener) {
+      if (!this._events[event]) this._events[event] = []
+      this._events[event].push(listener)
+      return this
+    },
+    once: function (event, listener) {
+      const onceWrapper = (...args) => {
+        this.removeListener(event, onceWrapper)
+        listener.apply(this, args)
+      }
+      this.on(event, onceWrapper)
+      return this
+    },
+    removeListener: function (event, listener) {
+      if (this._events[event]) {
+        this._events[event] = this._events[event].filter((l) => l !== listener)
+      }
+      return this
+    },
+    emit: function (event, ...args) {
+      if (this._events[event]) {
+        this._events[event].forEach((listener) => listener(...args))
+      }
+      return true
+    },
+  }
+
+  // Return a dummy auto-updater to prevent crashes
+  return Object.assign(dummyEventEmitter, {
+    logger: utils.logger,
+    autoDownload: false,
+    checkForUpdates: () => {
+      utils.log('[Dummy] Check for updates called')
+      setTimeout(() => dummyEventEmitter.emit('update-not-available'), 500)
+      return Promise.resolve()
+    },
+    downloadUpdate: () => {
+      utils.log('[Dummy] Download update called')
+      return Promise.resolve()
+    },
+    quitAndInstall: () => {
+      utils.log('[Dummy] Quit and install called')
+    },
+  })
+}
+
+/**
  * Configure auto-updater for the main process
  * @param {BrowserWindow} mainWindow - The main application window
- *
- * @note GitHub Auto Updates Configuration:
- * For auto-updates to work with private GitHub repositories or to avoid rate limiting,
- * you need to set up a GitHub Personal Access Token (PAT) with 'repo' scope.
- *
- * Set it using one of these methods:
- * 1. Environment variable: GH_TOKEN=your_token electron .
- * 2. In your CI/CD pipeline environment variables
- * 3. For development: Create a .env file with GH_TOKEN=your_token
- *
- * Without a PAT, updates may fail with authentication errors or API rate limits.
  */
 function setupAutoUpdater(mainWindow) {
   const autoUpdater = getAutoUpdater()
@@ -140,26 +145,12 @@ function setupAutoUpdater(mainWindow) {
   // Disable auto download
   autoUpdater.autoDownload = false
 
-  // Configure logging - use our properly implemented logger interface
+  // Configure logging
   autoUpdater.logger = utils.logger
 
   // Handle update events
   autoUpdater.on('checking-for-update', () => {
     utils.log('Checking for updates...')
-
-    // For more visibility on why updates might be skipped
-    if (isDev) {
-      utils.log(`Update check environment details:
-        - NODE_ENV: ${process.env.NODE_ENV}
-        - isDev: ${isDev}
-        - FORCE_DEV_UPDATES: ${process.env.FORCE_DEV_UPDATES}
-        - forceDevUpdateConfig: ${autoUpdater.forceDevUpdateConfig}
-        - Update allowed: ${!isDev || autoUpdater.forceDevUpdateConfig}
-      `)
-
-      // Additional check for releases
-      utils.log('Make sure there are published releases at https://github.com/jdlien/unifi-protect-viewer/releases')
-    }
   })
 
   autoUpdater.on('update-available', (info) => {
@@ -189,23 +180,15 @@ function setupAutoUpdater(mainWindow) {
 
   autoUpdater.on('error', (err) => {
     utils.logError('Update error:', err)
-
-    // Detect GitHub API authentication errors
     const errorMessage = err.message || String(err)
-    if (
-      errorMessage.includes('API rate limit exceeded') ||
-      errorMessage.includes('Not Found') ||
-      errorMessage.includes('Bad credentials') ||
-      errorMessage.includes('Unauthorized')
-    ) {
-      utils.log('GitHub API authentication error detected')
-      mainWindow.webContents.send(
-        'update-error',
-        'GitHub authentication error. A Personal Access Token may be required.',
-      )
-    } else {
-      mainWindow.webContents.send('update-error', errorMessage)
-    }
+    mainWindow.webContents.send(
+      'update-error',
+      errorMessage.includes('API rate limit') ||
+        errorMessage.includes('credentials') ||
+        errorMessage.includes('Unauthorized')
+        ? 'GitHub authentication error. A Personal Access Token may be required.'
+        : errorMessage,
+    )
   })
 
   autoUpdater.on('download-progress', (progress) => {
@@ -240,20 +223,15 @@ function setupAutoUpdater(mainWindow) {
       return
     }
 
-    // Check for updates after a short delay to ensure app is fully loaded
+    // Schedule update checks
     setTimeout(() => {
-      utils.log('Checking for updates...')
-      autoUpdater.checkForUpdates().catch((err) => {
-        utils.logError('Error checking for updates:', err)
-      })
+      utils.log('Initial update check')
+      autoUpdater.checkForUpdates().catch((err) => utils.logError('Update check error:', err))
     }, initialUpdateDelay)
 
-    // Check for updates on the configured interval
     setInterval(() => {
       utils.log('Scheduled update check')
-      autoUpdater.checkForUpdates().catch((err) => {
-        utils.logError('Error checking for updates:', err)
-      })
+      autoUpdater.checkForUpdates().catch((err) => utils.logError('Update check error:', err))
     }, updateCheckInterval)
   } else {
     utils.log('Auto-updates disabled in development mode')
@@ -269,26 +247,26 @@ function setupUpdateIpcHandlers(mainWindow) {
     ipcMain = require('electron').ipcMain
   }
 
+  if (!app) {
+    app = require('electron').app
+  }
+
   const autoUpdater = getAutoUpdater()
   if (!autoUpdater) return
 
   // Update-related IPC handlers
   ipcMain.on('check-for-updates', () => {
-    if (isDev) {
+    if (isDev && !process.env.FORCE_DEV_UPDATES) {
       utils.log('Update check requested in dev mode - skipping')
       return
     }
     utils.log('Manual update check requested')
-    autoUpdater.checkForUpdates().catch((err) => {
-      utils.logError('Error checking for updates:', err)
-    })
+    autoUpdater.checkForUpdates().catch((err) => utils.logError('Error checking for updates:', err))
   })
 
   ipcMain.on('download-update', () => {
     utils.log('Manual update download requested')
-    autoUpdater.downloadUpdate().catch((err) => {
-      utils.logError('Error downloading update:', err)
-    })
+    autoUpdater.downloadUpdate().catch((err) => utils.logError('Error downloading update:', err))
   })
 
   ipcMain.on('install-update', () => {
@@ -296,20 +274,254 @@ function setupUpdateIpcHandlers(mainWindow) {
     autoUpdater.quitAndInstall(true, true)
   })
 
-  if (!app) {
-    app = require('electron').app
-  }
-
   // Get app version (sync)
   ipcMain.on('get-app-version', (event) => {
     event.returnValue = app.getVersion()
   })
 }
 
-// Initialize update functionality - main process entry point
+/**
+ * Initialize update functionality - main process entry point
+ * @param {BrowserWindow} mainWindow - The main application window
+ */
 function initialize(mainWindow) {
   setupAutoUpdater(mainWindow)
   setupUpdateIpcHandlers(mainWindow)
+}
+
+/**
+ * Check for updates and show results in a dialog
+ * @param {BrowserWindow} mainWindow - The main browser window
+ */
+function checkForUpdatesWithDialog(mainWindow) {
+  try {
+    utils.log('Manually checking for updates from dialog')
+    const autoUpdater = getAutoUpdater()
+
+    // Make sure BrowserWindow is available
+    if (!BrowserWindow) {
+      BrowserWindow = require('electron').BrowserWindow
+    }
+
+    // Override for testing in development mode
+    if (isDev && !process.env.FORCE_DEV_UPDATES) {
+      utils.log('Development mode detected, but proceeding with update check for testing')
+      autoUpdater.forceDevUpdateConfig = true
+      autoUpdater.allowPrerelease = true
+    }
+
+    // If the auto-updater is not available, show a message and return
+    if (!autoUpdater) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Updates',
+        message: 'Update System Not Available',
+        detail: isDev
+          ? 'Updates are disabled in development mode. Set FORCE_DEV_UPDATES=true in your .env file to test updates.'
+          : 'The update system is not available due to initialization errors.',
+        buttons: ['OK'],
+      })
+      return
+    }
+
+    // Show checking dialog
+    let checkingDialog = new BrowserWindow({
+      parent: mainWindow,
+      modal: true,
+      show: false,
+      width: 350,
+      height: 140,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      title: 'Checking for Updates',
+      vibrancy: 'under-window',
+      visualEffectState: 'active',
+      backgroundColor: '#00000000',
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    })
+
+    checkingDialog.loadFile(path.join(__dirname, '../../html/update-checking.html'))
+    checkingDialog.once('ready-to-show', () => checkingDialog.show())
+
+    // Helper to close the checking dialog
+    const closeCheckingDialog = () => {
+      if (checkingDialog && !checkingDialog.isDestroyed()) {
+        checkingDialog.close()
+        checkingDialog = null
+      }
+    }
+
+    // Set up event handlers for update checking
+    const updateAvailableHandler = (info) => {
+      closeCheckingDialog()
+
+      // Show update available dialog
+      dialog
+        .showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'Update Available',
+          message: `Version ${info.version} Available`,
+          detail: 'A new version is available. Would you like to download it now?',
+          buttons: ['Download', 'Later'],
+          defaultId: 0,
+        })
+        .then(({ response }) => {
+          if (response === 0) {
+            // Create download progress dialog
+            let downloadDialog = new BrowserWindow({
+              parent: mainWindow,
+              modal: true,
+              show: false,
+              width: 400,
+              height: 170,
+              resizable: false,
+              minimizable: false,
+              maximizable: false,
+              fullscreenable: false,
+              title: 'Downloading Update',
+              vibrancy: 'under-window',
+              visualEffectState: 'active',
+              backgroundColor: '#00000000',
+              webPreferences: {
+                contextIsolation: true,
+                nodeIntegration: false,
+                preload: path.join(__dirname, '../../js/download-preload.js'),
+              },
+            })
+
+            downloadDialog.loadFile(path.join(__dirname, '../../html/update-downloading.html'))
+            downloadDialog.once('ready-to-show', () => downloadDialog.show())
+
+            // Progress and completion handlers
+            const downloadProgressHandler = (progressObj) => {
+              if (downloadDialog && !downloadDialog.isDestroyed()) {
+                downloadDialog.webContents.send('update-progress', progressObj)
+              }
+            }
+
+            const downloadCompletedHandler = () => {
+              if (downloadDialog && !downloadDialog.isDestroyed()) {
+                downloadDialog.close()
+                downloadDialog = null
+              }
+
+              dialog
+                .showMessageBox(mainWindow, {
+                  type: 'info',
+                  title: 'Update Ready',
+                  message: 'Update Downloaded',
+                  detail: 'The update has been downloaded. It will be installed when you restart the application.',
+                  buttons: ['Restart Now', 'Later'],
+                  defaultId: 0,
+                })
+                .then(({ response }) => {
+                  if (response === 0) {
+                    autoUpdater.quitAndInstall()
+                  }
+                })
+            }
+
+            // Register event handlers
+            autoUpdater.on('download-progress', downloadProgressHandler)
+            autoUpdater.once('update-downloaded', downloadCompletedHandler)
+
+            // Handle download errors
+            autoUpdater.downloadUpdate().catch((err) => {
+              if (downloadDialog && !downloadDialog.isDestroyed()) {
+                downloadDialog.close()
+                downloadDialog = null
+              }
+
+              utils.logError('Error downloading update:', err)
+              dialog.showMessageBox(mainWindow, {
+                type: 'error',
+                title: 'Download Error',
+                message: 'Error Downloading Update',
+                detail: `Unable to download the update: ${err.message || err}`,
+                buttons: ['OK'],
+              })
+
+              // Clean up event listeners
+              autoUpdater.removeListener('download-progress', downloadProgressHandler)
+              autoUpdater.removeListener('update-downloaded', downloadCompletedHandler)
+            })
+          }
+        })
+    }
+
+    const updateNotAvailableHandler = () => {
+      closeCheckingDialog()
+
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'No Updates',
+        message: 'You have the latest version',
+        detail: `Version ${app.getVersion()} is the latest version available.`,
+        buttons: ['OK'],
+      })
+    }
+
+    const updateErrorHandler = (err) => {
+      closeCheckingDialog()
+
+      utils.logError('Error checking for updates:', err)
+      const errorMessage = err.message || String(err)
+
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'Update Error',
+        message: 'Error Checking for Updates',
+        detail: getGitHubErrorMessage(errorMessage),
+        buttons: ['OK'],
+      })
+    }
+
+    // Register temporary event listeners
+    autoUpdater.once('update-available', updateAvailableHandler)
+    autoUpdater.once('update-not-available', updateNotAvailableHandler)
+    autoUpdater.once('error', updateErrorHandler)
+
+    // Start update check
+    autoUpdater.checkForUpdates().catch(updateErrorHandler)
+
+    // Set a timeout to close the checking dialog if no response is received
+    setTimeout(() => {
+      if (checkingDialog && !checkingDialog.isDestroyed()) {
+        closeCheckingDialog()
+
+        // Remove event listeners
+        autoUpdater.removeListener('update-available', updateAvailableHandler)
+        autoUpdater.removeListener('update-not-available', updateNotAvailableHandler)
+        autoUpdater.removeListener('error', updateErrorHandler)
+
+        dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Update Check Timeout',
+          message: 'Update Check Timed Out',
+          detail: 'Unable to check for updates. Please check your internet connection and try again.',
+          buttons: ['OK'],
+        })
+      }
+    }, 30000) // 30 second timeout
+  } catch (err) {
+    utils.logError('Error initiating update check:', err)
+    const errorMessage = err.message || String(err)
+
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Error',
+      message: 'Error Checking for Updates',
+      detail: errorMessage.includes('GitHub')
+        ? 'GitHub authentication error. Please check your GH_TOKEN environment variable.'
+        : `An unexpected error occurred: ${errorMessage}`,
+      buttons: ['OK'],
+    })
+  }
 }
 
 // RENDERER PROCESS CODE
@@ -545,4 +757,5 @@ module.exports = {
   showUpdateNotification,
   removeUpdateNotification,
   checkForUpdates,
+  checkForUpdatesWithDialog,
 }

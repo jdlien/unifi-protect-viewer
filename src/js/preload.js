@@ -1,5 +1,4 @@
 const { contextBridge, ipcRenderer } = require('electron')
-const isDev = process.env.NODE_ENV === 'development'
 
 const ui = require('./modules/ui.js')
 const navigation = require('./modules/navigation.js')
