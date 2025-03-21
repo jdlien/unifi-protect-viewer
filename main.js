@@ -273,6 +273,48 @@ function setupApplicationMenu(mainWindow) {
           },
         },
         { type: 'separator' },
+        {
+          label: 'Restart Application',
+          accelerator: 'F9',
+          click: () => {
+            app.relaunch()
+            app.exit()
+          },
+        },
+        {
+          label: 'Reset Configuration',
+          accelerator: 'F10',
+          click: () => {
+            dialog
+              .showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Reset Configuration',
+                message: 'Are you sure you want to reset all settings?',
+                detail: 'This will clear all your saved settings including credentials.',
+                buttons: ['Cancel', 'Reset'],
+                defaultId: 0,
+                cancelId: 0,
+              })
+              .then(({ response }) => {
+                if (response === 1) {
+                  // Reset was clicked
+                  store.clear()
+                  app.relaunch()
+                  app.exit()
+                }
+              })
+          },
+        },
+        {
+          label: 'Force Reset Configuration',
+          accelerator: 'Shift+F10',
+          click: () => {
+            store.clear()
+            app.relaunch()
+            app.exit()
+          },
+        },
+        { type: 'separator' },
         { role: 'quit' },
       ],
     },
@@ -320,6 +362,13 @@ function setupApplicationMenu(mainWindow) {
           accelerator: 'Alt+H',
           click: () => {
             mainWindow.webContents.send('toggle-header-only')
+          },
+        },
+        {
+          label: 'Toggle Widget Panel',
+          accelerator: 'Alt+W',
+          click: () => {
+            mainWindow.webContents.send('toggle-widget-panel')
           },
         },
         { type: 'separator' },

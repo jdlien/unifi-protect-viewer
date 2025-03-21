@@ -51,6 +51,13 @@ window.addEventListener('DOMContentLoaded', () => {
   ipcRenderer.on('return-to-dashboard', () => {
     ui.triggerDashboardNavigation()
   })
+
+  // Listen for toggle-widget-panel events from the main process
+  ipcRenderer.on('toggle-widget-panel', () => {
+    ui.handleWidgetPanel({ toggle: true }).catch((error) => {
+      utils.logError('Error toggling widget panel from menu:', error)
+    })
+  })
 })
 
 // Expose API to renderer using modern structure
@@ -79,6 +86,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleNavigation: () => ui.toggleNavigation(),
     toggleNavOnly: () => ui.toggleNavigation({ toggleNav: true, toggleHeader: false }),
     toggleHeaderOnly: () => ui.toggleNavigation({ toggleNav: false, toggleHeader: true }),
+    toggleWidgetPanel: () => ui.handleWidgetPanel({ toggle: true }),
     returnToDashboard: () => ui.triggerDashboardNavigation(),
   },
 

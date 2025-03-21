@@ -120,16 +120,8 @@ async function handleLiveviewV5() {
   // wait until remove option buttons are visible
   await utils.waitUntil(() => document.querySelectorAll('[data-testid="option"]').length > 0)
 
-  // Check if the widget panel is open
-  let isWidgetPanelOpen = document.querySelector('[class^=dashboard__Widgets]').offsetWidth > 0
-
-  // If the widget panel is open, close it
-  if (isWidgetPanelOpen) {
-    document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0].click()
-  }
-
-  // Make the widget panel open/close button less prominent
-  utils.setStyle(document.querySelectorAll('button[class^=dashboard__ExpandButton]')[0], 'opacity', '0.5')
+  // Handle widget panel based on user preference (default: hidden)
+  await handleWidgetPanel()
 
   // Show dashboard button after UI modifications
   handleDashboardButton()
@@ -419,75 +411,79 @@ function initializeDashboardPage() {
  * @param {KeyboardEvent} event - Keyboard event
  */
 function handleKeyboardShortcuts(event) {
-  // F10 for reset
-  if (event.key === 'F10') {
-    if (event.shiftKey) {
-      // Force reset with Shift+F10
-      ipcRenderer.send('reset')
-      ipcRenderer.send('restart')
-    } else {
-      // Show confirmation dialog
-      ipcRenderer.invoke('showResetConfirmation').then((confirmed) => {
-        if (confirmed) {
-          ipcRenderer.send('reset')
-          ipcRenderer.send('restart')
-        }
-      })
-    }
-  }
-
-  // F9 for restart
-  if (event.key === 'F9') {
-    ipcRenderer.send('restart')
-  }
-
-  // Fullscreen toggle shortcuts
-  if (
-    // F11 for all platforms
-    event.key === 'F11' ||
-    // macOS native Ctrl+Cmd+F
-    (process.platform === 'darwin' && event.key.toLowerCase() === 'f' && event.ctrlKey && event.metaKey)
-  ) {
-    event.preventDefault() // Prevent default browser behavior
-    // Request fullscreen via IPC
-    ipcRenderer.send('toggleFullscreen')
-  }
-
-  // Escape to toggle Navigation (nav & header elements)
-  if (event.key === 'Escape') {
-    // Prevent page reload
-    event.preventDefault()
-    toggleNavigation().catch((error) => {
-      utils.logError('Error toggling navigation:', error)
-    })
-  }
-
-  // Add Alt+N to toggle just the nav
-  if (event.key.toLowerCase() === 'n' && event.altKey) {
-    event.preventDefault()
-    toggleNavigation({ toggleNav: true, toggleHeader: false }).catch((error) => {
-      utils.logError('Error toggling nav:', error)
-    })
-  }
-
-  // Add Alt+H to toggle just the header
-  if (event.key.toLowerCase() === 'h' && event.altKey) {
-    event.preventDefault()
-    toggleNavigation({ toggleNav: false, toggleHeader: true }).catch((error) => {
-      utils.logError('Error toggling header:', error)
-    })
-  }
+  // All shortcuts are now handled through the Electron menu system
+  // This function remains as a placeholder in case we need to add
+  // any keyboard shortcuts that can't be managed through the menu
+  // (For example, shortcuts that need complex logic or dynamic behavior)
 }
 
 /**
  * Set up keyboard shortcut handling
  */
 function setupKeyboardShortcuts() {
-  window.addEventListener('keydown', handleKeyboardShortcuts)
+  // Since shortcuts are now handled by the menu system,
+  // this function is kept for API compatibility
+  // No need to add any listeners here
 
-  // Return cleanup function
-  return () => {
-    window.removeEventListener('keydown', handleKeyboardShortcuts)
+  // Return cleanup function (also for API compatibility)
+  return () => {}
+}
+
+/**
+ * Handle the widget panel visibility based on user preference
+ * @param {Object} options - Configuration options
+ * @param {boolean} [options.toggle=false] - Whether to toggle the current state
+ * @returns {Promise<boolean>} True if operation was successful
+ */
+async function handleWidgetPanel(options = {}) {
+  try {
+    const toggle = options.toggle === true
+
+    // Wait for widget panel elements to be ready
+    await utils.waitUntil(() => {
+      return (
+        document.querySelector('[class^=dashboard__Widgets]') !== null &&
+        document.querySelector('button[class^=dashboard__ExpandButton]') !== null
+      )
+    }, 5000)
+
+    // Get the expand button
+    const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
+
+    // Make the widget panel open/close button less prominent
+    utils.setStyle(expandButton, 'opacity', '0.5')
+
+    // Determine if widget panel is currently open
+    const widgetPanel = document.querySelector('[class^=dashboard__Widgets]')
+    const isWidgetPanelOpen = widgetPanel.offsetWidth > 0
+
+    // Load user preference from config
+    const config = (await ipcRenderer.invoke('configLoad')) || {}
+    // Default to hiding widget panel if setting doesn't exist
+    const hideWidgetPanel = config.hideWidgetPanel !== false
+
+    // Determine if we need to change the current state
+    let shouldBeOpen = false
+
+    if (toggle) {
+      // If toggling, invert the current state
+      shouldBeOpen = !isWidgetPanelOpen
+      // Save the new preference
+      ipcRenderer.send('configSave', { hideWidgetPanel: !shouldBeOpen })
+    } else {
+      // Otherwise use the config preference
+      shouldBeOpen = !hideWidgetPanel
+    }
+
+    // Change state if needed
+    if (shouldBeOpen !== isWidgetPanelOpen) {
+      expandButton.click()
+    }
+
+    return true
+  } catch (error) {
+    utils.logError('Error handling widget panel:', error)
+    return false
   }
 }
 
@@ -501,4 +497,5 @@ module.exports = {
   toggleNavigation,
   initializeDashboardPage,
   setupKeyboardShortcuts,
+  handleWidgetPanel,
 }
