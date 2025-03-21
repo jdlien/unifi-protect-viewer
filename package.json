@@ -119,7 +119,8 @@
       "category": "Utility",
       "publish": [
         "github"
-      ]
+      ],
+      "artifactName": "UniFi-Protect-Viewer-${arch}.${ext}"
     },
     "publish": [
       {
