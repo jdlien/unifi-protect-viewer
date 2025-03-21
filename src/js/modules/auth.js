@@ -139,15 +139,76 @@ async function attemptLogin() {
       rememberMeCheckbox.dispatchEvent(new Event('click', { bubbles: true }))
     }
 
-    // Submit form
+    // Submit form and set up a login success monitor
     submitButton.click()
+
+    // Set up a special monitor for login success that doesn't rely on URL monitoring
+    setupLoginSuccessMonitor()
 
     return true
   } catch (error) {
     console.error('Auto-login failed:', error)
     return false
   }
-} // end attemptLogin
+}
+
+/**
+ * Set up a monitor to detect successful login completion and apply dashboard customizations
+ */
+function setupLoginSuccessMonitor() {
+  // Check for dashboard elements periodically
+  const startTime = Date.now()
+  const dashboard = require('./dashboard.js')
+  const ui = require('./ui.js')
+  const MAX_CHECK_TIME = 30000 // 30 seconds timeout
+  const CHECK_INTERVAL = 500 // Check every 500ms
+
+  // Flag to track if we've already detected login success
+  let loginSuccessDetected = false
+
+  const checkInterval = setInterval(() => {
+    // Stop checking if we've exceeded the maximum time
+    if (Date.now() - startTime > MAX_CHECK_TIME) {
+      clearInterval(checkInterval)
+      return
+    }
+
+    // Check if the URL includes dashboard, which indicates successful login
+    if (window.location.href.includes('/protect/dashboard') && !loginSuccessDetected) {
+      loginSuccessDetected = true
+
+      // Reset login attempts counter
+      resetLoginAttempts().catch((err) => {
+        console.error('Failed to reset login attempts counter:', err)
+      })
+
+      // Wait for dashboard to fully load then apply customizations
+      setTimeout(async () => {
+        // First check if dashboard page is ready
+        try {
+          const isReady = await dashboard.waitForDashboardReady()
+
+          if (isReady) {
+            ui.handleLiveviewV5()
+          } else {
+            // Try one more time after a longer delay
+            setTimeout(async () => {
+              const isReadyRetry = await dashboard.waitForDashboardReady()
+
+              if (isReadyRetry) {
+                ui.handleLiveviewV5()
+              }
+            }, 2000) // Extra 2 second delay for retry
+          }
+        } catch (error) {
+          console.error('Error during post-login dashboard customization:', error)
+        }
+      }, 1000) // Wait 1 second after URL change
+
+      clearInterval(checkInterval)
+    }
+  }, CHECK_INTERVAL)
+}
 
 /**
  * Reset login attempts counter

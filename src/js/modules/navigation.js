@@ -19,6 +19,10 @@ function setupNavigationMonitor() {
       lastUrl = window.location.href
       utils.log('Navigation detected:', oldUrl, '->', lastUrl)
 
+      // Special handling for login-to-dashboard transition
+      const isFromLogin = oldUrl.includes('login') || oldUrl.includes('signin') || oldUrl.includes('auth')
+      const isToDashboard = window.location.href.includes('/protect/dashboard')
+
       // Check if we're on a dashboard page and update menu state
       const isDashboardPage = dashboard.isDashboardPage()
 
@@ -43,7 +47,7 @@ function setupNavigationMonitor() {
   // Apply dashboard customizations with retry mechanism
   const applyDashboardCustomizations = async () => {
     try {
-      // Use the new dashboard module instead of direct implementation
+      // Use the dashboard module instead of direct implementation
       const success = await dashboard.initializeDashboard()
       if (!success) {
         utils.log('Dashboard not ready yet, will retry')

@@ -10,6 +10,7 @@ const utils = require('./utils')
  */
 async function handleLiveviewV5() {
   // wait until liveview is present
+  utils.logger.debug('Waiting for liveview to be present')
   await utils.waitUntil(() => document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0)
 
   // close all modals if needed
