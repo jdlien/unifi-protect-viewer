@@ -13,7 +13,6 @@
     "build:mac-arm64": "electron-builder --mac --arm64",
     "build:mac-x64": "electron-builder --mac --x64",
     "build:win-arm64": "electron-builder --win --arm64",
-    "build:win-ia32": "electron-builder --win --ia32",
     "build:win-x64": "electron-builder --win --x64",
     "build:linux": "electron-builder --linux --x64",
     "build:linux-arm64": "electron-builder --linux --arm64",
@@ -27,8 +26,12 @@
     "release:mac:arm64": "NODE_ENV=production APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --arm64 --x64=false --publish always",
     "release:mac:universal": "NODE_ENV=production APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --universal --publish always",
     "release:mac": "npm run release:mac:x64 && npm run release:mac:arm64 && npm run release:mac:universal",
-    "release:win": "npm run clean && npm version patch && electron-builder --win --publish always",
-    "release:linux": "npm run clean && npm version patch && electron-builder --linux --publish always",
+    "release:win:x64": "npm run clean && npm version patch && electron-builder --win --x64 --publish always",
+    "release:win:arm64": "electron-builder --win --arm64 --publish always",
+    "release:win": "npm run release:win:x64 && npm run release:win:arm64",
+    "release:linux:x64": "npm run clean && npm version patch && electron-builder --linux --x64 --publish always",
+    "release:linux:arm64": "electron-builder --linux --arm64 --publish always",
+    "release:linux": "npm run release:linux:x64 && npm run release:linux:arm64",
     "release": "npm run release:mac && npm run release:win && npm run release:linux",
     "super-release": "node scripts/release.js",
     "release:major": "node scripts/release.js major",
@@ -85,20 +88,28 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
       "icon": "src/img/256.png",
       "publish": [
         "github"
-      ]
+      ],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "certificateFile": "path-to-your-certificate.pfx",
+      "certificatePassword": "${WIN_CSC_KEY_PASSWORD}",
+      "signAndEditExecutable": true
     },
     "linux": {
       "target": [

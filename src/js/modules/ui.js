@@ -36,6 +36,10 @@ async function handleLiveviewV5() {
   // Default to hiding navigation if setting doesn't exist
   const hideNavigation = config.hideNavigation !== false
 
+  // Load individual element settings if available
+  const hideNav = config.hideNav !== false
+  const hideHeader = config.hideHeader !== false
+
   // Wait for navigation elements to be fully loaded
   try {
     await utils.waitUntil(
@@ -52,9 +56,16 @@ async function handleLiveviewV5() {
     const nav = document.getElementsByTagName('nav')[0]
 
     if (header && nav) {
-      // Apply navigation visibility based on user preference
-      utils.setStyle(header, 'display', hideNavigation ? 'none' : 'flex')
-      utils.setStyle(nav, 'display', hideNavigation ? 'none' : 'flex')
+      // Check if we have individual settings in the config
+      if (config.hideNav !== undefined || config.hideHeader !== undefined) {
+        // Apply individual element settings
+        utils.setStyle(nav, 'display', hideNav ? 'none' : 'flex')
+        utils.setStyle(header, 'display', hideHeader ? 'none' : 'flex')
+      } else {
+        // Apply legacy setting to both elements
+        utils.setStyle(header, 'display', hideNavigation ? 'none' : 'flex')
+        utils.setStyle(nav, 'display', hideNavigation ? 'none' : 'flex')
+      }
       return true
     }
     return false
@@ -175,7 +186,11 @@ function injectDashboardButton() {
   // Create an informational popup to tell people how to show the nav
   const showNavPopup = document.createElement('div')
   showNavPopup.id = 'show-nav-popup'
-  showNavPopup.innerHTML = '<kbd>Esc</kbd> Show/Hide Navigation'
+  showNavPopup.innerHTML = `<div><kbd>Esc</kbd> Toggle Navigation</div>`
+
+  // TODO: We could show these if we think they are valuable, but it's too noisy, IMO.
+  //<div><kbd>Alt</kbd>+<kbd>N</kbd> Toggle Side Nav</div>
+  //<div><kbd>Alt</kbd>+<kbd>H</kbd> Toggle Header</div>
   document.body.appendChild(showNavPopup)
 
   // Create and inject the stylesheet
@@ -203,19 +218,21 @@ function injectDashboardButton() {
     }
 
     #show-nav-popup {
-      align-items: center;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       position: fixed;
       top: 100px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
-      padding: 10px 12px;
+      padding: 14px 16px;
       border-radius: 4px;
-      font-size: 18px;
+      font-size: 16px;
       color: hsl(210, 10%, 80%);
       background-color: rgba(0, 0, 0, 0.6);
       pointer-events: none;
-      animation: fadeOut 4s ease-in forwards;
+      animation: fadeOut 5s ease-in forwards;
     }
 
     @keyframes fadeOut {
@@ -243,7 +260,7 @@ function injectDashboardButton() {
     if (popup) {
       popup.remove()
     }
-  }, 4000)
+  }, 5000) // Increased timeout to allow reading all shortcuts
 }
 
 /**
@@ -258,10 +275,16 @@ function handleDashboardButton() {
     return
   }
 
-  // More robustly check if the nav is visible
+  // More robustly check if both nav and header are visible
   const nav = document.querySelector('nav')
-  // Show dashboard button if nav doesn't exist or is hidden
-  if (!nav || nav.style.display === 'none') {
+  const header = document.querySelector('header')
+
+  // Show dashboard button if either nav or header doesn't exist or is hidden
+  const navHidden = !nav || nav.style.display === 'none'
+  const headerHidden = !header || header.style.display === 'none'
+
+  // If either element is hidden, show the dashboard button
+  if (navHidden || headerHidden) {
     setDashboardButtonVisibility(true)
   } else {
     setDashboardButtonVisibility(false)
@@ -281,8 +304,16 @@ function setDashboardButtonVisibility(show) {
 
 /**
  * Toggle navigation UI elements
+ * @param {Object} options - Configuration options
+ * @param {boolean} [options.toggleNav=true] - Whether to toggle the nav element
+ * @param {boolean} [options.toggleHeader=true] - Whether to toggle the header element
+ * @returns {Promise<boolean>} True if toggle was successful
  */
-async function toggleNavigation() {
+async function toggleNavigation(options = {}) {
+  // Default to toggling both elements if no options provided
+  const toggleNav = options.toggleNav !== undefined ? options.toggleNav : true
+  const toggleHeader = options.toggleHeader !== undefined ? options.toggleHeader : true
+
   // Wait for navigation elements to be ready
   try {
     await utils.waitUntil(
@@ -298,16 +329,62 @@ async function toggleNavigation() {
   const nav = document.querySelector('nav')
 
   if (header && nav) {
-    const isHidden = header.style.display === 'none'
-    header.style.display = isHidden ? 'flex' : 'none'
-    nav.style.display = isHidden ? 'flex' : 'none'
+    // Determine current state
+    const isHeaderHidden = header.style.display === 'none'
+    const isNavHidden = nav.style.display === 'none'
 
-    // Save only the navigation visibility preference
-    try {
-      // Send only the hideNavigation property, not the entire config
-      ipcRenderer.send('configSave', { hideNavigation: !isHidden })
-    } catch (e) {
-      console.error('Error saving navigation preference:', e)
+    // If both elements are requested to be toggled
+    if (toggleNav && toggleHeader) {
+      // If any element is hidden, show both; otherwise hide both
+      const anyHidden = isHeaderHidden || isNavHidden
+      header.style.display = anyHidden ? 'flex' : 'none'
+      nav.style.display = anyHidden ? 'flex' : 'none'
+
+      // Save both the legacy and new config properties
+      try {
+        ipcRenderer.send('configSave', {
+          hideNavigation: !anyHidden,
+          hideNav: !anyHidden,
+          hideHeader: !anyHidden,
+        })
+      } catch (e) {
+        console.error('Error saving navigation preferences:', e)
+      }
+    } else {
+      // Toggle individual elements as requested
+      if (toggleHeader) {
+        header.style.display = isHeaderHidden ? 'flex' : 'none'
+      }
+
+      if (toggleNav) {
+        nav.style.display = isNavHidden ? 'flex' : 'none'
+      }
+
+      // Save the individual settings
+      const newHeaderHidden = toggleHeader ? !isHeaderHidden : isHeaderHidden
+      const newNavHidden = toggleNav ? !isNavHidden : isNavHidden
+
+      try {
+        const configUpdate = {}
+
+        // Only update the properties that were actually toggled
+        if (toggleNav) {
+          configUpdate.hideNav = newNavHidden
+        }
+
+        if (toggleHeader) {
+          configUpdate.hideHeader = newHeaderHidden
+        }
+
+        // Also update the legacy property if both elements are in the same state
+        if (newHeaderHidden === newNavHidden && toggleNav && toggleHeader) {
+          configUpdate.hideNavigation = newHeaderHidden
+        }
+
+        ipcRenderer.send('configSave', configUpdate)
+      } catch (e) {
+        console.error('Error saving navigation preferences:', e)
+      }
     }
   }
 
@@ -381,6 +458,22 @@ function handleKeyboardShortcuts(event) {
     event.preventDefault()
     toggleNavigation().catch((error) => {
       utils.logError('Error toggling navigation:', error)
+    })
+  }
+
+  // Add Alt+N to toggle just the nav
+  if (event.key.toLowerCase() === 'n' && event.altKey) {
+    event.preventDefault()
+    toggleNavigation({ toggleNav: true, toggleHeader: false }).catch((error) => {
+      utils.logError('Error toggling nav:', error)
+    })
+  }
+
+  // Add Alt+H to toggle just the header
+  if (event.key.toLowerCase() === 'h' && event.altKey) {
+    event.preventDefault()
+    toggleNavigation({ toggleNav: false, toggleHeader: true }).catch((error) => {
+      utils.logError('Error toggling header:', error)
     })
   }
 }

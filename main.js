@@ -302,10 +302,24 @@ function setupApplicationMenu(mainWindow) {
         },
         { type: 'separator' },
         {
-          label: 'Toggle Navigation',
+          label: 'Toggle All Navigation',
           accelerator: 'Escape',
           click: () => {
             mainWindow.webContents.send('toggle-navigation')
+          },
+        },
+        {
+          label: 'Toggle Side Navigation',
+          accelerator: 'Alt+N',
+          click: () => {
+            mainWindow.webContents.send('toggle-nav-only')
+          },
+        },
+        {
+          label: 'Toggle Header Only',
+          accelerator: 'Alt+H',
+          click: () => {
+            mainWindow.webContents.send('toggle-header-only')
           },
         },
         { type: 'separator' },

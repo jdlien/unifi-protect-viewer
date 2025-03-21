@@ -110,14 +110,16 @@ const builds = [
   {
     name: 'Windows arm64',
     command: 'electron-builder --win --arm64 --publish always',
-  },
-  {
-    name: 'Windows ia32 (32-bit)',
-    command: 'electron-builder --win --ia32 --publish always',
+    condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+    fallback:
+      'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
   },
   {
     name: 'Windows x64 (64-bit)',
     command: 'electron-builder --win --x64 --publish always',
+    condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+    fallback:
+      'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
   },
 
   // Linux builds
@@ -136,6 +138,11 @@ const results = []
 for (const build of builds) {
   console.log(`\n📦 Building for ${build.name}...`)
   try {
+    if (build.condition && !build.condition()) {
+      console.log(build.fallback)
+      results.push({ name: build.name, success: false, error: build.fallback })
+      continue
+    }
     execSync(build.command, { stdio: 'inherit' })
     console.log(`✅ ${build.name} build successful`)
     results.push({ name: build.name, success: true })

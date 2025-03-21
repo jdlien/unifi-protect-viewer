@@ -33,6 +33,20 @@ window.addEventListener('DOMContentLoaded', () => {
     })
   })
 
+  // Listen for toggle-nav-only events from the main process
+  ipcRenderer.on('toggle-nav-only', () => {
+    ui.toggleNavigation({ toggleNav: true, toggleHeader: false }).catch((error) => {
+      utils.logError('Error toggling nav from menu:', error)
+    })
+  })
+
+  // Listen for toggle-header-only events from the main process
+  ipcRenderer.on('toggle-header-only', () => {
+    ui.toggleNavigation({ toggleNav: false, toggleHeader: true }).catch((error) => {
+      utils.logError('Error toggling header from menu:', error)
+    })
+  })
+
   // Listen for return-to-dashboard events from the main process
   ipcRenderer.on('return-to-dashboard', () => {
     ui.triggerDashboardNavigation()
@@ -63,6 +77,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // UI controls
   ui: {
     toggleNavigation: () => ui.toggleNavigation(),
+    toggleNavOnly: () => ui.toggleNavigation({ toggleNav: true, toggleHeader: false }),
+    toggleHeaderOnly: () => ui.toggleNavigation({ toggleNav: false, toggleHeader: true }),
     returnToDashboard: () => ui.triggerDashboardNavigation(),
   },
 

@@ -4,6 +4,28 @@ This Electron app is a wrapper for UniFi Protect that gives a clean interface th
 
 The app will then automatically log in and present you with the live view you selected.
 
+## Downloads
+
+Download the latest version for your platform:
+
+- **macOS**:
+
+  - [Universal (Intel/Apple Silicon)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-universal.dmg)
+  - [Apple Silicon (ARM64)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-arm64.dmg)
+  - [Intel (x64)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer.dmg)
+
+- **Windows**:
+
+  - [Windows Installer](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup.exe)
+  - [Windows Portable](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-win.zip)
+  - [Windows ARM64 Installer](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-arm64.exe)
+
+- **Linux**:
+  - [AppImage](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer.AppImage)
+  - [AppImage ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-arm64.AppImage)
+
+Or view all downloads on the [releases page](https://github.com/jdlien/unifi-protect-viewer/releases/latest).
+
 ## Features
 
 - Access UniFi Protect web UI in a desktop application
