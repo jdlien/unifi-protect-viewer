@@ -182,9 +182,8 @@
             ) // 15 seconds timeout
           } catch (error) {
             console.error('Error connecting to site:', error)
-            statusEl.textContent = 'Error connecting to site'
-
-            // Hide spinner and enable button on error
+            // Don't show status error since it may be a false positive when navigation is successful
+            // Only reset the UI elements
             document.getElementById('spinner').style.display = 'none'
             document.getElementById('connectBtn').disabled = false
           }
