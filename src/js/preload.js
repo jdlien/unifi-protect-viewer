@@ -18,8 +18,15 @@ const {
 window.addEventListener('DOMContentLoaded', () => {
   utils.log('Page loaded, URL:', window.location.href)
   timeouts.clearTimeout('connection')
-  navigation.initializeWithPolling()
-  ui.setupKeyboardShortcuts()
+
+  // Only initialize navigation and UI components on app pages (not error or config)
+  const currentUrl = window.location.href
+  const isAppPage = !currentUrl.includes('/html/error.html') && !currentUrl.includes('/html/config.html')
+
+  if (isAppPage) {
+    navigation.initializeWithPolling()
+    ui.setupKeyboardShortcuts()
+  }
 
   // Initialize updates - after a delay to ensure UI is ready
   setTimeout(() => {
