@@ -121,7 +121,7 @@
           ) // 15 seconds timeout
 
           // Attempt to load the URL
-          window.electronAPI.loadURL(errorUrl)
+          window.electronAPI.navigation.loadURL(errorUrl)
         } else {
           document.getElementById('statusMessage').textContent = 'No URL to retry'
         }

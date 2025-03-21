@@ -71,7 +71,7 @@
       // Load stored config on page load
       window.addEventListener('DOMContentLoaded', async () => {
         try {
-          statusEl.textContent = 'Loading configuration...'
+          // statusEl.textContent = 'Loading configuration...'
 
           // Load existing configuration if available
           const config = await window.electronAPI.config.load()
@@ -86,8 +86,8 @@
             statusEl.textContent = ''
           }
         } catch (error) {
-          console.error('Error loading config:', error)
-          statusEl.textContent = 'Error loading configuration'
+          console.log('Unable to load config:', error)
+          // statusEl.textContent = 'Error loading configuration'
         }
       })
 
@@ -145,7 +145,7 @@
         try {
           const config = getConfigFromForm()
           await window.electronAPI.config.save(config)
-          statusEl.textContent = 'Configuration saved successfully'
+          statusEl.textContent = 'Configuration saved'
           return true
         } catch (error) {
           console.error('Error saving config:', error)
@@ -159,14 +159,17 @@
         if (await saveConfig()) {
           statusEl.textContent = 'Connecting to UniFi Protect...'
 
-          // Show spinner and disable connect button
-          document.getElementById('spinner').style.display = 'block'
+          // Set a timeout to show spinner only if loading is slow
+          let spinnerTimeoutId = setTimeout(() => {
+            document.getElementById('spinner').style.display = 'block'
+          }, 150)
+
           document.getElementById('connectBtn').disabled = true
 
           try {
             const config = getConfigFromForm()
             // Use direct URL loading instead of restart
-            window.electronAPI.loadURL(config.url)
+            window.electronAPI.navigation.loadURL(config.url)
 
             // Set a timeout to show error if connection takes too long
             window.electronAPI.timeouts.setTrackedTimeout(
@@ -175,6 +178,7 @@
                 statusEl.textContent = 'Connection timed out. Please check the URL and try again.'
 
                 // Hide spinner and reset form buttons
+                clearTimeout(spinnerTimeoutId)
                 document.getElementById('spinner').style.display = 'none'
                 document.getElementById('connectBtn').disabled = false
               },
@@ -182,29 +186,11 @@
             ) // 15 seconds timeout
           } catch (error) {
             console.error('Error connecting to site:', error)
-            // Don't show status error since it may be a false positive when navigation is successful
             // Only reset the UI elements
+            clearTimeout(spinnerTimeoutId)
             document.getElementById('spinner').style.display = 'none'
             document.getElementById('connectBtn').disabled = false
           }
-        }
-      }
-
-      // Reset application
-      async function resetApp() {
-        try {
-          // Clear any existing connection timeout
-          window.electronAPI.timeouts.clearTimeout('connection')
-
-          const confirmed = await window.electronAPI.showResetConfirmation()
-          if (confirmed) {
-            statusEl.textContent = 'Resetting application...'
-            window.electronAPI.reset()
-            window.electronAPI.restart()
-          }
-        } catch (error) {
-          console.error('Error during reset:', error)
-          statusEl.textContent = 'Error resetting application'
         }
       }
 
