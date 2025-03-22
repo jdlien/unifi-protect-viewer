@@ -14,6 +14,8 @@
 
 - Update check sometimes showed twice
 - Kind of ugly update check status dialog
+- Download progress dialog gets cut off and doesn't correctly show the download status
+- ensure that latest-mac.yml has all the files in it.
 - Windows version is not signed
 
   - I need a OV certificate
@@ -21,6 +23,7 @@
   - My business probably needs to be of a certain age
 
 - UI Customizations sometimes don't take effect when first logging in
+- https://github.com/jdlien/unifi-protect-viewer/releases/download/v1.1.2/UniFi-Protect-Viewer-arm64.AppImage is 404 on GitHub if not logged in
 
 ## Optimization
 

@@ -91,47 +91,46 @@ console.log('\n=== Starting super build for all platforms ===\n')
 // Set build environment
 process.env.NODE_ENV = 'production'
 
-const builds = [
-  // macOS builds
-  {
-    name: 'macOS Universal (arm64+x64)',
-    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --universal --publish always`,
-  },
-  {
-    name: 'macOS arm64 (Apple Silicon)',
-    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --arm64 --publish always`,
-  },
-  {
-    name: 'macOS x64 (Intel)',
-    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --x64 --publish always`,
-  },
+// Function to create build configurations
+function createBuildConfigs() {
+  const macBaseConfig = `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID}`
 
-  // Windows builds
-  {
-    name: 'Windows arm64',
-    command: 'electron-builder --win --arm64 --publish always',
-    condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
-    fallback:
-      'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
-  },
-  {
-    name: 'Windows x64 (64-bit)',
-    command: 'electron-builder --win --x64 --publish always',
-    condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
-    fallback:
-      'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
-  },
+  return [
+    // macOS builds - Build all architectures together to ensure consistent update files
+    {
+      name: 'macOS (all architectures)',
+      command: `${macBaseConfig} electron-builder --mac --universal --x64 --arm64 --publish always`,
+    },
 
-  // Linux builds
-  {
-    name: 'Linux x64',
-    command: 'electron-builder --linux --x64 --publish always',
-  },
-  {
-    name: 'Linux arm64',
-    command: 'electron-builder --linux --arm64 --publish always',
-  },
-]
+    // Windows builds
+    {
+      name: 'Windows arm64',
+      command: 'electron-builder --win --arm64 --publish always',
+      condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+      fallback:
+        'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
+    },
+    {
+      name: 'Windows x64 (64-bit)',
+      command: 'electron-builder --win --x64 --publish always',
+      condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+      fallback:
+        'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
+    },
+
+    // Linux builds
+    {
+      name: 'Linux x64',
+      command: 'electron-builder --linux --x64 --publish always',
+    },
+    {
+      name: 'Linux arm64',
+      command: 'electron-builder --linux --arm64 --publish always',
+    },
+  ]
+}
+
+const builds = createBuildConfigs()
 
 // Execute each build
 const results = []
