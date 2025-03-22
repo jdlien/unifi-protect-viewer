@@ -20,12 +20,12 @@ if (!fs.existsSync(envPath)) {
 
 // Log environment vars (redacted)
 const appleId = process.env.APPLE_ID
-const applePassword = process.env.APPLE_ID_PASSWORD ? '********' : 'not set'
+const applePassword = process.env.APPLE_APP_SPECIFIC_PASSWORD ? '********' : 'not set'
 const teamId = process.env.APPLE_TEAM_ID
 
 console.log(`- NODE_ENV: ${process.env.NODE_ENV}`)
 console.log(`- APPLE_ID: ${appleId}`)
-console.log(`- APPLE_ID_PASSWORD: ${applePassword}`)
+console.log(`- APPLE_APP_SPECIFIC_PASSWORD: ${applePassword}`)
 console.log(`- APPLE_TEAM_ID: ${teamId}`)
 
 // Get command line arguments and skip the first two (node and this file)
@@ -37,7 +37,7 @@ const env = {
   ...process.env,
   NODE_ENV: 'production',
   APPLE_ID: appleId,
-  APPLE_ID_PASSWORD: process.env.APPLE_ID_PASSWORD,
+  APPLE_APP_SPECIFIC_PASSWORD: process.env.APPLE_APP_SPECIFIC_PASSWORD,
   APPLE_TEAM_ID: teamId,
 }
 

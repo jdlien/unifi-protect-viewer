@@ -95,15 +95,15 @@ const builds = [
   // macOS builds
   {
     name: 'macOS Universal (arm64+x64)',
-    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --universal --publish always`,
+    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --universal --publish always`,
   },
   {
     name: 'macOS arm64 (Apple Silicon)',
-    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --arm64 --publish always`,
+    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --arm64 --publish always`,
   },
   {
     name: 'macOS x64 (Intel)',
-    command: `NODE_ENV=production APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --x64 --publish always`,
+    command: `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} electron-builder --mac --x64 --publish always`,
   },
 
   // Windows builds

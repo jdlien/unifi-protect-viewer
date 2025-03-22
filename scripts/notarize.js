@@ -17,11 +17,11 @@ try {
 // IMPORTANT: If environment variables aren't working, you can hardcode them here
 // These will be used as a fallback if the environment variables don't work
 const APPLE_ID = process.env.APPLE_ID || 'jd@jdlien.com'
-const APPLE_ID_PASSWORD = process.env.APPLE_ID_PASSWORD || 'liee-exkd-xmlv-cclh'
+const APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD || 'liee-exkd-xmlv-cclh'
 const APPLE_TEAM_ID = process.env.APPLE_TEAM_ID || 'A93Q7MKECL'
 
 // Set APPLE_APP_SPECIFIC_PASSWORD as it might be needed for some builds
-process.env.APPLE_APP_SPECIFIC_PASSWORD = APPLE_ID_PASSWORD
+process.env.APPLE_APP_SPECIFIC_PASSWORD = APPLE_APP_SPECIFIC_PASSWORD
 
 // Explicitly set the teamId in the environment for the notarization process
 process.env.APPLE_TEAM_ID = APPLE_TEAM_ID
@@ -33,7 +33,6 @@ exports.default = async function notarizing(context) {
   console.log('Notarization environment (with fallbacks):')
   console.log(`- NODE_ENV: "${process.env.NODE_ENV}"`)
   console.log(`- Using APPLE_ID: ${APPLE_ID}`)
-  console.log(`- APPLE_ID_PASSWORD is set: ${Boolean(APPLE_ID_PASSWORD)}`)
   console.log(`- APPLE_APP_SPECIFIC_PASSWORD is set: ${Boolean(process.env.APPLE_APP_SPECIFIC_PASSWORD)}`)
   console.log(`- Using APPLE_TEAM_ID: ${APPLE_TEAM_ID}`)
   console.log(`- Current directory: ${process.cwd()}`)
@@ -63,10 +62,10 @@ exports.default = async function notarizing(context) {
     console.log(`Using team ID: ${APPLE_TEAM_ID}`)
 
     // Make sure we have the required properties
-    if (!APPLE_ID || !APPLE_ID_PASSWORD || !APPLE_TEAM_ID) {
+    if (!APPLE_ID || !APPLE_APP_SPECIFIC_PASSWORD || !APPLE_TEAM_ID) {
       console.error('❌ Missing required Apple credentials for notarization')
       console.error(`APPLE_ID: ${Boolean(APPLE_ID)}`)
-      console.error(`APPLE_ID_PASSWORD: ${Boolean(APPLE_ID_PASSWORD)}`)
+      console.error(`APPLE_APP_SPECIFIC_PASSWORD: ${Boolean(APPLE_APP_SPECIFIC_PASSWORD)}`)
       console.error(`APPLE_TEAM_ID: ${Boolean(APPLE_TEAM_ID)}`)
       return
     }
@@ -75,7 +74,7 @@ exports.default = async function notarizing(context) {
       appPath,
       appBundleId,
       appleId: APPLE_ID,
-      appleIdPassword: APPLE_ID_PASSWORD,
+      appleIdPassword: APPLE_APP_SPECIFIC_PASSWORD,
       teamId: APPLE_TEAM_ID,
     })
     console.log(`✅ Notarization completed successfully for ${appName}`)
