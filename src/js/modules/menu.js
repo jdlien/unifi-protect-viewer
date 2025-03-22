@@ -6,6 +6,9 @@ const { app, Menu, shell, dialog } = require('electron')
 const path = require('node:path')
 const utils = require('./utils')
 const dialogs = require('./dialogs')
+const windowManager = require('./window')
+
+const isDev = process.env.NODE_ENV === 'development'
 
 let mainMenu // Store the menu instance globally within the module
 
@@ -160,6 +163,31 @@ function setupApplicationMenu(mainWindow, store) {
       ],
     },
   ]
+
+  // Add development menu in dev mode
+  if (isDev) {
+    template.push({
+      label: 'Development',
+      submenu: [
+        {
+          label: 'Simulate Update Download',
+          click: () => {
+            const updates = require('./updates')
+            updates.simulateDownloadForDev(mainWindow)
+          },
+        },
+        {
+          label: 'Open DevTools',
+          accelerator: 'F12',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.openDevTools({ mode: 'right' })
+            }
+          },
+        },
+      ],
+    })
+  }
 
   mainMenu = Menu.buildFromTemplate(template)
   Menu.setApplicationMenu(mainMenu)

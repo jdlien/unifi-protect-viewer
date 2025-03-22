@@ -2,7 +2,7 @@
  * Window module to handle browser window creation and configuration
  */
 
-const { BrowserWindow, app } = require('electron')
+const { BrowserWindow, app, screen, shell, globalShortcut, ipcMain } = require('electron')
 const path = require('node:path')
 const utils = require('./utils')
 const version = require('./version')
@@ -74,6 +74,12 @@ async function createWindow(store) {
   // Quit the app when the window is closed
   mainWindow.on('closed', () => app.quit())
 
+  // Wait for window to be ready before setting up shortcuts
+  mainWindow.once('ready-to-show', () => {
+    // Register DevTools shortcut after window is ready
+    registerDevToolsShortcut(mainWindow)
+  })
+
   return mainWindow
 }
 
@@ -141,8 +147,70 @@ function setupWindowNavigation(mainWindow, store) {
   })
 }
 
+/**
+ * Register the global shortcut for DevTools
+ * @param {BrowserWindow} window - The browser window
+ */
+function registerDevToolsShortcut(window) {
+  try {
+    // First unregister in case it's already registered
+    if (globalShortcut.isRegistered('F12')) {
+      globalShortcut.unregister('F12')
+    }
+
+    // Register F12 to open DevTools globally
+    globalShortcut.register('F12', () => {
+      if (window && !window.isDestroyed()) {
+        openDevTools(window)
+      }
+    })
+
+    utils.log('F12 shortcut registered for DevTools')
+  } catch (err) {
+    utils.logError('Error registering F12 shortcut:', err)
+  }
+}
+
+/**
+ * Release all global shortcuts and resources
+ */
+function cleanupResources() {
+  utils.log('Cleaning up resources')
+
+  // Unregister all shortcuts
+  try {
+    globalShortcut.unregisterAll()
+  } catch (err) {
+    utils.logError('Error unregistering shortcuts:', err)
+  }
+}
+
+// Clean up resources when app is about to quit
+app.on('will-quit', cleanupResources)
+
+/**
+ * Open DevTools directly
+ * @param {BrowserWindow} window - The browser window
+ * @param {Object} options - Options for opening DevTools
+ */
+function openDevTools(window, options = { mode: 'right' }) {
+  if (window && !window.isDestroyed()) {
+    try {
+      window.webContents.openDevTools(options)
+      return true
+    } catch (err) {
+      utils.logError('Error opening DevTools:', err)
+      return false
+    }
+  }
+  return false
+}
+
 module.exports = {
   createWindow,
   handleCertificateError,
   setupWindowNavigation,
+  cleanupResources,
+  registerDevToolsShortcut,
+  openDevTools,
 }

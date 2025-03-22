@@ -378,7 +378,7 @@ function checkForUpdatesWithDialog(mainWindow) {
               modal: true,
               show: false,
               width: 400,
-              height: 170,
+              height: 200,
               resizable: false,
               minimizable: false,
               maximizable: false,
@@ -745,6 +745,89 @@ function checkForUpdates() {
   }
 }
 
+/**
+ * Simulate a download progress event for development testing
+ * @param {BrowserWindow} mainWindow - The main application window
+ */
+function simulateDownloadForDev(mainWindow) {
+  // Only allow in development mode
+  const isDev = process.env.NODE_ENV === 'development'
+  if (!isDev) {
+    utils.log('Simulated downloads only available in development mode')
+    return
+  }
+
+  utils.log('Simulating update download for development testing')
+
+  // Create download progress dialog
+  let downloadDialog = new BrowserWindow({
+    parent: mainWindow,
+    modal: true,
+    show: false,
+    width: 400,
+    height: 200,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    title: 'Downloading Update (SIMULATED)',
+    vibrancy: 'under-window',
+    visualEffectState: 'active',
+    backgroundColor: '#00000000',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, '../../js/download-preload.js'),
+    },
+  })
+
+  downloadDialog.loadFile(path.join(__dirname, '../../html/update-downloading.html'))
+  downloadDialog.once('ready-to-show', () => downloadDialog.show())
+
+  // Simulate download progress
+  let percent = 0
+  const total = 150 * 1024 * 1024 // 150 MB simulated file size
+  const intervalTime = 100 // Update every 100ms
+  const downloadSpeed = 1.5 * 1024 * 1024 // 1.5 MB/s simulated speed
+
+  const progressInterval = setInterval(() => {
+    percent += 1
+    const transferred = Math.min(total * (percent / 100), total)
+
+    const progressObj = {
+      percent,
+      transferred,
+      total,
+      bytesPerSecond: downloadSpeed,
+    }
+
+    if (downloadDialog && !downloadDialog.isDestroyed()) {
+      downloadDialog.webContents.send('update-progress', progressObj)
+    }
+
+    if (percent >= 100) {
+      clearInterval(progressInterval)
+
+      // Wait 1 second before closing the dialog
+      setTimeout(() => {
+        if (downloadDialog && !downloadDialog.isDestroyed()) {
+          downloadDialog.close()
+          downloadDialog = null
+
+          // Show completion dialog
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Simulated Download Complete',
+            message: 'Simulated Update Downloaded',
+            detail: 'This was a simulated download for testing purposes. No actual update was downloaded.',
+            buttons: ['OK'],
+          })
+        }
+      }, 1000)
+    }
+  }, intervalTime)
+}
+
 module.exports = {
   // Main process exports
   initialize,
@@ -758,4 +841,5 @@ module.exports = {
   removeUpdateNotification,
   checkForUpdates,
   checkForUpdatesWithDialog,
+  simulateDownloadForDev,
 }
