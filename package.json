@@ -147,7 +147,6 @@
       "output": "dist",
       "buildResources": "build"
     },
-    "generateUpdatesFilesForAllChannels": true,
-    "updaterCacheDirName": "unifi-protect-viewer-updater"
+    "generateUpdatesFilesForAllChannels": true
   }
 }
