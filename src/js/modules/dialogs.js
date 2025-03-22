@@ -18,7 +18,7 @@ function showAboutDialog(mainWindow) {
     .showMessageBox(mainWindow, {
       title: 'About UniFi Protect Viewer',
       message: 'UniFi Protect Viewer',
-      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.\nDeveloped by JD Lien.`,
+      detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.\n\nDeveloped by JD Lien.`,
       buttons: ['Check for Updates', 'View on GitHub', 'Close'],
       defaultId: 2,
       cancelId: 2,
