@@ -189,14 +189,14 @@ function setupLoginSuccessMonitor() {
           const isReady = await dashboard.waitForDashboardReady()
 
           if (isReady) {
-            ui.handleLiveviewV5()
+            ui.handleLiveView()
           } else {
             // Try one more time after a longer delay
             setTimeout(async () => {
               const isReadyRetry = await dashboard.waitForDashboardReady()
 
               if (isReadyRetry) {
-                ui.handleLiveviewV5()
+                ui.handleLiveView()
               }
             }, 2000) // Extra 2 second delay for retry
           }

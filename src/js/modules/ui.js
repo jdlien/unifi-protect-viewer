@@ -6,9 +6,10 @@ const path = require('path')
 const utils = require('./utils')
 
 /**
- * Fullscreen view modification function to customize the LiveView UI
+ * Fullscreen view modification function to customize the LiveView UI.
+ * Only compatible with UniFi Protect 5.0 and later.
  */
-async function handleLiveviewV5() {
+async function handleLiveView() {
   // wait until liveview is present
   utils.logger.debug('Waiting for liveview to be present')
   await utils.waitUntil(() => document.querySelectorAll('[class^=liveView__FullscreenWrapper]').length > 0)
@@ -489,7 +490,7 @@ async function handleWidgetPanel(options = {}) {
 
 // Export the functions
 module.exports = {
-  handleLiveviewV5,
+  handleLiveView,
   triggerDashboardNavigation,
   injectDashboardButton,
   handleDashboardButton,

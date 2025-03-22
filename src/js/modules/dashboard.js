@@ -39,7 +39,7 @@ async function initializeDashboard() {
     utils.log('LiveView is ready, applying customizations')
 
     // Apply UI customizations
-    ui.handleLiveviewV5()
+    ui.handleLiveView()
 
     // Update dashboard button state
     ui.handleDashboardButton()
