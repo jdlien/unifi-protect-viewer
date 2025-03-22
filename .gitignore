@@ -8,3 +8,4 @@ store
 **/.DS_Store
 notarization-log.json
 thinning-log.txt
+/scripts/tmp
