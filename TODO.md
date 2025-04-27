@@ -2,6 +2,7 @@
 
 ## Features
 
+- Add "FullScreen" button on header to the left of the "dark mode" button.
 - Add hotkeys
   - Stretch Goals: - switching cameras - switching between views - zoom in and out - mute and unmute audio
     √ Windows build for ARM64
