@@ -2,189 +2,107 @@ const { execSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
+const crypto = require('crypto')
 
-// Load environment variables from .env file if it exists
-try {
-  // Use dotenv with option to process environment variables
-  // This helps with special characters in passwords
-  require('dotenv').config({ processEnv: process.env })
-  console.log('Loaded environment variables from .env file')
-} catch (error) {
-  console.warn(
-    'dotenv module not found, skipping .env loading. This is not an error if the environment variables are already set.',
-  )
-}
+require('dotenv').config()
 
-/**
- * Sign a Windows executable using SSL.com's CodeSignTool
- * This function is called by electron-builder during the build process
- *
- * Environment variables needed:
- * - SSL_COM_USERNAME: Your SSL.com account username/email
- * - SSL_COM_PASSWORD: Your SSL.com account password
- * - SSL_COM_CREDENTIAL_ID: The credential ID for your certificate
- * - SSL_COM_TOTP_SECRET: The TOTP secret for authentication
- * - CODE_SIGN_TOOL_PATH: (Optional) Path to the CodeSignTool directory
- *
- * @param {Object} config - Configuration object passed by electron-builder
- */
 exports.default = async function (config) {
-  // Make sure we have a valid configuration object
-  if (!config || !config.path) {
-    console.error('Invalid configuration object passed to sign.js:', config)
-    return false
-  }
+  if (!config?.path) return console.error('Missing config.path'), false
 
-  // Extract file path from config (electron-builder v26 format)
   const filePath = config.path
-
-  // Only sign .exe files (skip other formats like .dll, .node, etc.)
-  if (!filePath.toLowerCase().endsWith('.exe')) {
-    console.log(`Skipping signing of non-exe file: ${filePath}`)
+  const fileExt = path.extname(filePath).toLowerCase()
+  if (!['.exe', '.dll'].includes(fileExt)) {
+    console.log(`Skipping non-EXE/DLL: ${filePath}`)
     return true
   }
 
-  console.log(`Signing file: ${filePath}`)
-
-  // Get credentials from environment variables
   const username = process.env.SSL_COM_USERNAME
   const password = process.env.SSL_COM_PASSWORD
   const credentialId = process.env.SSL_COM_CREDENTIAL_ID
-  let totpSecret = process.env.SSL_COM_TOTP_SECRET
-
-  // Extract the secret from a TOTP URI if it's in that format
-  if (totpSecret && totpSecret.includes('secret=')) {
-    const secretMatch = totpSecret.match(/secret=([^&]+)/)
-    if (secretMatch && secretMatch[1]) {
-      totpSecret = secretMatch[1]
-      console.log('Extracted TOTP secret from URI format')
-    }
-  }
-
-  // Get CodeSignTool path (default to user's bin directory if not specified)
+  const totpSecretRaw = process.env.SSL_COM_TOTP_SECRET
   const codeSignToolPath = process.env.CODE_SIGN_TOOL_PATH || path.join(os.homedir(), 'bin', 'CodeSignTool')
 
-  // Check if all required credentials are available
-  if (!username || !password || !credentialId || !totpSecret) {
-    const missing = []
-    if (!username) missing.push('SSL_COM_USERNAME')
-    if (!password) missing.push('SSL_COM_PASSWORD')
-    if (!credentialId) missing.push('SSL_COM_CREDENTIAL_ID')
-    if (!totpSecret) missing.push('SSL_COM_TOTP_SECRET')
-
-    console.error(`Error: Missing required environment variables for code signing: ${missing.join(', ')}`)
-    console.error('Make sure these variables are defined in your .env file or environment')
+  if (!username || !password || !credentialId || !totpSecretRaw) {
+    console.error('Missing signing environment variables')
     return false
   }
 
-  // Check if CodeSignTool exists
+  const totpSecret = totpSecretRaw.includes('secret=') ? totpSecretRaw.split('secret=')[1].split('&')[0] : totpSecretRaw
+
   if (!fs.existsSync(codeSignToolPath)) {
-    console.error(`Error: CodeSignTool not found at ${codeSignToolPath}`)
-    console.error(
-      'Set the CODE_SIGN_TOOL_PATH environment variable to the correct path or install it at the default location',
-    )
+    console.error('CodeSignTool not found:', codeSignToolPath)
     return false
   }
 
-  // Create a temporary directory for files
-  const tempDir = path.join(os.tmpdir(), 'codesigntool')
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true })
+  // Determine the correct executable based on platform
+  const isWindows = process.platform === 'win32'
+  const executableName = isWindows ? 'CodeSignTool.bat' : 'CodeSignTool.sh'
+  const codeSignToolExecutable = path.join(codeSignToolPath, executableName)
+
+  if (!fs.existsSync(codeSignToolExecutable)) {
+    console.error(`CodeSignTool executable not found: ${codeSignToolExecutable}`)
+    return false
   }
 
-  // Create a copy of the file with a simple name to avoid spaces
-  const originalFilePath = filePath
-  const tempFileName = `temp_${Date.now()}.exe`
-  const tempFilePath = path.join(tempDir, tempFileName)
+  console.log(`Signing with SSL.com CodeSignTool (${isWindows ? 'Windows' : 'Unix'})...`)
 
   try {
-    // Copy the file to a temporary location with a simple name
-    fs.copyFileSync(originalFilePath, tempFilePath)
-    console.log(`Created temporary copy at: ${tempFilePath}`)
+    // Get absolute path of the file to sign
+    const absoluteInputPath = path.resolve(filePath)
 
-    // Create temporary script file
-    const scriptPath = path.join(tempDir, os.platform() === 'win32' ? 'sign.bat' : 'sign.sh')
+    // Create temporary directories for input and output files with simple names
+    const tempDir = path.join(os.tmpdir(), 'codesign-' + crypto.randomBytes(8).toString('hex'))
+    const tempInDir = path.join(tempDir, 'in')
+    const tempOutDir = path.join(tempDir, 'out')
 
-    // Build the command with all available parameters
-    let commandParams = []
-    commandParams.push(`-username='${username}'`)
-    commandParams.push(`-password='${password.replace(/'/g, "'\\''")}'`) // Escape single quotes for bash
-    commandParams.push(`-credential_id='${credentialId}'`)
-    commandParams.push(`-totp_secret='${totpSecret}'`)
-    commandParams.push(`-input_file_path="${tempFilePath}"`)
-    commandParams.push(`-output_dir_path="${tempDir}"`)
-    commandParams.push(`-override`)
+    fs.mkdirSync(tempInDir, { recursive: true })
+    fs.mkdirSync(tempOutDir, { recursive: true })
 
-    // Create a script with the correct command, handling special characters appropriately
-    let scriptContent
+    // Copy the file to temp input dir with a simple name (no spaces)
+    const tempInFile = path.join(tempInDir, `app${fileExt}`)
+    fs.copyFileSync(absoluteInputPath, tempInFile)
 
-    if (os.platform() === 'win32') {
-      // Windows batch script - escape special characters in credentials
-      // For Windows, we need ^ before special characters
-      const escapedPassword = password.replace(/[&^|<>()]/g, '^$&')
+    // Create the command to sign the temp file
+    const cmd = isWindows
+      ? `"${executableName}" sign /username="${username}" /password="${password.replace(/"/g, '\\"')}" /credential_id="${credentialId}" /totp_secret="${totpSecret}" /input_file_path="${tempInFile}" /output_dir_path="${tempOutDir}"`
+      : `./${executableName} sign -username="${username}" -password="${password.replace(/"/g, '\\"')}" -credential_id="${credentialId}" -totp_secret="${totpSecret}" -input_file_path="${tempInFile}" -output_dir_path="${tempOutDir}"`
 
-      scriptContent = `@echo off
-set CODE_SIGN_TOOL_PATH=${codeSignToolPath}
-"${path.join(codeSignToolPath, 'CodeSignTool.bat')}" sign ^
-  -username="${username}" ^
-  -password="${escapedPassword}" ^
-  -credential_id="${credentialId}" ^
-  -totp_secret="${totpSecret}" ^
-  -input_file_path="${tempFilePath}" ^
-  -output_dir_path="${tempDir}" ^
-  -override
-`
+    // Execute the command from within the CodeSignTool directory
+    execSync(cmd, {
+      stdio: 'inherit',
+      cwd: codeSignToolPath,
+      shell: isWindows ? true : '/bin/bash',
+    })
+
+    // Get the signed file path
+    const signedFilePath = path.join(tempOutDir, path.basename(tempInFile))
+
+    if (!fs.existsSync(signedFilePath)) {
+      throw new Error(`Signed file not found at expected location: ${signedFilePath}`)
+    }
+
+    // Verify the file sizes differ to confirm signing actually happened
+    const originalSize = fs.statSync(tempInFile).size
+    const signedSize = fs.statSync(signedFilePath).size
+
+    if (originalSize === signedSize) {
+      console.warn(
+        `Warning: Original file (${originalSize} bytes) and signed file (${signedSize} bytes) have identical sizes - signing may have failed!`,
+      )
     } else {
-      // Unix shell script - use single quotes for values with special characters
-      scriptContent = `#!/bin/bash
-export CODE_SIGN_TOOL_PATH="${codeSignToolPath}"
-"${path.join(codeSignToolPath, 'CodeSignTool.sh')}" sign \\
-  ${commandParams.join(' \\\n  ')}
-`
+      console.log(`File size before: ${originalSize} bytes, after: ${signedSize} bytes - signing successful`)
     }
 
-    // Write script with restricted permissions
-    fs.writeFileSync(scriptPath, scriptContent, { mode: 0o700 }) // rwx for user only
-    console.log('Created temporary signing script')
+    // Replace the original file with the signed one
+    fs.copyFileSync(signedFilePath, absoluteInputPath)
 
-    // Execute the script
-    console.log('Executing SSL.com CodeSignTool...')
-    execSync(scriptPath, { stdio: 'inherit' })
+    // Clean up temp directory
+    fs.rmSync(tempDir, { recursive: true, force: true })
 
-    // Check if the signed file exists in the temp directory
-    if (!fs.existsSync(tempFilePath)) {
-      console.error('Error: Signed file not found after signing process')
-      return false
-    }
-
-    // If successful, copy the signed file back to the original location
-    fs.copyFileSync(tempFilePath, originalFilePath)
-    console.log(`Copied signed file back to original location: ${originalFilePath}`)
-
-    console.log('Code signed successfully')
+    console.log('Successfully signed:', filePath)
     return true
-  } catch (error) {
-    console.error('Error during code signing:', error.message)
-    if (error.stdout) console.log('stdout:', error.stdout.toString())
-    if (error.stderr) console.error('stderr:', error.stderr.toString())
-
-    // More detailed error information
-    console.error('Stack trace:', error.stack)
-
+  } catch (err) {
+    console.error('Signing failed:', err.message)
     return false
-  } finally {
-    // Clean up temporary files
-    try {
-      const scriptPath = path.join(tempDir, os.platform() === 'win32' ? 'sign.bat' : 'sign.sh')
-      if (fs.existsSync(scriptPath)) {
-        fs.unlinkSync(scriptPath)
-      }
-      if (fs.existsSync(tempFilePath)) {
-        fs.unlinkSync(tempFilePath)
-      }
-      console.log('Cleaned up temporary files')
-    } catch (cleanupError) {
-      console.warn('Warning: Failed to clean up temporary files:', cleanupError.message)
-    }
   }
 }
