@@ -549,27 +549,58 @@ async function injectFullscreenButton() {
 
   // Function to update button content based on fullscreen state
   const updateButtonContent = () => {
-    const isFullscreen = document.fullscreenElement !== null
-    button.innerHTML = `
-      <div id="fullscreen-button-label" style="display: flex; align-items: center;">
-        ${isFullscreen ? 'Exit&nbsp;' : ''}Fullscreen
-      </div>
-      <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
-        <div id="fullscreen-icon">
-          ${isFullscreen ? icons.exit : icons.enter}
+    // Query the fullscreen state from Electron
+    ipcRenderer
+      .invoke('isFullScreen')
+      .then((isFullscreen) => {
+        button.innerHTML = `
+        <div id="fullscreen-button-label" style="display: flex; align-items: center;">
+          ${isFullscreen ? 'Exit&nbsp;' : ''}Fullscreen
         </div>
-      </div>
-    `
+        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
+          <div id="fullscreen-icon">
+            ${isFullscreen ? icons.exit : icons.enter}
+          </div>
+        </div>
+      `
+      })
+      .catch((error) => {
+        // Fallback if IPC fails
+        utils.logError('Error getting fullscreen state:', error)
+        // Assume not fullscreen if error
+        button.innerHTML = `
+        <div id="fullscreen-button-label" style="display: flex; align-items: center;">
+          Fullscreen
+        </div>
+        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
+          <div id="fullscreen-icon">
+            ${icons.enter}
+          </div>
+        </div>
+      `
+      })
   }
 
   // Set initial button content
-  updateButtonContent()
+  // We'll set this initially as non-fullscreen and update immediately after
+  button.innerHTML = `
+    <div id="fullscreen-button-label" style="display: flex; align-items: center;">
+      Fullscreen
+    </div>
+    <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
+      <div id="fullscreen-icon">
+        ${icons.enter}
+      </div>
+    </div>
+  `
 
   // Set up fullscreen toggle functionality
   button.onclick = toggleFullscreen
 
-  // Add event listener for fullscreen state changes
-  document.addEventListener('fullscreenchange', updateButtonContent)
+  // Listen for fullscreen state changes from Electron
+  ipcRenderer.on('fullscreen-change', (event, isFullscreen) => {
+    updateButtonContent()
+  })
 
   try {
     // Wait for header to be available
@@ -595,6 +626,9 @@ async function injectFullscreenButton() {
     } else {
       header.appendChild(button)
     }
+
+    // Update button content immediately after adding to DOM
+    updateButtonContent()
 
     return true
   } catch (error) {
@@ -667,13 +701,9 @@ function addFullscreenStyles() {
  * Toggles fullscreen mode for the document
  */
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch((err) => {
-      console.error(`Error attempting to enable fullscreen: ${err.message}`)
-    })
-  } else if (document.exitFullscreen) {
-    document.exitFullscreen()
-  }
+  // Use the IPC renderer to trigger fullscreen through Electron's API
+  // This matches how keyboard shortcuts handle fullscreen
+  ipcRenderer.send('toggleFullscreen')
 }
 
 /**

@@ -63,8 +63,33 @@ function setupIpcHandlers(mainWindow, store) {
     if (mainWindow) {
       const isFullScreen = mainWindow.isFullScreen()
       mainWindow.setFullScreen(!isFullScreen)
+
+      // Notify renderer about fullscreen state change
+      event.sender.send('fullscreen-change', !isFullScreen)
     }
   })
+
+  // Check if window is in fullscreen mode
+  ipcMain.handle('isFullScreen', (event) => {
+    return mainWindow ? mainWindow.isFullScreen() : false
+  })
+
+  // Listen for fullscreen state changes from Electron and relay to renderer
+  if (mainWindow) {
+    mainWindow.on('enter-full-screen', () => {
+      utils.log('Window entered fullscreen')
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('fullscreen-change', true)
+      }
+    })
+
+    mainWindow.on('leave-full-screen', () => {
+      utils.log('Window left fullscreen')
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('fullscreen-change', false)
+      }
+    })
+  }
 
   // Handle menu state updates from renderer
   ipcMain.on('update-dashboard-state', (event, isDashboardPage) => {
