@@ -44,9 +44,21 @@ async function createWindow(store) {
   // Set window title
   mainWindow.setTitle(`UniFi Protect Viewer ${require('electron').app.getVersion()}`)
 
-  // Open DevTools in development mode
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools()
+  // Open DevTools in development mode - with reliable detection
+  const isDev = process.env.NODE_ENV === 'development'
+  if (isDev) {
+    utils.log('Opening DevTools (development mode)')
+    // Wait for window to be ready before opening DevTools
+    mainWindow.webContents.once('did-finish-load', () => {
+      setTimeout(() => {
+        try {
+          mainWindow.webContents.openDevTools({ mode: 'right' })
+          utils.log('DevTools opened successfully')
+        } catch (err) {
+          utils.logError('Error opening DevTools:', err)
+        }
+      }, 1000) // Delay slightly to ensure window is fully loaded
+    })
   }
 
   // Handle certificate errors - only bypass for configured domain
@@ -158,10 +170,11 @@ function registerDevToolsShortcut(window) {
       globalShortcut.unregister('F12')
     }
 
-    // Register F12 to open DevTools globally
+    // Register F12 to toggle DevTools globally
     globalShortcut.register('F12', () => {
       if (window && !window.isDestroyed()) {
-        openDevTools(window)
+        window.webContents.toggleDevTools()
+        utils.log('DevTools toggled via F12 shortcut')
       }
     })
 

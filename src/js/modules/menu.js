@@ -105,6 +105,20 @@ function setupApplicationMenu(mainWindow, store) {
             mainWindow.setFullScreen(!mainWindow.isFullScreen())
           },
         },
+        {
+          label: 'Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            try {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.toggleDevTools()
+                utils.log('DevTools toggled via menu')
+              }
+            } catch (err) {
+              utils.logError('Failed to toggle DevTools:', err)
+            }
+          },
+        },
         { type: 'separator' },
         {
           label: 'Toggle All Navigation',
@@ -174,15 +188,6 @@ function setupApplicationMenu(mainWindow, store) {
           click: () => {
             const updates = require('./updates')
             updates.simulateDownloadForDev(mainWindow)
-          },
-        },
-        {
-          label: 'Open DevTools',
-          accelerator: 'F12',
-          click: () => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.openDevTools({ mode: 'right' })
-            }
           },
         },
       ],
