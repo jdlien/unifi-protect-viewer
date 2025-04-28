@@ -17,7 +17,6 @@ function setupNavigationMonitor() {
     if (window.location.href !== lastUrl) {
       const oldUrl = lastUrl
       lastUrl = window.location.href
-      utils.log('Navigation detected:', oldUrl, '->', lastUrl)
 
       // Special handling for login-to-dashboard transition
       const isFromLogin = oldUrl.includes('login') || oldUrl.includes('signin') || oldUrl.includes('auth')
@@ -41,6 +40,8 @@ function setupNavigationMonitor() {
         // For non-dashboard pages, just update the dashboard button
         ui.handleDashboardButton()
       }
+
+      // No need to call initializeCommonUI here since the header persists in the React SPA
     }
   }
 
@@ -90,6 +91,8 @@ function setupNavigationMonitor() {
       } else {
         ui.handleDashboardButton()
       }
+      // Initialize common UI elements once during initial page load
+      ui.initializeCommonUI()
     } else {
       // Wait for DOM to be ready before initializing
       document.addEventListener(
@@ -100,6 +103,8 @@ function setupNavigationMonitor() {
           } else {
             ui.handleDashboardButton()
           }
+          // Initialize common UI elements once during initial page load
+          ui.initializeCommonUI()
         },
         { once: true },
       )

@@ -25,6 +25,10 @@ window.addEventListener('DOMContentLoaded', () => {
   if (isAppPage) {
     navigation.initializeWithPolling()
     ui.setupKeyboardShortcuts()
+    // Initialize common UI elements like the fullscreen button
+    ui.initializeCommonUI().catch((error) => {
+      utils.logError('Failed to initialize common UI elements', error)
+    })
   }
 
   // Initialize updates - after a delay to ensure UI is ready
@@ -32,21 +36,21 @@ window.addEventListener('DOMContentLoaded', () => {
     initializeUpdateListeners()
   }, 5000)
 
-  // Listen for toggle-navigation events from the main process
+  // Listen for toggle-navigation events from the main process (ESC key)
   ipcRenderer.on('toggle-navigation', () => {
     ui.toggleNavigation().catch((error) => {
       utils.logError('Error toggling navigation from menu:', error)
     })
   })
 
-  // Listen for toggle-nav-only events from the main process
+  // Listen for toggle-nav-only events from the main process (Alt+N)
   ipcRenderer.on('toggle-nav-only', () => {
     ui.toggleNavigation({ toggleNav: true, toggleHeader: false }).catch((error) => {
       utils.logError('Error toggling nav from menu:', error)
     })
   })
 
-  // Listen for toggle-header-only events from the main process
+  // Listen for toggle-header-only events from the main process (Alt+H)
   ipcRenderer.on('toggle-header-only', () => {
     ui.toggleNavigation({ toggleNav: false, toggleHeader: true }).catch((error) => {
       utils.logError('Error toggling header from menu:', error)
