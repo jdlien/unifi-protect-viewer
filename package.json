@@ -91,7 +91,8 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "notarize": true,
       "identity": "Joseph Lien (A93Q7MKECL)",
-      "timestamp": "http://timestamp.apple.com/ts01"
+      "timestamp": "http://timestamp.apple.com/ts01",
+      "artifactName": "UniFi-Protect-Viewer-${arch}.${ext}"
     },
     "win": {
       "target": [
@@ -120,7 +121,8 @@
         "signingHashAlgorithms": [
           "sha256"
         ]
-      }
+      },
+      "artifactName": "UniFi-Protect-Viewer-Setup-${arch}.${ext}"
     },
     "linux": {
       "target": [
