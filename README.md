@@ -16,7 +16,7 @@ Download the latest version for your platform:
 
   - [Windows Installer x64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-x64.exe)
 
-  - [Windows Portable ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-arm64-win.zip)
+  - [Windows Installer ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-arm64.exe)
 
 Or view all downloads, including Linux versions, on the [releases page](https://github.com/jdlien/unifi-protect-viewer/releases/latest).
 
