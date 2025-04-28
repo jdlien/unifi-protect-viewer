@@ -10,17 +10,15 @@ Download the latest version for your platform:
 
 - **macOS**:
 
-  - [Universal (Intel/Apple Silicon)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-1.1.5-universal.dmg)
+  - [Universal (Intel/Apple Silicon)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-universal.dmg)
 
-- **Windows** (coming soon):
+- **Windows**:
 
-  - [Windows Installer](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi.Protect.Viewer.Setup.1.1.5.exe)
+  - [Windows Installer x64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-x64.exe)
 
-- **Linux**:
-  - [AppImage](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-1.1.5.AppImage)
-  - [AppImage ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-arm64.AppImage)
+  - [Windows Portable ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-arm64-win.zip)
 
-Or view all downloads on the [releases page](https://github.com/jdlien/unifi-protect-viewer/releases/latest).
+Or view all downloads, including Linux versions, on the [releases page](https://github.com/jdlien/unifi-protect-viewer/releases/latest).
 
 ## Features
 

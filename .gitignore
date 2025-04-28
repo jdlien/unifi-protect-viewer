@@ -7,5 +7,6 @@ releases
 store
 **/.DS_Store
 notarization-log.json
+logs/code_signing_tool.log
 thinning-log.txt
 /scripts/tmp

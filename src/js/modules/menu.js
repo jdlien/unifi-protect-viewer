@@ -184,11 +184,8 @@ function setupApplicationMenu(mainWindow, store) {
       label: 'Development',
       submenu: [
         {
-          label: 'Simulate Update Download',
-          click: () => {
-            const updates = require('./updates')
-            updates.simulateDownloadForDev(mainWindow)
-          },
+          label: 'Toggle Developer Tools',
+          role: 'toggleDevTools',
         },
       ],
     })

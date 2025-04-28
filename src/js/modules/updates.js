@@ -19,6 +19,10 @@ const initialUpdateDelay = parseInt(process.env.INITIAL_UPDATE_DELAY || '10000',
 // MAIN PROCESS CODE
 // These functions are only used in the main process
 let autoUpdater, dialog, app, ipcMain, BrowserWindow
+let _mainWindow // Store mainWindow reference for internal use
+let isManualCheckInProgress = false // Flag to track manual checks
+let checkingDialog = null // Reference to the checking dialog window
+let downloadDialog = null // Reference to the download dialog window
 
 /**
  * Handle GitHub authentication error messages
@@ -58,13 +62,6 @@ function getAutoUpdater() {
       // Setup logger
       if (autoUpdater && !autoUpdater.logger) {
         autoUpdater.logger = utils.logger
-      }
-
-      // Force updates in development mode (for testing only)
-      if (isDev && process.env.FORCE_DEV_UPDATES === 'true') {
-        utils.log('Forcing updates in development mode for testing')
-        autoUpdater.forceDevUpdateConfig = true
-        autoUpdater.allowPrerelease = true
       }
 
       // Validate autoUpdater instance
@@ -135,88 +132,290 @@ function createDummyAutoUpdater() {
 }
 
 /**
+ * Close the 'Checking for Updates' modal window
+ */
+function _closeCheckingDialog() {
+  if (checkingDialog && !checkingDialog.isDestroyed()) {
+    checkingDialog.close()
+  }
+  checkingDialog = null
+}
+
+/**
+ * Close the 'Downloading Update' modal window
+ */
+function _closeDownloadDialog() {
+  if (downloadDialog && !downloadDialog.isDestroyed()) {
+    downloadDialog.close()
+  }
+  downloadDialog = null
+}
+
+/**
+ * Manages the UI flow for update checking, downloading, and installation.
+ * This is the central function for handling update-related dialogs and windows.
+ * @param {string} step - The current step ('check', 'available', 'downloading', 'downloaded', 'error', 'not-available')
+ * @param {object} [data] - Optional data associated with the step (e.g., info, progress, error)
+ */
+async function _manageUpdateUI(step, data) {
+  if (!_mainWindow || _mainWindow.isDestroyed()) {
+    utils.logError('Update UI cannot be shown: main window is not available.')
+    return
+  }
+
+  const autoUpdaterInstance = getAutoUpdater() // Ensure we have the instance
+
+  switch (step) {
+    case 'check':
+      // Close any existing dialogs first
+      _closeCheckingDialog()
+      _closeDownloadDialog()
+
+      isManualCheckInProgress = true // Mark that a manual check started the UI flow
+      utils.log('Showing checking for updates window.')
+
+      checkingDialog = new BrowserWindow({
+        parent: _mainWindow,
+        modal: true,
+        show: false,
+        width: 350,
+        height: 140,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        fullscreenable: false,
+        title: 'Checking for Updates',
+        vibrancy: 'under-window',
+        visualEffectState: 'active',
+        backgroundColor: '#00000000', // Transparent background
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      })
+      checkingDialog.loadFile(path.join(__dirname, '../../html/update-checking.html'))
+      checkingDialog.once('ready-to-show', () => checkingDialog.show())
+      checkingDialog.on('closed', () => {
+        checkingDialog = null
+      })
+
+      // Start the actual check
+      try {
+        await autoUpdaterInstance.checkForUpdates()
+      } catch (err) {
+        // Error during check initiation might be caught by the 'error' event listener
+        // Or could be a setup issue before listeners are attached
+        utils.logError('Error initiating update check:', err)
+        _manageUpdateUI('error', { error: err }) // Show error UI immediately
+      }
+      break
+
+    case 'available':
+      _closeCheckingDialog() // Close checking dialog if open
+      const { info } = data // UpdateInfo object
+
+      utils.log(`Showing update available dialog for version ${info.version}`)
+      const { response: downloadResponse } = await dialog.showMessageBox(_mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `Version ${info.version} Available`,
+        detail: 'A new version is available. Would you like to download it now?',
+        buttons: ['Download', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+
+      if (downloadResponse === 0) {
+        // Download
+        _manageUpdateUI('downloading') // Transition to downloading state
+        try {
+          await autoUpdaterInstance.downloadUpdate()
+        } catch (err) {
+          utils.logError('Error starting update download:', err)
+          _manageUpdateUI('error', err)
+        }
+      } else {
+        isManualCheckInProgress = false // Reset flag if user cancels
+      }
+      break
+
+    case 'downloading':
+      _closeCheckingDialog() // Ensure checking dialog is closed
+      _closeDownloadDialog() // Close previous download dialog if any
+
+      utils.log('Showing downloading update window.')
+      downloadDialog = new BrowserWindow({
+        parent: _mainWindow,
+        modal: true,
+        show: false,
+        width: 400,
+        height: 200, // Increased height for status text
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        fullscreenable: false,
+        title: 'Downloading Update',
+        vibrancy: 'under-window',
+        visualEffectState: 'active',
+        backgroundColor: '#00000000', // Transparent background
+        webPreferences: {
+          contextIsolation: true,
+          nodeIntegration: false,
+          preload: path.join(__dirname, '../../js/download-preload.js'),
+        },
+      })
+      downloadDialog.loadFile(path.join(__dirname, '../../html/update-downloading.html'))
+      downloadDialog.once('ready-to-show', () => downloadDialog.show())
+      downloadDialog.on('closed', () => {
+        downloadDialog = null
+      })
+      break
+
+    case 'progress':
+      // Send progress to the download window if it exists
+      if (downloadDialog && !downloadDialog.isDestroyed()) {
+        downloadDialog.webContents.send('update-progress', data.progress)
+      }
+      // Also send to main window for potential renderer UI (like toast)
+      if (_mainWindow && !_mainWindow.isDestroyed()) {
+        _mainWindow.webContents.send('download-progress', data.progress)
+      }
+      break
+
+    case 'downloaded':
+      _closeDownloadDialog() // Close download dialog
+      const { downloadedInfo } = data // UpdateInfo object
+
+      utils.log(`Showing update downloaded dialog for version ${downloadedInfo.version}`)
+      const { response: restartResponse } = await dialog.showMessageBox(_mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: `Update Downloaded (v${downloadedInfo.version})`,
+        detail: 'The update has been downloaded. Restart the application to apply the update.',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+
+      isManualCheckInProgress = false // Reset flag after download completes
+
+      if (restartResponse === 0) {
+        // Restart
+        autoUpdaterInstance.quitAndInstall(true, true) // isSilent = true, isForceRunAfter = true
+      }
+      break
+
+    case 'not-available':
+      _closeCheckingDialog()
+      // Only show 'no update' dialog if a manual check triggered the process
+      if (isManualCheckInProgress) {
+        utils.log('Showing no updates available dialog.')
+        dialog.showMessageBox(_mainWindow, {
+          type: 'info',
+          title: 'No Updates',
+          message: 'You have the latest version',
+          detail: `Version ${app.getVersion()} is the latest version available.`,
+          buttons: ['OK'],
+        })
+      } else {
+        utils.log('No updates available (automatic check).')
+      }
+      isManualCheckInProgress = false // Reset flag
+      break
+
+    case 'error':
+      _closeCheckingDialog()
+      _closeDownloadDialog()
+      isManualCheckInProgress = false // Reset flag on error
+
+      const error = data.error || new Error('Unknown update error')
+      const errorMessage = error.message || String(error)
+      utils.logError('Update error occurred:', errorMessage)
+
+      dialog.showMessageBox(_mainWindow, {
+        type: 'error',
+        title: 'Update Error',
+        message: 'Error During Update Process',
+        detail: getGitHubErrorMessage(errorMessage), // Format GitHub errors nicely
+        buttons: ['OK'],
+      })
+      break
+
+    default:
+      utils.logWarn(`_manageUpdateUI called with unknown step: ${step}`)
+  }
+}
+
+/**
  * Configure auto-updater for the main process
  * @param {BrowserWindow} mainWindow - The main application window
  */
 function setupAutoUpdater(mainWindow) {
-  const autoUpdater = getAutoUpdater()
-  if (!autoUpdater) return
+  _mainWindow = mainWindow // Store reference for internal use
+  const autoUpdaterInstance = getAutoUpdater()
+  if (!autoUpdaterInstance) return
 
-  // Disable auto download
-  autoUpdater.autoDownload = false
+  // Disable auto download - we manage it via _manageUpdateUI
+  autoUpdaterInstance.autoDownload = false
 
   // Configure logging
-  autoUpdater.logger = utils.logger
+  autoUpdaterInstance.logger = utils.logger
 
-  // Handle update events
-  autoUpdater.on('checking-for-update', () => {
+  // --- Centralized Event Handling ---
+  autoUpdaterInstance.removeAllListeners() // Clear any previous listeners (important for HMR)
+
+  autoUpdaterInstance.on('checking-for-update', () => {
     utils.log('Checking for updates...')
+    // Optionally, could inform renderer here if needed, but main UI handles it
   })
 
-  autoUpdater.on('update-available', (info) => {
+  autoUpdaterInstance.on('update-available', (info) => {
     utils.log('Update available:', info.version)
-    mainWindow.webContents.send('update-available', info)
-
-    // Ask user if they want to download the update
-    dialog
-      .showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Update Available',
-        message: `A new version (${info.version}) is available.`,
-        detail: 'Would you like to download it now?',
-        buttons: ['Download', 'Later'],
-        defaultId: 0,
-      })
-      .then((result) => {
-        if (result.response === 0) {
-          autoUpdater.downloadUpdate()
-        }
-      })
+    _manageUpdateUI('available', { info })
+    // Send event to renderer for potential non-modal notification
+    if (_mainWindow && !_mainWindow.isDestroyed()) {
+      _mainWindow.webContents.send('update-available', info)
+    }
   })
 
-  autoUpdater.on('update-not-available', () => {
-    utils.log('No updates available')
+  autoUpdaterInstance.on('update-not-available', () => {
+    utils.log('Update not available.')
+    _manageUpdateUI('not-available')
   })
 
-  autoUpdater.on('error', (err) => {
-    utils.logError('Update error:', err)
-    const errorMessage = err.message || String(err)
-    mainWindow.webContents.send(
-      'update-error',
-      errorMessage.includes('API rate limit') ||
-        errorMessage.includes('credentials') ||
-        errorMessage.includes('Unauthorized')
-        ? 'GitHub authentication error. A Personal Access Token may be required.'
-        : errorMessage,
-    )
+  autoUpdaterInstance.on('error', (err) => {
+    // Error handled centrally
+    _manageUpdateUI('error', { error: err })
+    // Send event to renderer
+    if (_mainWindow && !_mainWindow.isDestroyed()) {
+      const errorMessage = err.message || String(err)
+      _mainWindow.webContents.send(
+        'update-error',
+        errorMessage.includes('API rate limit') ||
+          errorMessage.includes('credentials') ||
+          errorMessage.includes('Unauthorized')
+          ? 'GitHub authentication error. A Personal Access Token may be required.'
+          : errorMessage,
+      )
+    }
   })
 
-  autoUpdater.on('download-progress', (progress) => {
-    mainWindow.webContents.send('download-progress', progress)
+  autoUpdaterInstance.on('download-progress', (progress) => {
+    // Progress handled centrally
+    _manageUpdateUI('progress', { progress })
   })
 
-  autoUpdater.on('update-downloaded', (info) => {
-    utils.log('Update downloaded')
-    mainWindow.webContents.send('update-downloaded', info)
-
-    // Prompt user to install update
-    dialog
-      .showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Update Ready',
-        message: 'Update downloaded',
-        detail: 'A new version has been downloaded. Restart the application to apply the update.',
-        buttons: ['Restart', 'Later'],
-        defaultId: 0,
-      })
-      .then((result) => {
-        if (result.response === 0) {
-          autoUpdater.quitAndInstall(true, true)
-        }
-      })
+  autoUpdaterInstance.on('update-downloaded', (info) => {
+    utils.log('Update downloaded:', info.version)
+    _manageUpdateUI('downloaded', { downloadedInfo: info })
+    // Send event to renderer for potential non-modal notification
+    if (_mainWindow && !_mainWindow.isDestroyed()) {
+      _mainWindow.webContents.send('update-downloaded', info)
+    }
   })
 
-  // Check for updates (but not in dev mode)
+  // --- Automatic Update Check Schedule ---
+  // Only run automatic checks in production mode
   if (!isDev) {
     if (disableAutoUpdates) {
       utils.log('Auto-updates disabled via configuration')
@@ -224,15 +423,29 @@ function setupAutoUpdater(mainWindow) {
     }
 
     // Schedule update checks
-    setTimeout(() => {
-      utils.log('Initial update check')
-      autoUpdater.checkForUpdates().catch((err) => utils.logError('Update check error:', err))
+    utils.log(`Initial update check scheduled in ${initialUpdateDelay / 1000}s`)
+    const initialCheckTimeout = setTimeout(() => {
+      utils.log('Performing initial update check.')
+      autoUpdaterInstance.checkForUpdates().catch((err) => {
+        // Don't show UI for initial check errors unless critical (handled by 'error' event)
+        utils.logError('Initial update check failed:', err)
+      })
     }, initialUpdateDelay)
 
-    setInterval(() => {
-      utils.log('Scheduled update check')
-      autoUpdater.checkForUpdates().catch((err) => utils.logError('Update check error:', err))
+    utils.log(`Periodic update check scheduled every ${updateCheckInterval / 1000 / 60} minutes`)
+    const periodicCheckInterval = setInterval(() => {
+      utils.log('Performing scheduled update check.')
+      autoUpdaterInstance.checkForUpdates().catch((err) => {
+        // Don't show UI for scheduled check errors (handled by 'error' event)
+        utils.logError('Scheduled update check failed:', err)
+      })
     }, updateCheckInterval)
+
+    // Ensure timers are cleared on app quit
+    app.on('will-quit', () => {
+      clearTimeout(initialCheckTimeout)
+      clearInterval(periodicCheckInterval)
+    })
   } else {
     utils.log('Auto-updates disabled in development mode')
   }
@@ -243,41 +456,65 @@ function setupAutoUpdater(mainWindow) {
  * @param {BrowserWindow} mainWindow - The main application window
  */
 function setupUpdateIpcHandlers(mainWindow) {
-  if (!ipcMain) {
-    ipcMain = require('electron').ipcMain
-  }
+  // Ensure modules are loaded (needed if called before getAutoUpdater)
+  if (!ipcMain) ipcMain = require('electron').ipcMain
+  if (!app) app = require('electron').app
 
-  if (!app) {
-    app = require('electron').app
-  }
+  const autoUpdaterInstance = getAutoUpdater()
+  if (!autoUpdaterInstance) return
 
-  const autoUpdater = getAutoUpdater()
-  if (!autoUpdater) return
+  // --- IPC Handlers ---
 
-  // Update-related IPC handlers
-  ipcMain.on('check-for-updates', () => {
-    if (isDev && !process.env.FORCE_DEV_UPDATES) {
-      utils.log('Update check requested in dev mode - skipping')
-      return
+  // Manual check triggered from Renderer/Menu -> Use simplified dialog function
+  ipcMain.handle('updates:check-manual', async () => {
+    // Manual checks are also disabled in dev by default now
+    if (isDev) {
+      utils.log('Manual update check skipped in dev mode.')
+      // Show informative dialog instead of just skipping silently
+      dialog.showMessageBox(_mainWindow, {
+        type: 'info',
+        title: 'Updates Disabled',
+        message: 'Update checking is disabled in development mode.',
+        detail: 'To test updates, please build a production version.',
+        buttons: ['OK'],
+      })
+      return { success: false, message: 'Updates disabled in dev mode.' }
     }
-    utils.log('Manual update check requested')
-    autoUpdater.checkForUpdates().catch((err) => utils.logError('Error checking for updates:', err))
+    utils.log('Manual update check requested via IPC.')
+    await _manageUpdateUI('check') // Start the UI flow
+    return { success: true }
   })
 
-  ipcMain.on('download-update', () => {
-    utils.log('Manual update download requested')
-    autoUpdater.downloadUpdate().catch((err) => utils.logError('Error downloading update:', err))
+  // Request to download update (e.g., from renderer notification)
+  ipcMain.handle('updates:download', async () => {
+    try {
+      utils.log('Manual update download requested via IPC.')
+      await _manageUpdateUI('downloading') // Show download UI
+      await autoUpdaterInstance.downloadUpdate()
+      return { success: true }
+    } catch (err) {
+      utils.logError('Error downloading update via IPC:', err)
+      _manageUpdateUI('error', { error: err })
+      return { success: false, message: err.message || String(err) }
+    }
   })
 
-  ipcMain.on('install-update', () => {
-    utils.log('Manual update installation requested')
-    autoUpdater.quitAndInstall(true, true)
+  // Request to install update (e.g., from renderer notification)
+  ipcMain.handle('updates:install', () => {
+    utils.log('Manual update install requested via IPC.')
+    autoUpdaterInstance.quitAndInstall(true, true)
+    // No return needed as app will quit
   })
 
-  // Get app version (sync)
+  // Get app version (can remain synchronous)
   ipcMain.on('get-app-version', (event) => {
     event.returnValue = app.getVersion()
   })
+
+  // Clean up old handlers if they exist - prevents duplicates on HMR
+  ipcMain.removeHandler('check-for-updates')
+  ipcMain.removeHandler('download-update')
+  ipcMain.removeHandler('install-update')
 }
 
 /**
@@ -290,238 +527,27 @@ function initialize(mainWindow) {
 }
 
 /**
- * Check for updates and show results in a dialog
+ * Check for updates manually and show the UI flow.
+ * This is typically called from menu items or buttons.
  * @param {BrowserWindow} mainWindow - The main browser window
  */
 function checkForUpdatesWithDialog(mainWindow) {
-  try {
-    utils.log('Manually checking for updates from dialog')
-    const autoUpdater = getAutoUpdater()
-
-    // Make sure BrowserWindow is available
-    if (!BrowserWindow) {
-      BrowserWindow = require('electron').BrowserWindow
-    }
-
-    // Override for testing in development mode
-    if (isDev && !process.env.FORCE_DEV_UPDATES) {
-      utils.log('Development mode detected, but proceeding with update check for testing')
-      autoUpdater.forceDevUpdateConfig = true
-      autoUpdater.allowPrerelease = true
-    }
-
-    // If the auto-updater is not available, show a message and return
-    if (!autoUpdater) {
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Updates',
-        message: 'Update System Not Available',
-        detail: isDev
-          ? 'Updates are disabled in development mode. Set FORCE_DEV_UPDATES=true in your .env file to test updates.'
-          : 'The update system is not available due to initialization errors.',
-        buttons: ['OK'],
-      })
-      return
-    }
-
-    // Show checking dialog
-    let checkingDialog = new BrowserWindow({
-      parent: mainWindow,
-      modal: true,
-      show: false,
-      width: 350,
-      height: 140,
-      resizable: false,
-      minimizable: false,
-      maximizable: false,
-      fullscreenable: false,
-      title: 'Checking for Updates',
-      vibrancy: 'under-window',
-      visualEffectState: 'active',
-      backgroundColor: '#00000000',
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    })
-
-    checkingDialog.loadFile(path.join(__dirname, '../../html/update-checking.html'))
-    checkingDialog.once('ready-to-show', () => checkingDialog.show())
-
-    // Helper to close the checking dialog
-    const closeCheckingDialog = () => {
-      if (checkingDialog && !checkingDialog.isDestroyed()) {
-        checkingDialog.close()
-        checkingDialog = null
-      }
-    }
-
-    // Set up event handlers for update checking
-    const updateAvailableHandler = (info) => {
-      closeCheckingDialog()
-
-      // Show update available dialog
-      dialog
-        .showMessageBox(mainWindow, {
-          type: 'info',
-          title: 'Update Available',
-          message: `Version ${info.version} Available`,
-          detail: 'A new version is available. Would you like to download it now?',
-          buttons: ['Download', 'Later'],
-          defaultId: 0,
-        })
-        .then(({ response }) => {
-          if (response === 0) {
-            // Create download progress dialog
-            let downloadDialog = new BrowserWindow({
-              parent: mainWindow,
-              modal: true,
-              show: false,
-              width: 400,
-              height: 200,
-              resizable: false,
-              minimizable: false,
-              maximizable: false,
-              fullscreenable: false,
-              title: 'Downloading Update',
-              vibrancy: 'under-window',
-              visualEffectState: 'active',
-              backgroundColor: '#00000000',
-              webPreferences: {
-                contextIsolation: true,
-                nodeIntegration: false,
-                preload: path.join(__dirname, '../../js/download-preload.js'),
-              },
-            })
-
-            downloadDialog.loadFile(path.join(__dirname, '../../html/update-downloading.html'))
-            downloadDialog.once('ready-to-show', () => downloadDialog.show())
-
-            // Progress and completion handlers
-            const downloadProgressHandler = (progressObj) => {
-              if (downloadDialog && !downloadDialog.isDestroyed()) {
-                downloadDialog.webContents.send('update-progress', progressObj)
-              }
-            }
-
-            const downloadCompletedHandler = () => {
-              if (downloadDialog && !downloadDialog.isDestroyed()) {
-                downloadDialog.close()
-                downloadDialog = null
-              }
-
-              dialog
-                .showMessageBox(mainWindow, {
-                  type: 'info',
-                  title: 'Update Ready',
-                  message: 'Update Downloaded',
-                  detail: 'The update has been downloaded. It will be installed when you restart the application.',
-                  buttons: ['Restart Now', 'Later'],
-                  defaultId: 0,
-                })
-                .then(({ response }) => {
-                  if (response === 0) {
-                    autoUpdater.quitAndInstall()
-                  }
-                })
-            }
-
-            // Register event handlers
-            autoUpdater.on('download-progress', downloadProgressHandler)
-            autoUpdater.once('update-downloaded', downloadCompletedHandler)
-
-            // Handle download errors
-            autoUpdater.downloadUpdate().catch((err) => {
-              if (downloadDialog && !downloadDialog.isDestroyed()) {
-                downloadDialog.close()
-                downloadDialog = null
-              }
-
-              utils.logError('Error downloading update:', err)
-              dialog.showMessageBox(mainWindow, {
-                type: 'error',
-                title: 'Download Error',
-                message: 'Error Downloading Update',
-                detail: `Unable to download the update: ${err.message || err}`,
-                buttons: ['OK'],
-              })
-
-              // Clean up event listeners
-              autoUpdater.removeListener('download-progress', downloadProgressHandler)
-              autoUpdater.removeListener('update-downloaded', downloadCompletedHandler)
-            })
-          }
-        })
-    }
-
-    const updateNotAvailableHandler = () => {
-      closeCheckingDialog()
-
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'No Updates',
-        message: 'You have the latest version',
-        detail: `Version ${app.getVersion()} is the latest version available.`,
-        buttons: ['OK'],
-      })
-    }
-
-    const updateErrorHandler = (err) => {
-      closeCheckingDialog()
-
-      utils.logError('Error checking for updates:', err)
-      const errorMessage = err.message || String(err)
-
-      dialog.showMessageBox(mainWindow, {
-        type: 'error',
-        title: 'Update Error',
-        message: 'Error Checking for Updates',
-        detail: getGitHubErrorMessage(errorMessage),
-        buttons: ['OK'],
-      })
-    }
-
-    // Register temporary event listeners
-    autoUpdater.once('update-available', updateAvailableHandler)
-    autoUpdater.once('update-not-available', updateNotAvailableHandler)
-    autoUpdater.once('error', updateErrorHandler)
-
-    // Start update check
-    autoUpdater.checkForUpdates().catch(updateErrorHandler)
-
-    // Set a timeout to close the checking dialog if no response is received
-    setTimeout(() => {
-      if (checkingDialog && !checkingDialog.isDestroyed()) {
-        closeCheckingDialog()
-
-        // Remove event listeners
-        autoUpdater.removeListener('update-available', updateAvailableHandler)
-        autoUpdater.removeListener('update-not-available', updateNotAvailableHandler)
-        autoUpdater.removeListener('error', updateErrorHandler)
-
-        dialog.showMessageBox(mainWindow, {
-          type: 'warning',
-          title: 'Update Check Timeout',
-          message: 'Update Check Timed Out',
-          detail: 'Unable to check for updates. Please check your internet connection and try again.',
-          buttons: ['OK'],
-        })
-      }
-    }, 30000) // 30 second timeout
-  } catch (err) {
-    utils.logError('Error initiating update check:', err)
-    const errorMessage = err.message || String(err)
-
+  _mainWindow = mainWindow // Ensure mainWindow is set
+  // Manual checks are also disabled in dev by default now
+  if (isDev) {
+    utils.log('Manual update check skipped in dev mode.')
     dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'Update Error',
-      message: 'Error Checking for Updates',
-      detail: errorMessage.includes('GitHub')
-        ? 'GitHub authentication error. Please check your GH_TOKEN environment variable.'
-        : `An unexpected error occurred: ${errorMessage}`,
+      type: 'info',
+      title: 'Updates Disabled',
+      message: 'Update checking is disabled in development mode.',
+      detail: 'To test updates, please build a production version.',
       buttons: ['OK'],
     })
+    return
   }
+
+  utils.log('Manual update check triggered (checkForUpdatesWithDialog).')
+  _manageUpdateUI('check') // Start the unified UI flow
 }
 
 // RENDERER PROCESS CODE
@@ -532,39 +558,60 @@ function checkForUpdatesWithDialog(mainWindow) {
  */
 function initializeUpdateListeners() {
   if (typeof window === 'undefined' || !window.electronAPI?.updates) {
-    utils.log('Update API not available')
+    utils.log('Update API not available in renderer')
     return
   }
 
-  utils.log('Initializing update listeners')
+  utils.log('Initializing update listeners in renderer')
 
-  // Handle update available notification
+  // Handle update available notification (from main process)
   window.electronAPI.updates.onUpdateAvailable((info) => {
-    utils.log('Update available:', info.version)
+    utils.log('Renderer received: update-available', info.version)
+    // Show non-modal notification, clicking downloads
     showUpdateNotification(
       `Update Available: v${info.version}`,
       'A new version is available. Click to download.',
-      () => {
-        window.electronAPI.updates.downloadUpdate()
+      async () => {
+        utils.log('Renderer requesting download via notification click')
+        removeUpdateNotification() // Hide notification once clicked
+        const result = await window.electronAPI.updates.downloadUpdate()
+        if (!result.success) {
+          // Handle potential error during download initiation
+          showUpdateNotification(
+            'Download Error',
+            `Failed to start download: ${result.message}`,
+            removeUpdateNotification,
+          )
+        } else {
+          // Show progress bar in notification area now
+          showUpdateNotification(`Downloading v${info.version}`, 'Preparing download...', removeUpdateNotification) // Placeholder message
+          updateDownloadProgress(0) // Show progress bar immediately
+        }
       },
     )
   })
 
-  // Handle update errors
+  // Handle update errors (from main process)
   window.electronAPI.updates.onUpdateError((message) => {
-    utils.logError('Update error:', message)
+    utils.logError('Renderer received: update-error', message)
+    // Optionally show an error notification/toast here, but the main process shows a dialog
+    showUpdateNotification('Update Error', message, removeUpdateNotification)
   })
 
-  // Handle download progress
+  // Handle download progress (from main process)
   window.electronAPI.updates.onDownloadProgress((progress) => {
-    updateDownloadProgress(Math.floor(progress.percent))
+    // Update the non-modal notification progress bar
+    updateDownloadProgress(Math.floor(progress.percent || 0))
   })
 
-  // Handle update downloaded
+  // Handle update downloaded (from main process)
   window.electronAPI.updates.onUpdateDownloaded((info) => {
-    utils.log('Update downloaded:', info.version)
+    utils.log('Renderer received: update-downloaded', info.version)
+    // Show non-modal notification, clicking installs
     showUpdateNotification(`Update Ready: v${info.version}`, 'Update downloaded. Click to install and restart.', () => {
-      window.electronAPI.updates.installUpdate()
+      utils.log('Renderer requesting install via notification click')
+      removeUpdateNotification() // Hide notification
+      window.electronAPI.updates.installUpdate() // No need to await, app will quit
     })
   })
 }
@@ -631,6 +678,14 @@ function updateDownloadProgress(percent) {
     progressContainer.style.display = 'block'
     progressBar.style.width = `${percent}%`
     progressText.textContent = `${percent}%`
+
+    // Update notification title/message during progress if needed
+    const notificationContent = progressContainer.closest('.update-notification-content')
+    if (notificationContent) {
+      const titleElement = notificationContent.querySelector('h3')
+      // Example: could update title based on percent if desired
+      // if (percent > 0 && titleElement) titleElement.textContent = `Downloading... ${percent}%`;
+    }
   }
 }
 
@@ -736,110 +791,15 @@ function addUpdateStyles() {
   document.head.appendChild(style)
 }
 
-/**
- * Check for updates manually
- */
-function checkForUpdates() {
-  if (typeof window !== 'undefined' && window.electronAPI?.updates) {
-    window.electronAPI.updates.checkForUpdates()
-  }
-}
-
-/**
- * Simulate a download progress event for development testing
- * @param {BrowserWindow} mainWindow - The main application window
- */
-function simulateDownloadForDev(mainWindow) {
-  // Only allow in development mode
-  const isDev = process.env.NODE_ENV === 'development'
-  if (!isDev) {
-    utils.log('Simulated downloads only available in development mode')
-    return
-  }
-
-  utils.log('Simulating update download for development testing')
-
-  // Create download progress dialog
-  let downloadDialog = new BrowserWindow({
-    parent: mainWindow,
-    modal: true,
-    show: false,
-    width: 400,
-    height: 200,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    title: 'Downloading Update (SIMULATED)',
-    vibrancy: 'under-window',
-    visualEffectState: 'active',
-    backgroundColor: '#00000000',
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, '../../js/download-preload.js'),
-    },
-  })
-
-  downloadDialog.loadFile(path.join(__dirname, '../../html/update-downloading.html'))
-  downloadDialog.once('ready-to-show', () => downloadDialog.show())
-
-  // Simulate download progress
-  let percent = 0
-  const total = 150 * 1024 * 1024 // 150 MB simulated file size
-  const intervalTime = 100 // Update every 100ms
-  const downloadSpeed = 1.5 * 1024 * 1024 // 1.5 MB/s simulated speed
-
-  const progressInterval = setInterval(() => {
-    percent += 1
-    const transferred = Math.min(total * (percent / 100), total)
-
-    const progressObj = {
-      percent,
-      transferred,
-      total,
-      bytesPerSecond: downloadSpeed,
-    }
-
-    if (downloadDialog && !downloadDialog.isDestroyed()) {
-      downloadDialog.webContents.send('update-progress', progressObj)
-    }
-
-    if (percent >= 100) {
-      clearInterval(progressInterval)
-
-      // Wait 1 second before closing the dialog
-      setTimeout(() => {
-        if (downloadDialog && !downloadDialog.isDestroyed()) {
-          downloadDialog.close()
-          downloadDialog = null
-
-          // Show completion dialog
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Simulated Download Complete',
-            message: 'Simulated Update Downloaded',
-            detail: 'This was a simulated download for testing purposes. No actual update was downloaded.',
-            buttons: ['OK'],
-          })
-        }
-      }, 1000)
-    }
-  }, intervalTime)
-}
-
 module.exports = {
   // Main process exports
   initialize,
-  setupAutoUpdater,
-  setupUpdateIpcHandlers,
   getAutoUpdater,
+  checkForUpdatesWithDialog,
 
   // Renderer process exports
   initializeUpdateListeners,
   showUpdateNotification,
   removeUpdateNotification,
-  checkForUpdates,
-  checkForUpdatesWithDialog,
-  simulateDownloadForDev,
+  updateDownloadProgress,
 }
