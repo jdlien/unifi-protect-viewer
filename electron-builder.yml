@@ -26,6 +26,9 @@ mac:
 win:
   target:
     - 'zip'
+  sign: './scripts/sign.js'
+  signingHashAlgorithms: ['sha256']
+  certificateSubjectName: 'SSL.com'
 linux:
   target:
     - 'zip'

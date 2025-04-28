@@ -1,0 +1,75 @@
+# GitHub Actions workflow example for building and signing your application
+# Save this file to .github/workflows/release.yml in your repository
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Run when a tag is pushed that starts with 'v'
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Needed for git history
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # SSL.com eSigner Setup (For Windows builds)
+      - name: Checkout eSigner for Windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/checkout@v3
+        with:
+          repository: 'SSLcom/esigner-codesign'
+          path: esigner-codesign
+
+      # Build and release based on platform
+      - name: Build and release for macOS
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npm run release:mac
+
+      - name: Build and release for Windows
+        if: matrix.os == 'windows-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SSL_COM_USERNAME: ${{ secrets.SSL_COM_USERNAME }}
+          SSL_COM_PASSWORD: ${{ secrets.SSL_COM_PASSWORD }}
+          SSL_COM_CREDENTIAL_ID: ${{ secrets.SSL_COM_CREDENTIAL_ID }}
+          SSL_COM_TOTP_SECRET: ${{ secrets.SSL_COM_TOTP_SECRET }}
+        run: npm run release:win
+
+      - name: Build and release for Linux
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: npm run release:linux
+# Note: Before using this workflow, make sure to set the following secrets in your GitHub repository:
+# - GH_TOKEN: GitHub token with repo permissions
+# - APPLE_ID: Your Apple ID email
+# - APPLE_APP_SPECIFIC_PASSWORD: App-specific password for your Apple ID
+# - APPLE_TEAM_ID: Your Apple Developer Team ID
+# - SSL_COM_USERNAME: Your SSL.com username/email
+# - SSL_COM_PASSWORD: Your SSL.com password
+# - SSL_COM_CREDENTIAL_ID: Your SSL.com credential ID
+# - SSL_COM_TOTP_SECRET: Your SSL.com TOTP secret

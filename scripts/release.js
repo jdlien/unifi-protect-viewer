@@ -7,6 +7,7 @@ require('dotenv').config()
 // Check for required environment variables
 const requiredVars = ['GH_TOKEN']
 const macVars = ['APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID']
+const sslComVars = ['SSL_COM_USERNAME', 'SSL_COM_PASSWORD', 'SSL_COM_CREDENTIAL_ID', 'SSL_COM_TOTP_SECRET']
 
 const missingVars = requiredVars.filter((varName) => !process.env[varName])
 if (missingVars.length > 0) {
@@ -24,6 +25,17 @@ if (process.platform === 'darwin') {
     if (response.toLowerCase() !== 'y') {
       process.exit(1)
     }
+  }
+}
+
+// Check for SSL.com signing variables
+const missingSslVars = sslComVars.filter((varName) => !process.env[varName])
+if (missingSslVars.length > 0) {
+  console.error(`Warning: Missing SSL.com code signing variables: ${missingSslVars.join(', ')}`)
+  console.error('Windows code signing may fail. Continue? (y/n)')
+  const response = require('readline-sync').question('')
+  if (response.toLowerCase() !== 'y') {
+    process.exit(1)
   }
 }
 
@@ -93,7 +105,7 @@ process.env.NODE_ENV = 'production'
 
 // Function to create build configurations
 function createBuildConfigs() {
-  const macBaseConfig = `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID}`
+  const macBaseConfig = `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} CSC_DISABLE_TIMESTAMP=true`
 
   return [
     // macOS builds - Build all architectures together to ensure consistent update files
@@ -106,16 +118,24 @@ function createBuildConfigs() {
     {
       name: 'Windows arm64',
       command: 'electron-builder --win --arm64 --publish always',
-      condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+      condition: () =>
+        process.env.SSL_COM_USERNAME &&
+        process.env.SSL_COM_PASSWORD &&
+        process.env.SSL_COM_CREDENTIAL_ID &&
+        process.env.SSL_COM_TOTP_SECRET,
       fallback:
-        'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
+        'Windows builds skipped: SSL.com code signing credentials not found. Set SSL_COM_USERNAME, SSL_COM_PASSWORD, SSL_COM_CREDENTIAL_ID, and SSL_COM_TOTP_SECRET environment variables.',
     },
     {
       name: 'Windows x64 (64-bit)',
       command: 'electron-builder --win --x64 --publish always',
-      condition: () => process.env.WIN_CSC_KEY_PASSWORD || process.env.CSC_KEY_PASSWORD,
+      condition: () =>
+        process.env.SSL_COM_USERNAME &&
+        process.env.SSL_COM_PASSWORD &&
+        process.env.SSL_COM_CREDENTIAL_ID &&
+        process.env.SSL_COM_TOTP_SECRET,
       fallback:
-        'Windows builds skipped: code signing credentials not found. Set WIN_CSC_KEY_PASSWORD or CSC_KEY_PASSWORD environment variable.',
+        'Windows builds skipped: SSL.com code signing credentials not found. Set SSL_COM_USERNAME, SSL_COM_PASSWORD, SSL_COM_CREDENTIAL_ID, and SSL_COM_TOTP_SECRET environment variables.',
     },
 
     // Linux builds

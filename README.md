@@ -81,6 +81,29 @@ For some platforms, there are scripts inside the package.json.
 
 `npm run build:linux:x64`
 
+### Code Signing
+
+#### macOS
+
+This application is signed and notarized for macOS. See the `scripts/sign-builds.js` file for details on the macOS signing process.
+
+#### Windows
+
+Windows builds can be signed using SSL.com's CodeSignTool. See the [Windows Code Signing documentation](./docs/windows-signing.md) for setup instructions.
+
+To build and sign Windows packages:
+
+```bash
+# For x64 only
+npm run sign:win-x64
+
+# For ARM64 only
+npm run sign:win-arm64
+
+# For both x64 and ARM64
+npm run sign:win
+```
+
 ## Known Issues
 
 Currently, enhanced codec (h.265) support does not appear to work in Windows (likely due to licensing limitations in Electron). Let me know if you have any ideas on how to fix this — one potential solution is to use a fork of Electron with HEVC support like https://github.com/AAAhs/electron-hevc

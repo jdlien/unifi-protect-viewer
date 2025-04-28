@@ -12,12 +12,18 @@
     "build:mac": "electron-builder --mac --universal",
     "build:mac-arm64": "electron-builder --mac --arm64",
     "build:mac-x64": "electron-builder --mac --x64",
+    "build:mac-notimestamp": "CSC_IDENTITY_AUTO_DISCOVERY=false CSC_DISABLE_TIMESTAMP=true APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --universal",
+    "build:mac-test": "node scripts/build-mac.js",
     "build:win-arm64": "electron-builder --win --arm64",
     "build:win-x64": "electron-builder --win --x64",
     "build:linux": "electron-builder --linux --x64",
     "build:linux-arm64": "electron-builder --linux --arm64",
     "dist": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run clean && electron-builder --mac --win --publish never",
     "dist:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false npm run clean && electron-builder --mac --publish never",
+    "sign:win-x64": "npm run clean && electron-builder --win --x64 --publish never",
+    "sign:win-arm64": "electron-builder --win --arm64 --publish never",
+    "sign:win": "npm run sign:win-x64 && npm run sign:win-arm64",
+    "test:signing": "node scripts/test-signing.js",
     "notarize:mac:x64": "NODE_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false npm run clean && APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --x64 --arm64=false",
     "notarize:mac:arm64": "NODE_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false mv dist dist-x64 && APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --arm64 --x64=false",
     "notarize:mac:universal": "NODE_ENV=production CSC_IDENTITY_AUTO_DISCOVERY=false mv dist dist-arm64 && APPLE_TEAM_ID=A93Q7MKECL electron-builder --mac --universal",
@@ -36,7 +42,8 @@
     "super-release": "node scripts/release.js",
     "release:major": "node scripts/release.js major",
     "release:minor": "node scripts/release.js minor",
-    "release:patch": "node scripts/release.js patch"
+    "release:patch": "node scripts/release.js patch",
+    "release:none": "node scripts/release.js none"
   },
   "keywords": [
     "app",
@@ -51,9 +58,10 @@
     "@electron/packager": "^18.1.3",
     "archiver": "^7.0.1",
     "electron": "^35.0.2",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.0.12",
     "electron-reloader": "^1.2.3",
     "glob": "^11.0.1",
+    "otplib": "^12.0.1",
     "prettier": "^3.3.3",
     "readline-sync": "^1.4.10",
     "semver": "^7.7.1"
@@ -81,7 +89,8 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "notarize": true,
-      "identity": "Joseph Lien (A93Q7MKECL)"
+      "identity": "Joseph Lien (A93Q7MKECL)",
+      "timestamp": "http://timestamp.apple.com/ts01"
     },
     "win": {
       "target": [
@@ -107,9 +116,8 @@
       "signingHashAlgorithms": [
         "sha256"
       ],
-      "certificateFile": "path-to-your-certificate.pfx",
-      "certificatePassword": "${WIN_CSC_KEY_PASSWORD}",
-      "signAndEditExecutable": true
+      "sign": "./scripts/sign.js",
+      "certificateSubjectName": "SSL.com"
     },
     "linux": {
       "target": [

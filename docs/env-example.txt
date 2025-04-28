@@ -1,0 +1,25 @@
+# SSL.com Code Signing Tool Configuration
+# Copy this file to .env in the root directory and fill in your actual values
+
+# Your SSL.com account username/email
+SSL_COM_USERNAME=your.email@example.com
+
+# Your SSL.com account password
+SSL_COM_PASSWORD=your-password
+
+# Your credential ID for code signing
+# You can find this ID by running:
+# ~/bin/CodeSignTool/CodeSignTool.sh get_credential_ids -username=your-username -password=your-password
+SSL_COM_CREDENTIAL_ID=your-credential-id
+
+# The TOTP secret for authentication
+# This is provided by SSL.com when you set up your certificate
+SSL_COM_TOTP_SECRET=your-totp-secret
+
+# Optional: Path to the CodeSignTool directory
+# Defaults to ~/bin/CodeSignTool if not specified
+#CODE_SIGN_TOOL_PATH=/custom/path/to/CodeSignTool
+
+# GitHub Token for automatic updates
+# Only needed if you want to enable auto-updates from private repos
+#GH_TOKEN=your-github-token
