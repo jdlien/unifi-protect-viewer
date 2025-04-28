@@ -1,7 +1,7 @@
 {
   "name": "unifi-protect-viewer",
   "productName": "UniFi Protect Viewer",
-  "version": "1.1.5",
+  "version": "1.1.4",
   "description": "Electron app for UniFi Protect",
   "main": "main.js",
   "scripts": {
@@ -113,11 +113,13 @@
       "publish": [
         "github"
       ],
-      "signingHashAlgorithms": [
-        "sha256"
-      ],
-      "sign": "./scripts/sign.js",
-      "certificateSubjectName": "SSL.com"
+      "signtoolOptions": {
+        "sign": "./scripts/sign.js",
+        "certificateSubjectName": "SSL.com",
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      }
     },
     "linux": {
       "target": [
@@ -135,7 +137,9 @@
         "provider": "github",
         "owner": "jdlien",
         "repo": "unifi-protect-viewer",
-        "releaseType": "release"
+        "releaseType": "release",
+        "vPrefixedTagName": true,
+        "publishAutoUpdate": true
       }
     ],
     "files": [

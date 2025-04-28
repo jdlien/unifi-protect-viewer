@@ -1583,3 +1583,195 @@ java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/co
 	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
 	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
 	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:36:47.698 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:36:47.699 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:36:47.699 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:36:47.699 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:36:47.699 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:36:47.699 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:36:47.700 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:36:47.700 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815006303.exe
+22:36:47.700 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:36:47.700 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:36:48.179 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:36:48.179 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:36:48.491 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:36:48.491 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:36:48.495 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:36:50.150 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:36:51.832 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["KWM5aW//QYNTe5/MZxGdUWzEOCBJRfaLWLx8sGmxbph5OlhUUQKzyGe+qkfruW0RpSOFtCAQKVhU3A+Cg/vYVDi4YBXA4015CrwEHShHjEUWCEvN/QJyVKqmjQEiHYfJxXmNoWmFDttOdAP5L7H+ZMrYC/ffh/3hARuFwltEPK6vS3G9ehhEGnYYihVeuYXIT6JpGLcfCwzLbJO7TaIXNq9mq3YOcdQzqdfp2Jm8P8v0yAsEfzBPU/C5kj76X9O3E5NE+CXJF4q+TxkFEkyYY9OYMWNpmlszT838CsgMnj7+ea7WS2h7srYxrTB4j0luWt1ycPWbKoXObeCzlfn3JaW5BKjLoryUEsdnG4xAhP0OcvQqNjMnKVQsQX1oQJjAuc0aYN0NneTVi7H752pLzpMjbWg5lDo6u3gWWkSIBhPmfjfRk23QvnaEshNF6MvlHd+CPb2uJv+hGWw72ir1J0ES0hRtaLNRzYgCNAh9c2z7PvLAkvoEM4XLXMR35VNK"]}
+22:36:51.832 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: KWM5aW//QYNTe5/MZxGdUWzEOCBJRfaLWLx8sGmxbph5OlhUUQKzyGe+qkfruW0RpSOFtCAQKVhU3A+Cg/vYVDi4YBXA4015CrwEHShHjEUWCEvN/QJyVKqmjQEiHYfJxXmNoWmFDttOdAP5L7H+ZMrYC/ffh/3hARuFwltEPK6vS3G9ehhEGnYYihVeuYXIT6JpGLcfCwzLbJO7TaIXNq9mq3YOcdQzqdfp2Jm8P8v0yAsEfzBPU/C5kj76X9O3E5NE+CXJF4q+TxkFEkyYY9OYMWNpmlszT838CsgMnj7+ea7WS2h7srYxrTB4j0luWt1ycPWbKoXObeCzlfn3JaW5BKjLoryUEsdnG4xAhP0OcvQqNjMnKVQsQX1oQJjAuc0aYN0NneTVi7H752pLzpMjbWg5lDo6u3gWWkSIBhPmfjfRk23QvnaEshNF6MvlHd+CPb2uJv+hGWw72ir1J0ES0hRtaLNRzYgCNAh9c2z7PvLAkvoEM4XLXMR35VNK
+22:36:51.840 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815006303.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815006303.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:37:05.357 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:37:05.359 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:37:05.360 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815024145.exe
+22:37:05.360 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:37:05.360 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:37:05.821 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:05.822 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:06.085 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:37:06.085 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:37:06.090 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:37:07.518 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:37:09.214 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["ONyCiqg/6SAsGl/rMUbN9BTfS1SfRUZU+uktVSrwLKljdYMpFttEF930zx6GXg2m+E77VFMG7DiPihZEGbWSwB40ETs8NSjmmfVjEurkBUBQ9Pm9kTuzaweKAUruhG1vlxwaOqZcvk0HYxsSfuBQFUr6kJCq/dSbzHB8awnXbAKRWhuph4RN8WVE2f4maT2FuW5xxfJr+aFmoPN4UqmTK8HGavn3zZafIas/8z+P5XPIrQl43AhnKkmfn1FWisbH3EDuVl/N40FMUaOaBlyXHXoG4f3KUaa30jcLBtEdv/jgB0AYokswJEpAKg0P+ff329M8RjE3cBdx3lP5tKzh0cHZG/bPBkLz/7/K4JEQB50irLumd0jjNz+m2b/c1jcRJCzoC8QR/y6qBZTWKdsrA70sqgljeZFGejLplDqxrCcI5+iKdVQzkUNlvmBKkK9A6n6szAS0s2k5T++PBEPrsqVXSTWIMiSR3AwUL3dD4BYmQBSs/mhbxY6BWqN4Mz7N"]}
+22:37:09.214 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: ONyCiqg/6SAsGl/rMUbN9BTfS1SfRUZU+uktVSrwLKljdYMpFttEF930zx6GXg2m+E77VFMG7DiPihZEGbWSwB40ETs8NSjmmfVjEurkBUBQ9Pm9kTuzaweKAUruhG1vlxwaOqZcvk0HYxsSfuBQFUr6kJCq/dSbzHB8awnXbAKRWhuph4RN8WVE2f4maT2FuW5xxfJr+aFmoPN4UqmTK8HGavn3zZafIas/8z+P5XPIrQl43AhnKkmfn1FWisbH3EDuVl/N40FMUaOaBlyXHXoG4f3KUaa30jcLBtEdv/jgB0AYokswJEpAKg0P+ff329M8RjE3cBdx3lP5tKzh0cHZG/bPBkLz/7/K4JEQB50irLumd0jjNz+m2b/c1jcRJCzoC8QR/y6qBZTWKdsrA70sqgljeZFGejLplDqxrCcI5+iKdVQzkUNlvmBKkK9A6n6szAS0s2k5T++PBEPrsqVXSTWIMiSR3AwUL3dD4BYmQBSs/mhbxY6BWqN4Mz7N
+22:37:09.218 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815024145.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815024145.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:37:46.323 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:37:46.324 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:37:46.324 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:37:46.324 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815065158.exe
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:37:46.325 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:37:46.769 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:46.769 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:47.061 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:37:47.062 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:37:47.066 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:37:47.992 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:37:49.636 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["PxQQ5ClcJ+davuIZQvUmKRhfJ6neZaqVYxuqP+p2916ED38DvL1r2z6/BHMDrI/8AKnOe4YW3L+zIYXirJkP5OHvrXDtn+kQFoxi+YlbuXEc2M2WnkDn76YQSYcYAaghDklznX3Yh8R5fgtZ+cMTti/xdNl4dJyea5gFO18HWIlAZlbozrpKMV0ZtX4YW5WIOtsEbuFhOWhFoe2xsMSNPR+rRBbWZ6fE7DqnUv5r83O4u5XLWpgFo9J13KW4LwEuzg9IkRivr9kKqQS3oDjVRfIk+BCqsK5MSnDQn5Vo88HrD0Bscn8kCJsbK3jdHWshbf3tN6HWHZxlVKHE3Hujl91FOVExBAHmRUMrKZbDYHadQnKmNlcpsec59yGwqCv6La1UTSccvlnHsiIvjst2kLO0Md6CBHl/UJR38rUQPfyEsotyqaARCW7Ka7KDbtd0Uu9+nfVphgPpq9fvm2EoZiz0i4IB8u+sZgzN9RXLkLuui0Cd+Q0mccqDT/8z646D"]}
+22:37:49.636 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: PxQQ5ClcJ+davuIZQvUmKRhfJ6neZaqVYxuqP+p2916ED38DvL1r2z6/BHMDrI/8AKnOe4YW3L+zIYXirJkP5OHvrXDtn+kQFoxi+YlbuXEc2M2WnkDn76YQSYcYAaghDklznX3Yh8R5fgtZ+cMTti/xdNl4dJyea5gFO18HWIlAZlbozrpKMV0ZtX4YW5WIOtsEbuFhOWhFoe2xsMSNPR+rRBbWZ6fE7DqnUv5r83O4u5XLWpgFo9J13KW4LwEuzg9IkRivr9kKqQS3oDjVRfIk+BCqsK5MSnDQn5Vo88HrD0Bscn8kCJsbK3jdHWshbf3tN6HWHZxlVKHE3Hujl91FOVExBAHmRUMrKZbDYHadQnKmNlcpsec59yGwqCv6La1UTSccvlnHsiIvjst2kLO0Md6CBHl/UJR38rUQPfyEsotyqaARCW7Ka7KDbtd0Uu9+nfVphgPpq9fvm2EoZiz0i4IB8u+sZgzN9RXLkLuui0Cd+Q0mccqDT/8z646D
+22:37:49.644 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815065158.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815065158.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:37:50.680 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:37:50.682 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:37:50.683 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815069676.exe
+22:37:50.683 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:37:50.683 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:37:51.098 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:51.098 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:37:51.378 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:37:51.378 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:37:51.381 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:37:52.310 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:37:53.959 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["PxQQ5ClcJ+davuIZQvUmKRhfJ6neZaqVYxuqP+p2916ED38DvL1r2z6/BHMDrI/8AKnOe4YW3L+zIYXirJkP5OHvrXDtn+kQFoxi+YlbuXEc2M2WnkDn76YQSYcYAaghDklznX3Yh8R5fgtZ+cMTti/xdNl4dJyea5gFO18HWIlAZlbozrpKMV0ZtX4YW5WIOtsEbuFhOWhFoe2xsMSNPR+rRBbWZ6fE7DqnUv5r83O4u5XLWpgFo9J13KW4LwEuzg9IkRivr9kKqQS3oDjVRfIk+BCqsK5MSnDQn5Vo88HrD0Bscn8kCJsbK3jdHWshbf3tN6HWHZxlVKHE3Hujl91FOVExBAHmRUMrKZbDYHadQnKmNlcpsec59yGwqCv6La1UTSccvlnHsiIvjst2kLO0Md6CBHl/UJR38rUQPfyEsotyqaARCW7Ka7KDbtd0Uu9+nfVphgPpq9fvm2EoZiz0i4IB8u+sZgzN9RXLkLuui0Cd+Q0mccqDT/8z646D"]}
+22:37:53.960 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: PxQQ5ClcJ+davuIZQvUmKRhfJ6neZaqVYxuqP+p2916ED38DvL1r2z6/BHMDrI/8AKnOe4YW3L+zIYXirJkP5OHvrXDtn+kQFoxi+YlbuXEc2M2WnkDn76YQSYcYAaghDklznX3Yh8R5fgtZ+cMTti/xdNl4dJyea5gFO18HWIlAZlbozrpKMV0ZtX4YW5WIOtsEbuFhOWhFoe2xsMSNPR+rRBbWZ6fE7DqnUv5r83O4u5XLWpgFo9J13KW4LwEuzg9IkRivr9kKqQS3oDjVRfIk+BCqsK5MSnDQn5Vo88HrD0Bscn8kCJsbK3jdHWshbf3tN6HWHZxlVKHE3Hujl91FOVExBAHmRUMrKZbDYHadQnKmNlcpsec59yGwqCv6La1UTSccvlnHsiIvjst2kLO0Md6CBHl/UJR38rUQPfyEsotyqaARCW7Ka7KDbtd0Uu9+nfVphgPpq9fvm2EoZiz0i4IB8u+sZgzN9RXLkLuui0Cd+Q0mccqDT/8z646D
+22:37:53.970 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815069676.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815069676.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:38:14.110 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:38:14.111 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:38:14.111 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:38:14.111 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:38:14.111 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:38:14.111 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:38:14.112 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:38:14.112 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815092998.exe
+22:38:14.112 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:38:14.113 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:38:14.560 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:38:14.560 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:38:14.846 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:38:14.847 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:38:14.853 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:38:15.784 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:38:17.420 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["K6i8qE5lNCtvnOjcDdd3w9NEelaK49zoT3653NpiZ516w/2muVFuW+/WiWauix3ahhPuckdOrcLjjzWAO+y7VIoWjdE8r04CaeqbApX1hZmSaJQZEhWnMK9nBlPhGUIXZncLdjz1jWRFVV8IbWO7BFAK6XiQha1xRFymdAeJXKnNcV7eKMpGdndCYPov1Nqxmn8t0qnkf97oaqItXbvPs+8m9v4QTt7sU5i0JeaNobrPpU6UYkPherq4Ukqov45X1GfcooPu9YD7RaRrSegWbHtGzpDtFK0tMRCTduRoPOJaqTYOKmWa2jFh9oZ99bj/DlcQGVVJYO4vHyCUajVZD8/7RgTvJQlypb//yy1qySeZsei2twJPfqpddRnKNkVfxm6QM/QbOxt1MiNcJMSyuR7IlzGNMi2746JUTWyYwTN9OMHFL+0BRC6BRc08hfTCSvL56rqPqB9VIeBlTJMfj0RjVqZIviVutgHe+cB+Sqq3SV2UYDSBOI3p1rgrE/2n"]}
+22:38:17.420 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: K6i8qE5lNCtvnOjcDdd3w9NEelaK49zoT3653NpiZ516w/2muVFuW+/WiWauix3ahhPuckdOrcLjjzWAO+y7VIoWjdE8r04CaeqbApX1hZmSaJQZEhWnMK9nBlPhGUIXZncLdjz1jWRFVV8IbWO7BFAK6XiQha1xRFymdAeJXKnNcV7eKMpGdndCYPov1Nqxmn8t0qnkf97oaqItXbvPs+8m9v4QTt7sU5i0JeaNobrPpU6UYkPherq4Ukqov45X1GfcooPu9YD7RaRrSegWbHtGzpDtFK0tMRCTduRoPOJaqTYOKmWa2jFh9oZ99bj/DlcQGVVJYO4vHyCUajVZD8/7RgTvJQlypb//yy1qySeZsei2twJPfqpddRnKNkVfxm6QM/QbOxt1MiNcJMSyuR7IlzGNMi2746JUTWyYwTN9OMHFL+0BRC6BRc08hfTCSvL56rqPqB9VIeBlTJMfj0RjVqZIviVutgHe+cB+Sqq3SV2UYDSBOI3p1rgrE/2n
+22:38:17.429 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815092998.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815092998.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]
+22:38:21.888 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Command: sign
+22:38:21.889 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Client ID: kaXTRACNijSWsFdRKg_KAfD3fqrBlzMbWs6TwWHwAn8
+22:38:21.889 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - OAuth2 URL: https://login.ssl.com/oauth2/token
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - CSC Endpoint: https://cs.ssl.com
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA URL: http://ts.ssl.com
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - TSA Legacy URL: null
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Output directory path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Input file path: /var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815100691.exe
+22:38:21.890 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - File type: exe
+22:38:21.891 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Code format type: pe
+22:38:22.328 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID in input parameter: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:38:22.328 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Credential ID retrieved from signatures service: 8164062a-9cfd-4e20-b3aa-0ae162d986f8
+22:38:22.611 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Subject DN: CN=FullSpec Systems, O=FullSpec Systems, L=Edmonton, ST=Alberta, C=CA
+22:38:22.611 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Issuer DN: CN=SSL.com Code Signing Intermediate CA RSA R1, O=SSL Corp, L=Houston, ST=Texas, C=US
+22:38:22.615 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Certificate expiry: Wed Apr 22 11:43:48 MDT 2026
+22:38:24.134 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - malware detected: false
+22:38:25.782 [main] INFO  com.ssl.code.signing.tool.csc.CscApi - sign hash response: {"signatures":["UhnSUWibFBmPzdoTSgjOCjYIizFRaASrWMRxAKcWjD0MhTVsugNsypiGzkceQf6F8IAc+ZZOTDsEpriiHnN5/EF7/05ohoVTbF5fgQRjgawLH4iRWJnbJhnBEzgAwwEbXAK6+69eiLNPuNx/JWTXp7iIndLeYsDjp+ROEtPzwOgKm+QlfsUWthljItNAl+JOU0WEePV5pcjSTcmox293LGlaKPs3RznvrV8pKSNqz4B1IGRCLOX6vSSlytIMrTa9fIs91oOGZG0Y8qhUrEaWxacKIwpoyc4RCH0nJhPE0Qj8c03iC7ffo1wi3PkKKljlGGhx3Yrn73lF9YwaEygJxA/2oN88cWFQe21iVdIuPq06OPmQASNocPHFeGyNqGlH70Nh9XbTcxUtH6ouDPs1nmj1bcTKHuVJbtA+0W7UTjIvWJCXhwaSZjQxYun5BPoo8OhbbXNbPNNgL9BaAgJx1QyQEkACuI1d5SYeq1rJ/YCaVakESVMCcSzHLdA41PTo"]}
+22:38:25.782 [main] INFO  com.ssl.code.signing.tool.commands.SignCommand - Signature value: UhnSUWibFBmPzdoTSgjOCjYIizFRaASrWMRxAKcWjD0MhTVsugNsypiGzkceQf6F8IAc+ZZOTDsEpriiHnN5/EF7/05ohoVTbF5fgQRjgawLH4iRWJnbJhnBEzgAwwEbXAK6+69eiLNPuNx/JWTXp7iIndLeYsDjp+ROEtPzwOgKm+QlfsUWthljItNAl+JOU0WEePV5pcjSTcmox293LGlaKPs3RznvrV8pKSNqz4B1IGRCLOX6vSSlytIMrTa9fIs91oOGZG0Y8qhUrEaWxacKIwpoyc4RCH0nJhPE0Qj8c03iC7ffo1wi3PkKKljlGGhx3Yrn73lF9YwaEygJxA/2oN88cWFQe21iVdIuPq06OPmQASNocPHFeGyNqGlH70Nh9XbTcxUtH6ouDPs1nmj1bcTKHuVJbtA+0W7UTjIvWJCXhwaSZjQxYun5BPoo8OhbbXNbPNNgL9BaAgJx1QyQEkACuI1d5SYeq1rJ/YCaVakESVMCcSzHLdA41PTo
+22:38:25.793 [main] ERROR com.ssl.code.signing.tool.commands.SignCommand - 
+java.io.IOException: Source '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815100691.exe' and destination '/var/folders/fh/h7rns8lj22d1f6jf3jxzvv_c0000gn/T/codesigntool/temp_1745815100691.exe' are the same
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:874) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:835) ~[code_sign_tool-1.3.2.jar:?]
+	at org.apache.commons.io.FileUtils.copyFile(FileUtils.java:802) ~[code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.commands.SignCommand.run(SignCommand.java:302) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.executeUserObject(CommandLine.java:1939) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.access$1300(CommandLine.java:145) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.executeUserObjectOfLastSubcommandWithSameParent(CommandLine.java:2352) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2346) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$RunLast.handle(CommandLine.java:2311) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine$AbstractParseResultHandler.execute(CommandLine.java:2179) [code_sign_tool-1.3.2.jar:?]
+	at picocli.CommandLine.execute(CommandLine.java:2078) [code_sign_tool-1.3.2.jar:?]
+	at com.ssl.code.signing.tool.CodeSignTool.main(CodeSignTool.java:39) [code_sign_tool-1.3.2.jar:?]

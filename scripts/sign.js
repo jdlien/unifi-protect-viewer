@@ -26,17 +26,25 @@ try {
  * - SSL_COM_TOTP_SECRET: The TOTP secret for authentication
  * - CODE_SIGN_TOOL_PATH: (Optional) Path to the CodeSignTool directory
  *
- * @param {Object} configuration - Configuration object passed by electron-builder
- * @returns {boolean} - true if signing was successful
+ * @param {Object} config - Configuration object passed by electron-builder
  */
-exports.default = async function (configuration) {
+exports.default = async function (config) {
+  // Make sure we have a valid configuration object
+  if (!config || !config.path) {
+    console.error('Invalid configuration object passed to sign.js:', config)
+    return false
+  }
+
+  // Extract file path from config (electron-builder v26 format)
+  const filePath = config.path
+
   // Only sign .exe files (skip other formats like .dll, .node, etc.)
-  if (!configuration.path.toLowerCase().endsWith('.exe')) {
-    console.log(`Skipping signing of non-exe file: ${configuration.path}`)
+  if (!filePath.toLowerCase().endsWith('.exe')) {
+    console.log(`Skipping signing of non-exe file: ${filePath}`)
     return true
   }
 
-  console.log(`Signing file: ${configuration.path}`)
+  console.log(`Signing file: ${filePath}`)
 
   // Get credentials from environment variables
   const username = process.env.SSL_COM_USERNAME
@@ -85,7 +93,7 @@ exports.default = async function (configuration) {
   }
 
   // Create a copy of the file with a simple name to avoid spaces
-  const originalFilePath = configuration.path
+  const originalFilePath = filePath
   const tempFileName = `temp_${Date.now()}.exe`
   const tempFilePath = path.join(tempDir, tempFileName)
 
@@ -138,14 +146,6 @@ export CODE_SIGN_TOOL_PATH="${codeSignToolPath}"
     // Write script with restricted permissions
     fs.writeFileSync(scriptPath, scriptContent, { mode: 0o700 }) // rwx for user only
     console.log('Created temporary signing script')
-
-    // Print debug info about the command (with password and TOTP masked)
-    // console.log('DEBUG - Command being executed (password and TOTP secret redacted):')
-    // console.log(
-    //   scriptContent
-    //     .replace(/-password=(['"]).*?\1/g, '-password=******')
-    //     .replace(/-totp_secret=(['"]).*?\1/g, '-totp_secret=******'),
-    // )
 
     // Execute the script
     console.log('Executing SSL.com CodeSignTool...')

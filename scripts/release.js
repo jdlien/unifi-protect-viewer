@@ -111,24 +111,13 @@ function createBuildConfigs() {
     // macOS builds - Build all architectures together to ensure consistent update files
     {
       name: 'macOS (all architectures)',
-      command: `${macBaseConfig} electron-builder --mac --universal --x64 --arm64 --publish always`,
+      command: `${macBaseConfig} electron-builder --mac --universal --publish always`,
     },
 
-    // Windows builds
+    // Windows builds - consolidated into a single build
     {
-      name: 'Windows arm64',
-      command: 'electron-builder --win --arm64 --publish always',
-      condition: () =>
-        process.env.SSL_COM_USERNAME &&
-        process.env.SSL_COM_PASSWORD &&
-        process.env.SSL_COM_CREDENTIAL_ID &&
-        process.env.SSL_COM_TOTP_SECRET,
-      fallback:
-        'Windows builds skipped: SSL.com code signing credentials not found. Set SSL_COM_USERNAME, SSL_COM_PASSWORD, SSL_COM_CREDENTIAL_ID, and SSL_COM_TOTP_SECRET environment variables.',
-    },
-    {
-      name: 'Windows x64 (64-bit)',
-      command: 'electron-builder --win --x64 --publish always',
+      name: 'Windows (all architectures)',
+      command: 'electron-builder --win --publish always',
       condition: () =>
         process.env.SSL_COM_USERNAME &&
         process.env.SSL_COM_PASSWORD &&
@@ -138,14 +127,10 @@ function createBuildConfigs() {
         'Windows builds skipped: SSL.com code signing credentials not found. Set SSL_COM_USERNAME, SSL_COM_PASSWORD, SSL_COM_CREDENTIAL_ID, and SSL_COM_TOTP_SECRET environment variables.',
     },
 
-    // Linux builds
+    // Linux builds - consolidated into a single build
     {
-      name: 'Linux x64',
-      command: 'electron-builder --linux --x64 --publish always',
-    },
-    {
-      name: 'Linux arm64',
-      command: 'electron-builder --linux --arm64 --publish always',
+      name: 'Linux (all architectures)',
+      command: 'electron-builder --linux --publish always',
     },
   ]
 }
