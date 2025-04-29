@@ -225,6 +225,10 @@ async function initializeCommonUI() {
       // Apply user's navigation visibility preferences
       // This is crucial for restoring the correct visibility on page load
       await applyUserNavigationPreferences()
+
+      // Set up a periodic check to ensure button styles stay active
+      // This helps in case the styles get removed by the application's own operations
+      setupStyleChecker()
     } else {
       // utils.logger.debug('Not a Protect page, skipping navigation preferences')
     }
@@ -311,7 +315,7 @@ function setupNavigationObserver() {
         }
 
         // Re-evaluate dashboard button visibility when nav changes
-        handleDashboardButton().catch((error) => {
+        buttons.handleDashboardButton().catch((error) => {
           utils.logError('Error handling dashboard button visibility from observer', error)
         })
       }
@@ -471,6 +475,19 @@ function setupUrlChangeListener() {
           // utils.logError('Error applying navigation preferences after URL change', error)
         })
 
+        // Ensure button styles and buttons are present
+        if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+          buttonStyles.injectButtonStyles()
+          utils.logger.debug('Button styles were missing, re-injected after URL change')
+        }
+
+        // Inject header buttons if not already present
+        buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+        buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+        // Handle dashboard button visibility
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
+
         // Set up continuous enforcement for the first few seconds
         // This helps override any app behavior that restores nav/header
         let enforcementCount = 0
@@ -562,6 +579,34 @@ function setupUrlChangeListener() {
   }
 }
 
+/**
+ * Sets up a periodic check to ensure button styles remain active
+ * This helps if the styles get removed by application updates or DOM changes
+ */
+function setupStyleChecker() {
+  // Clear any existing style checker
+  if (window._styleCheckerInterval) {
+    clearInterval(window._styleCheckerInterval)
+  }
+
+  // Check every 5 seconds if the style element exists
+  window._styleCheckerInterval = setInterval(() => {
+    if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+      // If missing, re-inject styles
+      buttonStyles.injectButtonStyles()
+      utils.logger.debug('Button styles were missing, re-injected during routine check')
+    }
+  }, 5000) // Check every 5 seconds
+
+  // Return a cleanup function
+  return () => {
+    if (window._styleCheckerInterval) {
+      clearInterval(window._styleCheckerInterval)
+      window._styleCheckerInterval = null
+    }
+  }
+}
+
 // Export the functions
 module.exports = {
   handleLiveView,
@@ -571,4 +616,5 @@ module.exports = {
   applyUserNavigationPreferences,
   setupNavigationObserver,
   setupUrlChangeListener,
+  setupStyleChecker,
 }

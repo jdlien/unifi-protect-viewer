@@ -3,6 +3,8 @@ const ui = require('./ui.js')
 const utils = require('./utils.js')
 const auth = require('./auth.js')
 const dashboard = require('./dashboard.js')
+const buttons = require('./buttons.js')
+const buttonStyles = require('./buttonStyles.js')
 
 /**
  * Setup navigation monitoring to detect URL changes in SPA
@@ -21,6 +23,7 @@ function setupNavigationMonitor() {
       // Special handling for login-to-dashboard transition
       const isFromLogin = oldUrl.includes('login') || oldUrl.includes('signin') || oldUrl.includes('auth')
       const isToDashboard = window.location.href.includes('/protect/dashboard')
+      const isProtectPage = window.location.href.includes('/protect/')
 
       // Check if we're on a dashboard page and update menu state
       const isDashboardPage = dashboard.isDashboardPage()
@@ -36,9 +39,29 @@ function setupNavigationMonitor() {
         })
 
         applyDashboardCustomizations()
+      } else if (isProtectPage) {
+        // For non-dashboard Protect pages, ensure header buttons are injected
+        utils.log('Protect page detected, ensuring buttons are injected')
+
+        // Ensure button styles are present
+        if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+          buttonStyles.injectButtonStyles()
+        }
+
+        // Inject header buttons if not already present
+        buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+        buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+        // Ensure dashboard button is handled
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
+
+        // Apply navigation preferences
+        ui.applyUserNavigationPreferences().catch((err) =>
+          utils.logError('Failed to apply navigation preferences:', err),
+        )
       } else {
         // For non-dashboard pages, just update the dashboard button
-        ui.handleDashboardButton()
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
       }
 
       // No need to call initializeCommonUI here since the header persists in the React SPA
@@ -88,8 +111,24 @@ function setupNavigationMonitor() {
       // DOM already ready, initialize immediately
       if (window.location.href.includes('/protect/dashboard')) {
         applyDashboardCustomizations()
+      } else if (window.location.href.includes('/protect/')) {
+        // For other Protect pages, ensure proper button initialization
+        utils.log('Non-dashboard Protect page detected, ensuring buttons are injected')
+
+        // First ensure styles are injected
+        if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+          buttonStyles.injectButtonStyles()
+          utils.log('Injected button styles during initializeUI')
+        }
+
+        // Then inject buttons
+        buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+        buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+        // Handle dashboard button
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
       } else {
-        ui.handleDashboardButton()
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
       }
       // Initialize common UI elements once during initial page load
       ui.initializeCommonUI()
@@ -100,8 +139,24 @@ function setupNavigationMonitor() {
         () => {
           if (window.location.href.includes('/protect/dashboard')) {
             applyDashboardCustomizations()
+          } else if (window.location.href.includes('/protect/')) {
+            // For other Protect pages, ensure proper button initialization
+            utils.log('Non-dashboard Protect page detected, ensuring buttons are injected')
+
+            // First ensure styles are injected
+            if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+              buttonStyles.injectButtonStyles()
+              utils.log('Injected button styles during DOMContentLoaded')
+            }
+
+            // Then inject buttons
+            buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+            buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+            // Handle dashboard button
+            buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
           } else {
-            ui.handleDashboardButton()
+            buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
           }
           // Initialize common UI elements once during initial page load
           ui.initializeCommonUI()
@@ -138,6 +193,25 @@ function initializePageByType() {
 
     // Then initialize dashboard UI
     return ui.initializeDashboardPage()
+  } else if (window.location.href.includes('/protect/')) {
+    // For other Protect pages, set up navigation monitoring
+    // and ensure buttons are properly initialized
+    setupNavigationMonitor()
+
+    // Specifically ensure button styles are present
+    if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+      buttonStyles.injectButtonStyles()
+      utils.log('Injected button styles on non-dashboard Protect page')
+    }
+
+    // Inject buttons on non-dashboard protect pages
+    buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+    buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+    // Make sure dashboard button visibility is handled
+    buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
+
+    return true
   } else {
     // For other pages, just set up navigation monitoring
     setupNavigationMonitor()

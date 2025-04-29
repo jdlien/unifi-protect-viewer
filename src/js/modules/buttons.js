@@ -5,6 +5,8 @@ const path = require('path')
 // Import the toggleFullscreen and togglePageElements from ui.js to avoid circular dependencies
 // These functions will be exposed via buttons.js and referenced by ui.js
 // Importing ui module for handleDashboardButton function - be careful of circular imports
+// Import the buttonStyles module directly to use it for checks and injection
+const buttonStyles = require('./buttonStyles')
 let ui
 
 // To avoid circular dependency issues, we'll load ui lazily when needed
@@ -27,6 +29,13 @@ function getUi() {
  */
 async function createHeaderButton(options) {
   const { id, label, onClick, updateContent, icons = {} } = options
+
+  // Check if button styles are present, inject them if not
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    // Inject button styles before proceeding
+    buttonStyles.injectButtonStyles()
+    utils.logger.debug('Button styles were missing, injected them before creating button')
+  }
 
   // Strict check to prevent duplicate injections
   if (document.getElementById(id)) {
@@ -93,6 +102,12 @@ async function createHeaderButton(options) {
  * @returns {Promise<boolean>} True if button was injected successfully
  */
 async function injectFullscreenButton() {
+  // Ensure button styles are present
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    buttonStyles.injectButtonStyles()
+    utils.logger.debug('Button styles were missing, injected them before creating fullscreen button')
+  }
+
   // SVG icons for fullscreen states
   const icons = {
     enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
@@ -156,6 +171,12 @@ async function injectFullscreenButton() {
  * @returns {Promise<boolean>} True if button was injected successfully
  */
 async function injectSidebarButton() {
+  // Ensure button styles are present
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    buttonStyles.injectButtonStyles()
+    utils.logger.debug('Button styles were missing, injected them before creating sidebar button')
+  }
+
   // Simple rectangle SVG icons for sidebar states
   const icons = {
     hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
@@ -366,6 +387,12 @@ function triggerDashboardNavigation() {
 function injectDashboardButton() {
   // Don't create duplicate buttons
   if (document.getElementById('dashboard-button')) return
+
+  // Ensure button styles are present
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    buttonStyles.injectButtonStyles()
+    utils.logger.debug('Button styles were missing, injected them before creating dashboard button')
+  }
 
   // Create button element
   const button = document.createElement('button')

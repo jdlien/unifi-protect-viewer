@@ -1,6 +1,7 @@
 // Import required modules
 const utils = require('./utils.js')
 const ui = require('./ui.js')
+const buttons = require('./buttons.js')
 const { ipcRenderer } = require('electron')
 
 /**
@@ -41,8 +42,8 @@ async function initializeDashboard() {
     // Apply UI customizations
     ui.handleLiveView()
 
-    // Update dashboard button state
-    ui.handleDashboardButton()
+    // Update dashboard button state - use buttons module instead of ui
+    buttons.handleDashboardButton().catch((err) => utils.logError('Error handling dashboard button:', err))
 
     return true
   } catch (error) {

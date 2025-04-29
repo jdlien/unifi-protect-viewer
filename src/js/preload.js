@@ -22,13 +22,40 @@ window.addEventListener('DOMContentLoaded', () => {
   // Only initialize navigation and UI components on app pages (not error or config)
   const currentUrl = window.location.href
   const isAppPage = !currentUrl.includes('/html/error.html') && !currentUrl.includes('/html/config.html')
+  const isProtectPage = currentUrl.includes('/protect/')
 
   if (isAppPage) {
     navigation.initializeWithPolling()
+
     // Initialize common UI elements like the fullscreen button
     ui.initializeCommonUI().catch((error) => {
       utils.logError('Failed to initialize common UI elements', error)
     })
+
+    // For Protect pages, ensure buttons are injected even if they're not dashboard pages
+    if (isProtectPage) {
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        // First ensure styles are injected
+        const buttonStyles = require('./modules/buttonStyles.js')
+        if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+          buttonStyles.injectButtonStyles()
+          utils.log('Injected button styles during page load')
+        }
+
+        // Then inject buttons
+        buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
+        buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+
+        // Update dashboard button visibility
+        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
+
+        // Apply navigation preferences
+        ui.applyUserNavigationPreferences().catch((err) =>
+          utils.logError('Failed to apply navigation preferences:', err),
+        )
+      }, 300) // Short delay to ensure DOM is ready
+    }
   }
 
   // Initialize updates - after a delay to ensure UI is ready
