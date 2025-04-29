@@ -394,6 +394,32 @@ async function toggleNavigation(options = {}) {
         navSettings.hideNav = newNavState
         utils.setStyle(nav, 'display', newNavState ? 'none' : 'flex')
         // utils.logger.debug(`Toggling nav sidebar: ${newNavState ? 'hiding' : 'showing'}`)
+
+        // Update sidebar button state immediately after style change
+        const sidebarButton = document.getElementById('sidebar-button')
+        if (sidebarButton) {
+          // Reuse the icons defined in injectSidebarButton (assuming they are accessible)
+          // Need to define icons here or make them globally accessible. Defining here for now.
+          const icons = {
+            hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
+            visible: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="currentColor" d="M30 33v-2l11-12a2 2 0 0 1 3 3L34 32l10 10a2 2 0 0 1-3 3L30 33Z"/></svg>`,
+          }
+          try {
+            sidebarButton.innerHTML = `
+              <div id="sidebar-button-label" style="display: flex; align-items: center;">
+                ${newNavState ? 'Show' : 'Hide'} Nav
+              </div>
+              <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Sidebar">
+                <div id="sidebar-icon">
+                  ${newNavState ? icons.hidden : icons.visible}
+                </div>
+              </div>
+            `
+          } catch (error) {
+            // Log error but don't break the main toggle functionality
+            utils.logError('Error updating sidebar button content within toggleNavigation:', error)
+          }
+        }
       }
 
       // For header toggle (Alt+H)
@@ -467,15 +493,12 @@ function setupKeyboardShortcuts() {
 }
 
 /**
- * Handle the widget panel visibility based on user preference
- * @param {Object} options - Configuration options
- * @param {boolean} [options.toggle=false] - Whether to toggle the current state
+ * Adjust the widget panel button appearance
+ * @param {Object} options - Configuration options (not used anymore)
  * @returns {Promise<boolean>} True if operation was successful
  */
 async function handleWidgetPanel(options = {}) {
   try {
-    const toggle = options.toggle === true
-
     // Wait for widget panel elements to be ready
     await utils.waitUntil(() => {
       return (
@@ -490,32 +513,7 @@ async function handleWidgetPanel(options = {}) {
     // Make the widget panel open/close button less prominent
     utils.setStyle(expandButton, 'opacity', '0.5')
 
-    // Determine if widget panel is currently open
-    const widgetPanel = document.querySelector('[class^=dashboard__Widgets]')
-    const isWidgetPanelOpen = widgetPanel.offsetWidth > 0
-
-    // Load user preference from config - use invoke for loading (this is fine)
-    const config = (await ipcRenderer.invoke('configLoad')) || {}
-    // Default to hiding widget panel if setting doesn't exist
-    const hideWidgetPanel = config.hideWidgetPanel !== false
-
-    // Determine if we need to change the current state
-    let shouldBeOpen = false
-
-    if (toggle) {
-      // If toggling, invert the current state
-      shouldBeOpen = !isWidgetPanelOpen
-      // Save the new preference - use send for saving
-      ipcRenderer.send('configSave', { hideWidgetPanel: !shouldBeOpen })
-    } else {
-      // Otherwise use the config preference
-      shouldBeOpen = !hideWidgetPanel
-    }
-
-    // Change state if needed
-    if (shouldBeOpen !== isWidgetPanelOpen) {
-      expandButton.click()
-    }
+    // No longer managing widget panel state - UniFi Protect handles this natively
 
     return true
   } catch (error) {
@@ -525,89 +523,62 @@ async function handleWidgetPanel(options = {}) {
 }
 
 /**
- * Inject a fullscreen toggle button into the header
+ * Generalizes button creation for header UI buttons
+ * @param {Object} options - Button creation options
+ * @param {string} options.id - Button ID
+ * @param {string} options.label - Button label text
+ * @param {Function} options.onClick - Click handler function
+ * @param {Function} options.updateContent - Function to update button content (gets called after creation)
+ * @param {string} options.styleId - Style element ID
+ * @param {string} options.styles - CSS styles as string
+ * @param {Object} options.icons - Icon SVGs object
  * @returns {Promise<boolean>} True if button was injected successfully
  */
-async function injectFullscreenButton() {
+async function createHeaderButton(options) {
+  const { id, label, onClick, updateContent, styleId, styles, icons = {} } = options
+
   // Strict check to prevent duplicate injections
-  if (document.getElementById('fullscreen-button')) {
+  if (document.getElementById(id)) {
     return true
   }
 
-  // SVG icons for fullscreen states
-  const icons = {
-    enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
-    exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8l-144 0c-13.3 0-24-10.7-24-24l0-144c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272l144 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z"/></svg>`,
-  }
-
   // Add CSS styles if not already present
-  addFullscreenStyles()
+  if (styleId && styles && !document.getElementById(styleId)) {
+    const style = document.createElement('style')
+    style.id = styleId
+    style.innerHTML = styles
+
+    // Insert style at the beginning of head
+    if (document.head.firstChild) {
+      document.head.insertBefore(style, document.head.firstChild)
+    } else {
+      document.head.appendChild(style)
+    }
+  }
 
   // Create the button element
   const button = document.createElement('button')
-  button.id = 'fullscreen-button'
+  button.id = id
 
-  // Function to update button content based on fullscreen state
-  const updateButtonContent = () => {
-    // Query the fullscreen state from Electron
-    ipcRenderer
-      .invoke('isFullScreen')
-      .then((isFullscreen) => {
-        button.innerHTML = `
-        <div id="fullscreen-button-label" style="display: flex; align-items: center;">
-          ${isFullscreen ? 'Exit&nbsp;' : ''}Fullscreen
-        </div>
-        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
-          <div id="fullscreen-icon">
-            ${isFullscreen ? icons.exit : icons.enter}
-          </div>
-        </div>
-      `
-      })
-      .catch((error) => {
-        // Fallback if IPC fails
-        utils.logError('Error getting fullscreen state:', error)
-        // Assume not fullscreen if error
-        button.innerHTML = `
-        <div id="fullscreen-button-label" style="display: flex; align-items: center;">
-          Fullscreen
-        </div>
-        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
-          <div id="fullscreen-icon">
-            ${icons.enter}
-          </div>
-        </div>
-      `
-      })
-  }
-
-  // Set initial button content
-  // We'll set this initially as non-fullscreen and update immediately after
+  // Set initial content
   button.innerHTML = `
-    <div id="fullscreen-button-label" style="display: flex; align-items: center;">
-      Fullscreen
+    <div id="${id}-label" style="display: flex; align-items: center;">
+      ${label}
     </div>
-    <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
-      <div id="fullscreen-icon">
-        ${icons.enter}
-      </div>
+    <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+      <div id="${id}-icon"></div>
     </div>
   `
 
-  // Set up fullscreen toggle functionality
-  button.onclick = toggleFullscreen
-
-  // Listen for fullscreen state changes from Electron
-  ipcRenderer.on('fullscreen-change', (event, isFullscreen) => {
-    updateButtonContent()
-  })
+  // Set click handler
+  button.onclick = onClick
 
   try {
     // Wait for header to be available
     await utils.waitUntil(() => document.querySelector('header') !== null, 5000)
 
     // Double check button wasn't created during waiting (race condition)
-    if (document.getElementById('fullscreen-button')) {
+    if (document.getElementById(id)) {
       return true
     }
 
@@ -628,13 +599,357 @@ async function injectFullscreenButton() {
     }
 
     // Update button content immediately after adding to DOM
-    updateButtonContent()
+    if (typeof updateContent === 'function') {
+      updateContent(button, icons)
+    }
 
     return true
   } catch (error) {
-    utils.logError('Error injecting fullscreen button', error)
+    utils.logError(`Error injecting ${id} button`, error)
     return false
   }
+}
+
+/**
+ * Adds shared button styles to the document if not already present
+ */
+function addSharedButtonStyles() {
+  if (document.getElementById('header-buttons-shared-style')) return
+
+  const style = document.createElement('style')
+  style.id = 'header-buttons-shared-style'
+  style.innerHTML = `
+    .header-button {
+      position: relative;
+      border: none;
+      border-radius: 999px;
+      background-color: rgb(19, 20, 22);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: end;
+      vertical-align: middle;
+      padding: 5px 10px;
+      height: 24px;
+      box-sizing: border-box;
+      color: #808893;
+      margin-right: 8px;
+    }
+
+    .header-button:hover {
+      color: rgb(150, 158, 170);
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .header-button-label {
+      margin-right: 8px;
+      font-size: 14px;
+      line-height: 14px;
+    }
+
+    .header-button-icon {
+      width: 13px;
+      height: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-button-icon svg {
+      width: 100%;
+      height: 100%;
+      vertical-align: middle;
+      display: block;
+    }
+  `
+
+  // Insert style at the beginning of head
+  if (document.head.firstChild) {
+    document.head.insertBefore(style, document.head.firstChild)
+  } else {
+    document.head.appendChild(style)
+  }
+}
+
+/**
+ * Inject a fullscreen toggle button into the header
+ * @returns {Promise<boolean>} True if button was injected successfully
+ */
+async function injectFullscreenButton() {
+  // SVG icons for fullscreen states
+  const icons = {
+    enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
+    exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8l-144 0c-13.3 0-24-10.7-24-24l0-144c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272l144 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z"/></svg>`,
+  }
+
+  // Add shared button styles
+  addSharedButtonStyles()
+
+  // Add fullscreen-specific styles
+  addFullscreenStyles()
+
+  // Function to update button content based on fullscreen state
+  const updateFullscreenButtonContent = (button) => {
+    // Query the fullscreen state from Electron
+    ipcRenderer
+      .invoke('isFullScreen')
+      .then((isFullscreen) => {
+        button.innerHTML = `
+          <div id="fullscreen-button-label" style="display: flex; align-items: center;">
+            ${isFullscreen ? 'Exit&nbsp;' : ''}Fullscreen
+          </div>
+          <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
+            <div id="fullscreen-icon">
+              ${isFullscreen ? icons.exit : icons.enter}
+            </div>
+          </div>
+        `
+      })
+      .catch((error) => {
+        // Fallback if IPC fails
+        utils.logError('Error getting fullscreen state:', error)
+        // Assume not fullscreen if error
+        button.innerHTML = `
+          <div id="fullscreen-button-label" style="display: flex; align-items: center;">
+            Fullscreen
+          </div>
+          <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Fullscreen (F11)">
+            <div id="fullscreen-icon">
+              ${icons.enter}
+            </div>
+          </div>
+        `
+      })
+  }
+
+  // Listen for fullscreen state changes from Electron
+  ipcRenderer.on('fullscreen-change', (event, isFullscreen) => {
+    const button = document.getElementById('fullscreen-button')
+    if (button) {
+      updateFullscreenButtonContent(button)
+    }
+  })
+
+  // Use the generalized function to create the button
+  return createHeaderButton({
+    id: 'fullscreen-button',
+    label: 'Fullscreen',
+    onClick: toggleFullscreen,
+    updateContent: updateFullscreenButtonContent,
+    styleId: 'fullscreen-button-style',
+    styles: `
+      #fullscreen-button {
+        position: relative;
+        border: none;
+        border-radius: 999px;
+        background-color: rgb(19, 20, 22);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: end;
+        vertical-align: middle;
+        padding: 5px 10px;
+        height: 24px;
+        box-sizing: border-box;
+        color: #808893;
+      }
+
+      #fullscreen-button:hover {
+        color: rgb(150, 158, 170);
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+
+      #fullscreen-button-label {
+        margin-right: 8px;
+        font-size: 14px;
+        line-height: 14px;
+      }
+
+      #fullscreen-icon {
+        width: 13px;
+        height: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #fullscreen-icon svg {
+        width: 100%;
+        height: 100%;
+        vertical-align: middle;
+        display: block;
+      }
+    `,
+    icons: icons,
+  })
+}
+
+/**
+ * Inject a sidebar toggle button into the header
+ * @returns {Promise<boolean>} True if button was injected successfully
+ */
+async function injectSidebarButton() {
+  // Simple rectangle SVG icons for sidebar states
+  const icons = {
+    hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
+    visible: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="currentColor" d="M30 33v-2l11-12a2 2 0 0 1 3 3L34 32l10 10a2 2 0 0 1-3 3L30 33Z"/></svg>`,
+  }
+
+  // Add shared button styles
+  addSharedButtonStyles()
+
+  // Add sidebar-specific styles
+  const addSidebarStyles = () => {
+    if (document.getElementById('sidebar-button-style')) return
+
+    const style = document.createElement('style')
+    style.id = 'sidebar-button-style'
+    style.innerHTML = `
+      #sidebar-button {
+        position: relative;
+        border: none;
+        border-radius: 999px;
+        background-color: rgb(19, 20, 22);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: end;
+        vertical-align: middle;
+        padding: 5px 10px;
+        height: 24px;
+        box-sizing: border-box;
+        color: #808893;
+      }
+
+      #sidebar-button:hover {
+        color: rgb(150, 158, 170);
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+
+      #sidebar-button-label {
+        margin-right: 8px;
+        font-size: 14px;
+        line-height: 14px;
+      }
+
+      #sidebar-icon {
+        width: 13px;
+        height: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #sidebar-icon svg {
+        width: 100%;
+        height: 100%;
+        vertical-align: middle;
+        display: block;
+      }
+    `
+
+    // Insert style at the beginning of head
+    if (document.head.firstChild) {
+      document.head.insertBefore(style, document.head.firstChild)
+    } else {
+      document.head.appendChild(style)
+    }
+  }
+
+  // Add the sidebar styles
+  addSidebarStyles()
+
+  // Function to update button content based on sidebar state
+  const updateSidebarButtonContent = async (button) => {
+    try {
+      // Get config to check current nav state
+      const config = (await ipcRenderer.invoke('configLoad')) || {}
+      const isNavHidden = config.hideNav === true
+
+      button.innerHTML = `
+        <div id="sidebar-button-label" style="display: flex; align-items: center;">
+          ${isNavHidden ? 'Show' : 'Hide'} Nav
+        </div>
+        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Sidebar">
+          <div id="sidebar-icon">
+            ${isNavHidden ? icons.hidden : icons.visible}
+          </div>
+        </div>
+      `
+    } catch (error) {
+      utils.logError('Error getting sidebar state:', error)
+      // Default fallback
+      button.innerHTML = `
+        <div id="sidebar-button-label" style="display: flex; align-items: center;">
+          Toggle Sidebar
+        </div>
+        <div style="border-radius: 50%; display: flex; align-items: center; justify-content: center;" title="Toggle Sidebar">
+          <div id="sidebar-icon">
+            ${icons.visible}
+          </div>
+        </div>
+      `
+    }
+  }
+
+  // Function to toggle only the sidebar
+  const toggleSidebar = () => {
+    // Just call toggleNavigation, the button update is handled inside it now
+    toggleNavigation({ toggleNav: true, toggleHeader: false })
+  }
+
+  // Use the generalized function to create the button
+  return createHeaderButton({
+    id: 'sidebar-button',
+    label: 'Toggle Sidebar',
+    onClick: toggleSidebar,
+    updateContent: updateSidebarButtonContent,
+    styleId: 'sidebar-button-style',
+    styles: `
+      #sidebar-button {
+        position: relative;
+        border: none;
+        border-radius: 999px;
+        background-color: rgb(19, 20, 22);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: end;
+        vertical-align: middle;
+        padding: 5px 10px;
+        height: 24px;
+        box-sizing: border-box;
+        color: #808893;
+      }
+
+      #sidebar-button:hover {
+        color: rgb(150, 158, 170);
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+
+      #sidebar-button-label {
+        margin-right: 8px;
+        font-size: 14px;
+        line-height: 14px;
+      }
+
+      #sidebar-icon {
+        width: 13px;
+        height: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #sidebar-icon svg {
+        width: 100%;
+        height: 100%;
+        vertical-align: middle;
+        display: block;
+      }
+    `,
+    icons: icons,
+  })
 }
 
 /**
@@ -801,8 +1116,9 @@ async function initializeCommonUI() {
       window._isInitialLoad = false
     }, 1000)
 
-    // Inject fullscreen button (will only inject if not already present)
+    // Inject buttons (will only inject if not already present)
     await injectFullscreenButton()
+    await injectSidebarButton()
 
     // Set up a MutationObserver to watch for changes to nav visibility
     setupNavigationObserver()
@@ -1140,6 +1456,7 @@ module.exports = {
   setupKeyboardShortcuts,
   handleWidgetPanel,
   injectFullscreenButton,
+  injectSidebarButton,
   addFullscreenStyles,
   toggleFullscreen,
   initializeCommonUI,

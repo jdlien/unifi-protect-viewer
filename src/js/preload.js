@@ -64,9 +64,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Listen for toggle-widget-panel events from the main process
   ipcRenderer.on('toggle-widget-panel', () => {
-    ui.handleWidgetPanel({ toggle: true }).catch((error) => {
-      utils.logError('Error toggling widget panel from menu:', error)
-    })
+    // Get the widget panel expand button and click it directly
+    // This lets UniFi Protect handle the state natively
+    const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
+    if (expandButton) {
+      expandButton.click()
+    } else {
+      utils.logError('Could not find widget panel expand button')
+    }
   })
 })
 
@@ -96,7 +101,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleNavigation: () => ui.toggleNavigation(),
     toggleNavOnly: () => ui.toggleNavigation({ toggleNav: true, toggleHeader: false }),
     toggleHeaderOnly: () => ui.toggleNavigation({ toggleNav: false, toggleHeader: true }),
-    toggleWidgetPanel: () => ui.handleWidgetPanel({ toggle: true }),
+    toggleWidgetPanel: () => {
+      // Click the widget panel button directly, letting UniFi Protect handle state
+      const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
+      if (expandButton) expandButton.click()
+    },
     returnToDashboard: () => ui.triggerDashboardNavigation(),
   },
 
