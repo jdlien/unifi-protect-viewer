@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 const ui = require('./modules/ui.js')
+const buttons = require('./modules/buttons.js')
 const navigation = require('./modules/navigation.js')
 const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
@@ -24,7 +25,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (isAppPage) {
     navigation.initializeWithPolling()
-    ui.setupKeyboardShortcuts()
     // Initialize common UI elements like the fullscreen button
     ui.initializeCommonUI().catch((error) => {
       utils.logError('Failed to initialize common UI elements', error)
@@ -38,28 +38,28 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Listen for toggle-navigation events from the main process (ESC key)
   ipcRenderer.on('toggle-navigation', () => {
-    ui.toggleNavigation().catch((error) => {
+    buttons.togglePageElements().catch((error) => {
       utils.logError('Error toggling navigation from menu:', error)
     })
   })
 
   // Listen for toggle-nav-only events from the main process (Alt+N)
   ipcRenderer.on('toggle-nav-only', () => {
-    ui.toggleNavigation({ toggleNav: true, toggleHeader: false }).catch((error) => {
+    buttons.togglePageElements({ toggleNav: true, toggleHeader: false }).catch((error) => {
       utils.logError('Error toggling nav from menu:', error)
     })
   })
 
   // Listen for toggle-header-only events from the main process (Alt+H)
   ipcRenderer.on('toggle-header-only', () => {
-    ui.toggleNavigation({ toggleNav: false, toggleHeader: true }).catch((error) => {
+    buttons.togglePageElements({ toggleNav: false, toggleHeader: true }).catch((error) => {
       utils.logError('Error toggling header from menu:', error)
     })
   })
 
   // Listen for return-to-dashboard events from the main process
   ipcRenderer.on('return-to-dashboard', () => {
-    ui.triggerDashboardNavigation()
+    buttons.triggerDashboardNavigation()
   })
 
   // Listen for toggle-widget-panel events from the main process
@@ -98,15 +98,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // UI controls
   ui: {
-    toggleNavigation: () => ui.toggleNavigation(),
-    toggleNavOnly: () => ui.toggleNavigation({ toggleNav: true, toggleHeader: false }),
-    toggleHeaderOnly: () => ui.toggleNavigation({ toggleNav: false, toggleHeader: true }),
+    togglePageElements: () => buttons.togglePageElements(),
+    toggleNavOnly: () => buttons.togglePageElements({ toggleNav: true, toggleHeader: false }),
+    toggleHeaderOnly: () => buttons.togglePageElements({ toggleNav: false, toggleHeader: true }),
     toggleWidgetPanel: () => {
       // Click the widget panel button directly, letting UniFi Protect handle state
       const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
       if (expandButton) expandButton.click()
     },
-    returnToDashboard: () => ui.triggerDashboardNavigation(),
+    returnToDashboard: () => buttons.triggerDashboardNavigation(),
   },
 
   // Update management
