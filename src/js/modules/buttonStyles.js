@@ -22,7 +22,6 @@ const BUTTON_STYLES = /*css*/ `
   height: 24px;
   box-sizing: border-box;
   color: #808893;
-  margin-right: 8px;
 }
 
 .header-button:hover {
