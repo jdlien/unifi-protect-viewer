@@ -105,20 +105,6 @@ function setupApplicationMenu(mainWindow, store) {
             mainWindow.setFullScreen(!mainWindow.isFullScreen())
           },
         },
-        {
-          label: 'Developer Tools',
-          accelerator: 'F12',
-          click: () => {
-            try {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.toggleDevTools()
-                utils.log('DevTools toggled via menu')
-              }
-            } catch (err) {
-              utils.logError('Failed to toggle DevTools:', err)
-            }
-          },
-        },
         { type: 'separator' },
         {
           label: 'Toggle All Navigation',
@@ -174,22 +160,38 @@ function setupApplicationMenu(mainWindow, store) {
             shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
           },
         },
+        { type: 'separator' },
+        {
+          label: 'Developer Tools',
+          accelerator: 'F12',
+          click: () => {
+            try {
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.toggleDevTools()
+                utils.log('DevTools toggled via menu')
+              }
+            } catch (err) {
+              utils.logError('Failed to toggle DevTools:', err)
+            }
+          },
+        },
       ],
     },
   ]
 
   // Add development menu in dev mode
-  if (isDev) {
-    template.push({
-      label: 'Development',
-      submenu: [
-        {
-          label: 'Toggle Developer Tools',
-          role: 'toggleDevTools',
-        },
-      ],
-    })
-  }
+  // Reserved for future use, we don't need this now
+  // if (isDev) {
+  //   template.push({
+  //     label: 'Development',
+  //     submenu: [
+  //       {
+  //         label: 'Toggle Developer Tools',
+  //         role: 'toggleDevTools',
+  //       },
+  //     ],
+  //   })
+  // }
 
   mainMenu = Menu.buildFromTemplate(template)
   Menu.setApplicationMenu(mainMenu)

@@ -160,25 +160,22 @@ function setupWindowNavigation(mainWindow, store) {
 }
 
 /**
- * Register the global shortcut for DevTools
+ * Register the shortcut for DevTools
  * @param {BrowserWindow} window - The browser window
  */
 function registerDevToolsShortcut(window) {
   try {
-    // First unregister in case it's already registered
-    if (globalShortcut.isRegistered('F12')) {
-      globalShortcut.unregister('F12')
+    // Register F12 as a local shortcut on the window instead of globally
+    if (window && !window.isDestroyed()) {
+      window.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'F12' && !input.control && !input.meta && !input.alt && !input.shift) {
+          window.webContents.toggleDevTools()
+          utils.log('DevTools toggled via F12 local shortcut')
+          event.preventDefault()
+        }
+      })
+      utils.log('Local F12 shortcut registered for DevTools')
     }
-
-    // Register F12 to toggle DevTools globally
-    globalShortcut.register('F12', () => {
-      if (window && !window.isDestroyed()) {
-        window.webContents.toggleDevTools()
-        utils.log('DevTools toggled via F12 shortcut')
-      }
-    })
-
-    utils.log('F12 shortcut registered for DevTools')
   } catch (err) {
     utils.logError('Error registering F12 shortcut:', err)
   }
