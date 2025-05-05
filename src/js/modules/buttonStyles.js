@@ -29,6 +29,10 @@ const BUTTON_STYLES = /*css*/ `
   background-color: rgba(0, 0, 0, 0.6);
 }
 
+body[motif-theme="light"] .header-button {
+  background-color: white;
+}
+
 .header-button-label {
   margin-right: 8px;
   font-size: 14px;
@@ -48,6 +52,46 @@ const BUTTON_STYLES = /*css*/ `
   height: 100%;
   vertical-align: middle;
   display: block;
+}
+
+/* Custom Nav Button */
+.custom-nav-button {
+  color: rgb(183, 188, 194);
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+  text-align: center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-shadow: none;
+  border-radius: 0;
+  background: rgb(40, 43, 47);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font: inherit;
+  padding: 0;
+}
+
+/* Override UniFi Protect navbar padding */
+nav[class*="Nav__"][class*="nav-auto__"],
+nav[class*="nav-horizontal__"][class*="nav-auto__"],
+nav[class*="nav-vertical__"][class*="nav-auto__"],
+nav[class*="nav-auto__"][class*="nav-auto__"] {
+  padding-top: 0 !important;
+  padding-bottom: 12px !important;
+  gap: 1px !important;
+}
+
+/* Also target navigation lists to ensure gap is applied there too */
+nav ul,
+nav[class*="Nav__"] ul,
+nav[class*="nav-auto__"] ul,
+nav ul[class*="group__"] {
+  gap: 2px !important;
 }
 
 /* Dashboard button overlay */
@@ -105,6 +149,16 @@ const BUTTON_STYLES = /*css*/ `
   border-radius: 4px;
   border: 1px solid rgb(183, 188, 194);
   padding: 1px 2px;
+}
+
+/* Light theme overrides for nav buttons */
+body[motif-theme="light"] .custom-nav-button {
+  color: rgb(128, 136, 147);
+  background: rgb(244, 245, 246);
+  /* Adjust other properties as needed for light mode */
+}
+body[motif-theme="light"] .custom-nav-button:hover {
+  color: rgb(159, 165, 173);
 }
 `
 

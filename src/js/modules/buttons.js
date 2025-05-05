@@ -9,6 +9,14 @@ const path = require('path')
 const buttonStyles = require('./buttonStyles')
 let ui
 
+// Shared icon constants for navigation elements
+const navIcons = {
+  sidebar: {
+    hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
+    visible: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="currentColor" d="M30 33v-2l11-12a2 2 0 0 1 3 3L34 32l10 10a2 2 0 0 1-3 3L30 33Z"/></svg>`,
+  },
+}
+
 // To avoid circular dependency issues, we'll load ui lazily when needed
 function getUi() {
   if (!ui) {
@@ -177,12 +185,6 @@ async function injectSidebarButton() {
     utils.logger.debug('Button styles were missing, injected them before creating sidebar button')
   }
 
-  // Simple rectangle SVG icons for sidebar states
-  const icons = {
-    hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
-    visible: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="currentColor" d="M30 33v-2l11-12a2 2 0 0 1 3 3L34 32l10 10a2 2 0 0 1-3 3L30 33Z"/></svg>`,
-  }
-
   // Function to update button content based on sidebar state
   const updateSidebarButtonContent = async (button) => {
     try {
@@ -196,7 +198,7 @@ async function injectSidebarButton() {
         </div>
         <div class="header-button-icon" title="Toggle Sidebar">
           <div id="sidebar-icon">
-            ${isNavHidden ? icons.hidden : icons.visible}
+            ${isNavHidden ? navIcons.sidebar.hidden : navIcons.sidebar.visible}
           </div>
         </div>
       `
@@ -209,7 +211,7 @@ async function injectSidebarButton() {
         </div>
         <div class="header-button-icon" title="Toggle Sidebar">
           <div id="sidebar-icon">
-            ${icons.visible}
+            ${navIcons.sidebar.visible}
           </div>
         </div>
       `
@@ -228,7 +230,7 @@ async function injectSidebarButton() {
     label: 'Toggle Sidebar',
     onClick: toggleSidebar,
     updateContent: updateSidebarButtonContent,
-    icons: icons,
+    icons: navIcons.sidebar,
   })
 }
 
@@ -310,12 +312,6 @@ async function togglePageElements(options = {}) {
         // Update sidebar button state immediately after style change
         const sidebarButton = document.getElementById('sidebar-button')
         if (sidebarButton) {
-          // Reuse the icons defined in injectSidebarButton (assuming they are accessible)
-          // Need to define icons here or make them globally accessible. Defining here for now.
-          const icons = {
-            hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="CurrentColor" d="M44 31v2L32 45a2 2 0 0 1-2-3l10-10-10-10a2 2 0 0 1 2-3l12 12Z"/></svg>`,
-            visible: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="currentColor" d="M64 8v48c0 4-4 8-8 8H8c-4 0-8-4-8-8V8c0-4 4-8 8-8h48c4 0 8 4 8 8ZM12 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 12a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm12 41h32c2 0 4-2 4-4V8c0-2-2-4-4-4H24v56ZM12 31a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path fill="currentColor" d="M30 33v-2l11-12a2 2 0 0 1 3 3L34 32l10 10a2 2 0 0 1-3 3L30 33Z"/></svg>`,
-          }
           try {
             sidebarButton.innerHTML = `
               <div id="sidebar-button-label" class="header-button-label">
@@ -323,7 +319,7 @@ async function togglePageElements(options = {}) {
               </div>
               <div class="header-button-icon" title="Toggle Sidebar">
                 <div id="sidebar-icon">
-                  ${newNavState ? icons.hidden : icons.visible}
+                  ${newNavState ? navIcons.sidebar.hidden : navIcons.sidebar.visible}
                 </div>
               </div>
             `
@@ -339,6 +335,15 @@ async function togglePageElements(options = {}) {
         const newHeaderState = !isHeaderHidden
         navSettings.hideHeader = newHeaderState
         utils.setStyle(header, 'display', newHeaderState ? 'none' : 'flex')
+
+        // Update the header toggle button icon immediately
+        const headerToggleButton = document.getElementById('header-toggle-button')
+        if (headerToggleButton && typeof window.updateHeaderToggleButton === 'function') {
+          // We need to pass the new state directly or call the function
+          // that can determine the state itself.
+          window.updateHeaderToggleButton(headerToggleButton)
+        }
+
         // utils.logger.debug(`Toggling header: ${newHeaderState ? 'hiding' : 'showing'}`)
       }
     }
@@ -544,11 +549,192 @@ function setDashboardButtonVisibility(show) {
   else button.style.display = 'none'
 }
 
+/**
+ * Generalizes button creation for navigation sidebar buttons
+ * @param {Object} options - Button creation options
+ * @param {string} options.id - Button ID
+ * @param {string} options.tooltip - Button tooltip text
+ * @param {Function} options.onClick - Click handler function
+ * @param {string} options.content - HTML content for the button (SVG icon, etc.)
+ * @param {Function} options.updateContent - Function to update button content (gets called after creation)
+ * @returns {Promise<boolean>} True if button was injected successfully
+ */
+async function createNavButton(options) {
+  const { id, tooltip, onClick, content, updateContent } = options
+
+  // Check if button styles are present, inject them if not
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    // Inject button styles before proceeding
+    buttonStyles.injectButtonStyles()
+    utils.logger.debug('Button styles were missing, injected them before creating nav button')
+  }
+
+  // Create a function to generate the button element
+  const createButtonElement = () => {
+    // Create a standalone button element instead of mimicking the existing structure
+    const buttonElement = document.createElement('button')
+    buttonElement.id = id
+    buttonElement.className = 'custom-nav-button'
+    buttonElement.title = tooltip || ''
+    buttonElement.setAttribute('role', 'button')
+    buttonElement.innerHTML = content
+
+    // Set click handler
+    buttonElement.onclick = onClick
+
+    return buttonElement
+  }
+
+  // Function to insert the button into the nav
+  const insertButton = () => {
+    // Avoid duplicate insertions
+    if (document.getElementById(id)) {
+      return false
+    }
+
+    const nav = document.querySelector('nav')
+    if (!nav) {
+      return false
+    }
+
+    const buttonElement = createButtonElement()
+
+    // Insert directly into the nav element
+    nav.prepend(buttonElement)
+
+    return true
+  }
+
+  try {
+    // Wait for the nav element to be available
+    await utils.waitUntil(() => document.querySelector('nav') !== null, 5000)
+
+    // First insertion attempt
+    const wasInserted = insertButton()
+
+    // Set up a MutationObserver to detect when our button is removed
+    const observer = new MutationObserver((mutations) => {
+      // Check if our button is still in the DOM
+      if (!document.getElementById(id)) {
+        // Button was removed, try to add it back
+        const wasInserted = insertButton()
+        if (wasInserted && typeof updateContent === 'function') {
+          // If inserted and an update function exists, call it immediately
+          const buttonElement = document.getElementById(id)
+          if (buttonElement) {
+            updateContent(buttonElement)
+          }
+        }
+      }
+    })
+
+    // Watch for changes in the body that might affect our nav
+    const targetNode = document.body
+    const config = {
+      childList: true, // Watch for child additions/removals
+      subtree: true, // Watch the entire subtree
+      attributes: false, // No need to watch attributes
+    }
+
+    // Start observing
+    observer.observe(targetNode, config)
+
+    // Store the observer reference on window to prevent garbage collection
+    if (!window._navButtonObservers) {
+      window._navButtonObservers = {}
+    }
+    window._navButtonObservers[id] = observer
+
+    return true
+  } catch (error) {
+    utils.logError(`Error injecting ${id} nav button`, error)
+    return false
+  }
+}
+
+/**
+ * Inject a red circle button into the nav sidebar as a demonstration
+ * @returns {Promise<boolean>} True if button was injected successfully
+ */
+async function injectHeaderToggleButton() {
+  // Create wrappers with the sidebar icons rotated by 90 degrees
+  const headerToggleButtonUp = `
+  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
+     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
+      ${navIcons.sidebar.visible}
+    </div>
+  </div>
+  `
+
+  const headerToggleButtonDown = `
+  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
+     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
+      ${navIcons.sidebar.hidden}
+    </div>
+  </div>
+  `
+
+  // Function to update button content based on header visibility
+  const updateHeaderToggleButtonContent = (button) => {
+    const header = document.querySelector('header')
+    if (!button || !header) return
+    try {
+      const headerStyle = window.getComputedStyle(header)
+      const isHeaderHidden = headerStyle.display === 'none'
+      button.innerHTML = isHeaderHidden ? headerToggleButtonDown : headerToggleButtonUp
+    } catch (error) {
+      utils.logError('Error updating header toggle button content:', error)
+      // Optionally set a default state or leave as is
+    }
+  }
+
+  // Expose the update function globally for togglePageElements to call
+  window.updateHeaderToggleButton = updateHeaderToggleButtonContent
+
+  // Click handler for the button
+  const handleHeaderToggleClick = () => {
+    // No need to update button here, togglePageElements will do it
+    togglePageElements({ toggleHeader: true, toggleNav: false })
+  }
+
+  // Use the generalized function to create the button
+  const created = await createNavButton({
+    id: 'header-toggle-button',
+    tooltip: 'Toggle Header',
+    onClick: handleHeaderToggleClick,
+    content: headerToggleButtonUp, // Initial content, will be updated
+    updateContent: updateHeaderToggleButtonContent, // Pass the update function
+  })
+
+  // Update content after creation, with a slight delay for initial styles
+  const button = document.getElementById('header-toggle-button')
+  if (button) {
+    await utils.wait(100) // Add delay
+    updateHeaderToggleButtonContent(button)
+  }
+
+  // Set up a MutationObserver to watch for header visibility changes
+  const header = document.querySelector('header')
+  if (header && button) {
+    if (!window._headerToggleButtonObserver) {
+      const observer = new MutationObserver(() => {
+        updateHeaderToggleButtonContent(button)
+      })
+      observer.observe(header, { attributes: true, attributeFilter: ['style', 'class'] })
+      window._headerToggleButtonObserver = observer
+    }
+  }
+
+  return created
+}
+
 // Export the functions
 module.exports = {
   createHeaderButton,
+  createNavButton,
   injectFullscreenButton,
   injectSidebarButton,
+  injectHeaderToggleButton,
   toggleFullscreen,
   togglePageElements,
   triggerDashboardNavigation,

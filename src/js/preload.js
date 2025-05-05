@@ -46,6 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Then inject buttons
         buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
         buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
+        buttons.injectHeaderToggleButton().catch((err) => utils.logError('Failed to inject header toggle button:', err))
 
         // Update dashboard button visibility
         buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
