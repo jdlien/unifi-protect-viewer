@@ -76,6 +76,10 @@ body[motif-theme="light"] .header-button {
   padding: 0;
 }
 
+.custom-nav-button:hover {
+  color: rgb(153, 160, 168);
+}
+
 /* Override UniFi Protect navbar padding */
 nav[class*="Nav__"][class*="nav-auto__"],
 nav[class*="nav-horizontal__"][class*="nav-auto__"],
