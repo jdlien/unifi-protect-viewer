@@ -73,10 +73,6 @@ This application is signed and notarized for macOS. See the `scripts/sign-builds
 
 Windows builds are signed with a code signing certificate belonging to my company (FullSpec Systems) using SSL.com's CodeSignTool.
 
-## Known Issues
-
-Currently, enhanced codec (h.265) support does not appear to work in some operating systems, like Windows ARM64 and Linux. Let me know if you have any ideas on how to fix this.
-
 ## Usage
 
 After configuration, the app will automatically start the live view upon startup. If you want to change the configuration, you can press `F10` (or use the UniFi Protect Viewer menu)to reset all settings and restart the configuration process.
@@ -84,3 +80,15 @@ After configuration, the app will automatically start the live view upon startup
 - Escape: Toggle Navigation
 - F9: Restart
 - F10: Restart & Reset
+
+## Known Issues
+
+- Currently, enhanced codec (h.265) support does not appear to work in some operating systems, like Windows ARM64 and Linux. Let me know if you have any ideas on how to fix this.
+- After toggling header+nav visibility, the icon at the top left corner for toggling the header can get out of sync.
+-
+
+## Planned Features
+
+- A 'hide header+nav' button may be added to the header.
+- A widget panel toggle button may be added to the header.
+- Hotkeys to switch between cameras or Multi-Views.
