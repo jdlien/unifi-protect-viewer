@@ -27,27 +27,13 @@ Or view all downloads, including Linux versions, on the [releases page](https://
 - Automatic updates via GitHub releases
 - Stays logged in between sessions
 - No need to open a browser
-
-<!-- I'm not sure if this is really needed
-## GitHub Authentication for Updates
-
-To enable automatic updates from GitHub, you need to:
-
-1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens with "repo" scope
-2. Set the token as GH_TOKEN environment variable when running the app
-3. Or add it to a `.env` file in the root directory:
-   ```
-   GH_TOKEN=your_token_here
-   ```
-
-Without a valid GitHub token, the application will still work, but it won't be able to check for or download updates.
--->
+- Automatic updates
 
 ## Credits
 
-This application is based on [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has been almost completely rewritten. It now only works with Protect v5. The chief difference is that this version is designed to allow you to access the Protect application as you normally would without any features removed. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view.
+This application was based on [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has now been almost completely rewritten. It now only works with Protect v5. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
 
-This version removes fewer of the features/elements of UniFi Protect than the original, allowing navigation between different parts of the app. The following features have also been added:
+Some of the features included by this version are:
 
 - You can toggle navigation/header by pressing `Escape`
 - There is a menu with many options for modifying the view
@@ -75,6 +61,8 @@ For some platforms, there are scripts inside the package.json.
 
 `npm run build:linux:x64`
 
+There is an `npm run super-release` script that will build and sign the app for all platforms.
+
 ### Code Signing
 
 #### macOS
@@ -83,28 +71,15 @@ This application is signed and notarized for macOS. See the `scripts/sign-builds
 
 #### Windows
 
-Windows builds can be signed using SSL.com's CodeSignTool. See the [Windows Code Signing documentation](./docs/windows-signing.md) for setup instructions.
-
-To build and sign Windows packages:
-
-```bash
-# For x64 only
-npm run sign:win-x64
-
-# For ARM64 only
-npm run sign:win-arm64
-
-# For both x64 and ARM64
-npm run sign:win
-```
+Windows builds are signed with a code signing certificate belonging to my company (FullSpec Systems) using SSL.com's CodeSignTool.
 
 ## Known Issues
 
-Currently, enhanced codec (h.265) support does not appear to work in Windows (likely due to licensing limitations in Electron). Let me know if you have any ideas on how to fix this — one potential solution is to use a fork of Electron with HEVC support like https://github.com/AAAhs/electron-hevc
+Currently, enhanced codec (h.265) support does not appear to work in some operating systems, like Windows ARM64 and Linux. Let me know if you have any ideas on how to fix this.
 
 ## Usage
 
-After configuration, the app will automatically start the live view upon startup. If you want to change the configuration, you can press `F10` to reset all settings and restart the configuration process.
+After configuration, the app will automatically start the live view upon startup. If you want to change the configuration, you can press `F10` (or use the UniFi Protect Viewer menu)to reset all settings and restart the configuration process.
 
 - Escape: Toggle Navigation
 - F9: Restart
