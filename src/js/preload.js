@@ -121,7 +121,7 @@ async function handleLiveviewV3() {
     });
 }
 
-async function handleLiveviewV4andV5() {
+async function handleLiveviewV4andNewer() {
     // wait until liveview is present
     await waitUntil(() => document.querySelectorAll("[class^=liveView__FullscreenWrapper]").length > 0);
 
@@ -173,12 +173,12 @@ async function handleLiveviewV4andV5() {
     await waitUntil(() => document.querySelectorAll("[class^=LiveViewGridSlot__PlayerOptions] [class^=PlayerTopLeftControls__ButtonGroup]").length > 0, 1000);
 
     document.querySelectorAll("[class^=LiveViewGridSlot__PlayerOptions] [class^=PlayerTopLeftControls__ButtonGroup]").forEach( button => {
-    	setStyle(button, 'display', 'none');
+        setStyle(button, 'display', 'none');
     });
 
     // color all missing or error cameras black
     document.querySelectorAll("[class^=ViewportError__Wrapper]").forEach( button => {
-    	setStyle(button, 'background-color', 'black');
+        setStyle(button, 'background-color', 'black');
     });
 }
 
@@ -228,7 +228,7 @@ async function run() {
     // get version from screen (v4 has version string, v3 has not)
     const version = (
         Array.from(document.querySelectorAll("[class^=Version__Item] > span")).filter(el => el.innerText.includes('Protect')).at(0)?.innerHTML
-            ?? 'Protect 3.x'
+        ?? 'Protect 3.x'
     ).replace('Protect', '').trim();
 
     console.log('version', version);
@@ -245,14 +245,14 @@ async function run() {
     }
 
     // unifi stuff - fullscreen for dashboard (version 4)
-    if (checkUrl('protect/dashboard') && version.startsWith('4.') || version.startsWith('5.')) {
-        console.log('run logic v4/v5',);
+    if (checkUrl('protect/dashboard') && version.startsWith('4.') || version.startsWith('5.') || version.startsWith('6.')) {
+        console.log('run logic v4/v5/v6',);
 
-        await handleLiveviewV4andV5();
+        await handleLiveviewV4andNewer();
 
         await wait(4000);
 
-        await handleLiveviewV4andV5();
+        await handleLiveviewV4andNewer();
     }
 
     // reload & login when token expires (v3 & v4) and we got the expires at in localstorage
