@@ -15,16 +15,12 @@ env:
 
 jobs:
   # ------------------------------------------------------------------
-  # macOS — build, sign, notarize (x64, arm64, universal)
+  # macOS — build all arches, sign, notarize
   # ------------------------------------------------------------------
   build-macos:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64, universal]
     env:
       HAS_APPLE_CERT: ${{ secrets.CSC_LINK != '' }}
-      HAS_APPLE_ID: ${{ secrets.APPLE_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,13 +30,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Build macOS (${{ matrix.arch }})
+      - name: Build macOS (x64, arm64, universal)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # electron-builder picks up the cert from CSC_LINK
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          # Notarization credentials
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -49,26 +43,24 @@ jobs:
             echo "No signing cert — building unsigned"
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          pnpm exec electron-builder --mac --${{ matrix.arch }} --publish never
+          pnpm exec electron-builder --mac --x64 --arm64 --universal --publish never
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}
+          name: macos
           path: |
             dist/*.dmg
             dist/*.zip
             dist/*.yml
+            dist/*.blockmap
           if-no-files-found: error
 
   # ------------------------------------------------------------------
-  # Windows — build and sign (x64, arm64)
+  # Windows — build all arches, sign with Azure Trusted Signing
   # ------------------------------------------------------------------
   build-windows:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64]
     env:
       HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
     steps:
@@ -81,11 +73,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Build unsigned — sign.js gracefully skips without SSL.com creds
-      # Azure Trusted Signing handles signing post-build
-      - name: Build Windows (${{ matrix.arch }})
+      - name: Build Windows (x64, arm64)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm exec electron-builder --win --${{ matrix.arch }} --publish never
+        run: pnpm exec electron-builder --win --x64 --arm64 --publish never
         shell: bash
 
       - name: Sign with Azure Trusted Signing
@@ -105,21 +96,19 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.arch }}
+          name: windows
           path: |
             dist/*.exe
             dist/*.zip
             dist/*.yml
+            dist/*.blockmap
           if-no-files-found: error
 
   # ------------------------------------------------------------------
-  # Linux — build (x64, arm64)
+  # Linux — build all arches
   # ------------------------------------------------------------------
   build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [x64, arm64]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -129,16 +118,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Build Linux (${{ matrix.arch }})
+      - name: Build Linux (x64, arm64)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: pnpm exec electron-builder --linux --${{ matrix.arch }} --publish never
+        run: pnpm exec electron-builder --linux --x64 --arm64 --publish never
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-${{ matrix.arch }}
+          name: linux
           path: |
             dist/*.AppImage
             dist/*.deb
@@ -181,6 +170,7 @@ jobs:
             release-artifacts/*.AppImage
             release-artifacts/*.deb
             release-artifacts/*.yml
+            release-artifacts/*.blockmap
             release-artifacts/checksums-sha256.txt
           fail_on_unmatched_files: false
         env:
