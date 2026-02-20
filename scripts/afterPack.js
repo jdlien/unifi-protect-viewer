@@ -6,14 +6,17 @@ const path = require('path')
  * Flips Electron fuses on the packaged binary to harden the production app.
  */
 module.exports = async function afterPack(context) {
-  const ext = {
-    darwin: '.app',
-    linux: '',
-    win32: '.exe',
-  }
+  const platform = context.electronPlatformName
+  let electronBinaryName
 
-  const electronBinaryName =
-    context.packager.appInfo.productFilename + (ext[context.electronPlatformName] ?? '')
+  if (platform === 'darwin') {
+    electronBinaryName = context.packager.appInfo.productFilename + '.app'
+  } else if (platform === 'win32') {
+    electronBinaryName = context.packager.appInfo.productFilename + '.exe'
+  } else {
+    // Linux uses the executable name (lowercase, from package.json "name")
+    electronBinaryName = context.packager.executableName
+  }
 
   const electronBinaryPath = path.join(context.appOutDir, electronBinaryName)
 
