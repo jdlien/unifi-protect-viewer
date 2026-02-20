@@ -4,7 +4,7 @@ const fs = require('fs')
 const os = require('os')
 const crypto = require('crypto')
 
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 exports.default = async function (config) {
   if (!config?.path) return console.error('Missing config.path'), false

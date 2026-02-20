@@ -1,6 +1,6 @@
 // Simple script to build macOS app with verbose output
 const { execSync } = require('child_process')
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 // Check for required environment variables
 const requiredVars = ['GH_TOKEN', 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID']

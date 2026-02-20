@@ -9,7 +9,7 @@ const fs = require('fs')
 
 // Load dotenv if available
 try {
-  require('dotenv').config()
+  require('dotenv').config({ quiet: true })
 } catch (err) {
   console.log('dotenv not available, using hardcoded values')
 }

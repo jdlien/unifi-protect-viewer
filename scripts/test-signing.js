@@ -23,7 +23,7 @@ const os = require('os')
 try {
   // Use dotenv with option to process environment variables
   // This helps with special characters in passwords
-  require('dotenv').config({ processEnv: process.env })
+  require('dotenv').config({ processEnv: process.env, quiet: true })
   console.log('Loaded environment variables from .env file')
 } catch (error) {
   console.warn(

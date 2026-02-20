@@ -10,7 +10,7 @@
 
 // Try to load environment variables from .env file
 try {
-  require('dotenv').config()
+  require('dotenv').config({ quiet: true })
   console.log('Loaded environment variables from .env file')
 } catch (error) {
   console.warn('Failed to load .env file, using environment variables as is')
@@ -45,43 +45,27 @@ try {
   console.log()
 } catch (error) {
   console.warn('Failed to use node-2fa:', error.message)
-  console.log('Please install it with: npm install node-2fa')
+  console.log('Please install it with: pnpm add node-2fa')
   console.log()
 }
 
 try {
-  // Try using otplib
-  const { authenticator } = require('otplib')
+  // Try using otplib v13+
+  const { generateSync } = require('otplib')
 
-  // Try with different base32 encoding options
   console.log('Using otplib:')
 
-  // Standard mode
   try {
-    const token = authenticator.generate(totpSecret)
-    console.log('Generated token (standard):', token)
+    const token = generateSync({ secret: totpSecret })
+    console.log('Generated token:', token)
   } catch (error) {
-    console.warn('Failed to generate token using standard mode:', error.message)
-  }
-
-  // Try with relaxed padding
-  try {
-    authenticator.options = {
-      encoding: 'base32',
-      algorithm: 'sha1',
-      step: 30,
-      window: 0,
-    }
-    const token = authenticator.generate(totpSecret)
-    console.log('Generated token (custom options):', token)
-  } catch (error) {
-    console.warn('Failed to generate token using custom options:', error.message)
+    console.warn('Failed to generate token:', error.message)
   }
 
   console.log()
 } catch (error) {
   console.warn('Failed to use otplib:', error.message)
-  console.log('Please install it with: npm install otplib')
+  console.log('Please install it with: pnpm add otplib')
   console.log()
 }
 

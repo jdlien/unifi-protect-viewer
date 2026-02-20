@@ -2,7 +2,7 @@
 const { execSync } = require('child_process')
 const fs = require('fs')
 const semver = require('semver')
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 // Check for required environment variables
 const requiredVars = ['GH_TOKEN']

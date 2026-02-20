@@ -7,7 +7,7 @@
 const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 // Load environment variables from .env file
 console.log('Loading environment variables for notarization:')

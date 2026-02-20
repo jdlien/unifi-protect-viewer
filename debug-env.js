@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({ quiet: true })
 
 console.log('Environment variables loaded:')
 console.log('Username length:', process.env.SSL_COM_USERNAME ? process.env.SSL_COM_USERNAME.length : 'not set')
