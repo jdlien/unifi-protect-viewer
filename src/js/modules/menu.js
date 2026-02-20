@@ -114,9 +114,8 @@ function buildMenuTemplate() {
         },
         { type: 'separator' },
         {
-          label: visibilityState.navHidden && visibilityState.headerHidden
-            ? 'Show All Navigation'
-            : 'Hide All Navigation',
+          label:
+            visibilityState.navHidden && visibilityState.headerHidden ? 'Show All Navigation' : 'Hide All Navigation',
           accelerator: 'Escape',
           click: () => {
             mainWindow.webContents.send('toggle-navigation')

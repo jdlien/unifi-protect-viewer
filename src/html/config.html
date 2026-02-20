@@ -68,7 +68,9 @@
         <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px">
           <table class="diagnostics-table">
             <tbody id="diagnosticsBody">
-              <tr><td colspan="2" style="color: #888">Loading diagnostics...</td></tr>
+              <tr>
+                <td colspan="2" style="color: #888">Loading diagnostics...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -220,21 +222,32 @@
         try {
           const diag = await window.electronAPI.app.getDiagnostics()
 
-          const statusHtml = (ok) =>
-            ok ? '<span class="status-yes">Yes</span>' : '<span class="status-no">No</span>'
+          const statusHtml = (ok) => (ok ? '<span class="status-yes">Yes</span>' : '<span class="status-no">No</span>')
 
           // Check codec support via Media Capabilities API
           const h264 = await navigator.mediaCapabilities
             .decodingInfo({
               type: 'media-source',
-              video: { contentType: 'video/mp4; codecs="avc1.640034"', width: 1920, height: 1080, bitrate: 10000000, framerate: 30 },
+              video: {
+                contentType: 'video/mp4; codecs="avc1.640034"',
+                width: 1920,
+                height: 1080,
+                bitrate: 10000000,
+                framerate: 30,
+              },
             })
             .catch(() => ({ supported: false, smooth: false, powerEfficient: false }))
 
           const h265 = await navigator.mediaCapabilities
             .decodingInfo({
               type: 'media-source',
-              video: { contentType: 'video/mp4; codecs="hev1.1.6.L153.B0"', width: 1920, height: 1080, bitrate: 10000000, framerate: 30 },
+              video: {
+                contentType: 'video/mp4; codecs="hev1.1.6.L153.B0"',
+                width: 1920,
+                height: 1080,
+                bitrate: 10000000,
+                framerate: 30,
+              },
             })
             .catch(() => ({ supported: false, smooth: false, powerEfficient: false }))
 
@@ -244,8 +257,14 @@
             ['Electron', diag.electronVersion],
             ['Chrome', diag.chromeVersion],
             ['Hardware Acceleration', statusHtml(diag.hardwareAcceleration)],
-            ['H.264 Decode', `Supported: ${statusHtml(h264.supported)} &nbsp; Smooth: ${statusHtml(h264.smooth)} &nbsp; Power Efficient: ${statusHtml(h264.powerEfficient)}`],
-            ['H.265/HEVC Decode', `Supported: ${statusHtml(h265.supported)} &nbsp; Smooth: ${statusHtml(h265.smooth)} &nbsp; Power Efficient: ${statusHtml(h265.powerEfficient)}`],
+            [
+              'H.264 Decode',
+              `Supported: ${statusHtml(h264.supported)} &nbsp; Smooth: ${statusHtml(h264.smooth)} &nbsp; Power Efficient: ${statusHtml(h264.powerEfficient)}`,
+            ],
+            [
+              'H.265/HEVC Decode',
+              `Supported: ${statusHtml(h265.supported)} &nbsp; Smooth: ${statusHtml(h265.smooth)} &nbsp; Power Efficient: ${statusHtml(h265.powerEfficient)}`,
+            ],
             ['App Version', (await window.electronAPI.getAppVersion()) || 'Unknown'],
           ]
 

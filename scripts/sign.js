@@ -7,7 +7,7 @@ const crypto = require('crypto')
 require('dotenv').config({ quiet: true })
 
 exports.default = async function (config) {
-  if (!config?.path) return console.error('Missing config.path'), false
+  if (!config?.path) return (console.error('Missing config.path'), false)
 
   const filePath = config.path
   const fileExt = path.extname(filePath).toLowerCase()
