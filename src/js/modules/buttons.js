@@ -2,12 +2,7 @@ const { ipcRenderer } = require('electron')
 const utils = require('./utils')
 const fs = require('fs')
 const path = require('path')
-// Import the toggleFullscreen and togglePageElements from ui.js to avoid circular dependencies
-// These functions will be exposed via buttons.js and referenced by ui.js
-// Importing ui module for handleDashboardButton function - be careful of circular imports
-// Import the buttonStyles module directly to use it for checks and injection
 const buttonStyles = require('./buttonStyles')
-let ui
 
 // Shared icon constants for navigation elements
 const navIcons = {
@@ -17,12 +12,26 @@ const navIcons = {
   },
 }
 
-// To avoid circular dependency issues, we'll load ui lazily when needed
-function getUi() {
-  if (!ui) {
-    ui = require('./ui')
-  }
-  return ui
+// Header toggle icons (sidebar icons rotated 90 degrees)
+const headerToggleIcons = {
+  up: `
+  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
+     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
+      ${navIcons.sidebar.visible}
+    </div>
+  </div>`,
+  down: `
+  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
+     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
+      ${navIcons.sidebar.hidden}
+    </div>
+  </div>`,
+}
+
+// Fullscreen icons
+const fullscreenIcons = {
+  enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
+  exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8l-144 0c-13.3 0-24-10.7-24-24l0-144c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272l144 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z"/></svg>`,
 }
 
 /**
@@ -40,9 +49,7 @@ async function createHeaderButton(options) {
 
   // Check if button styles are present, inject them if not
   if (!document.getElementById('unifi-protect-viewer-button-styles')) {
-    // Inject button styles before proceeding
     buttonStyles.injectButtonStyles()
-    utils.logger.debug('Button styles were missing, injected them before creating button')
   }
 
   // Strict check to prevent duplicate injections
@@ -106,25 +113,34 @@ async function createHeaderButton(options) {
 }
 
 /**
- * Inject a fullscreen toggle button into the header
- * @returns {Promise<boolean>} True if button was injected successfully
+ * Inject a fullscreen toggle button into the header.
+ * @param {Function} onClick - Click handler (provided by orchestration layer)
+ * @returns {Promise<Function|null>} Updater function `(state) => void`, or null on failure
  */
-async function injectFullscreenButton() {
+async function injectFullscreenButton(onClick) {
   // Ensure button styles are present
   if (!document.getElementById('unifi-protect-viewer-button-styles')) {
     buttonStyles.injectButtonStyles()
-    utils.logger.debug('Button styles were missing, injected them before creating fullscreen button')
   }
 
-  // SVG icons for fullscreen states
-  const icons = {
-    enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
-    exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8l-144 0c-13.3 0-24-10.7-24-24l0-144c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272l144 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z"/></svg>`,
+  // Updater that will be returned and registered with the controller
+  const updater = (state) => {
+    const btn = document.getElementById('fullscreen-button')
+    if (!btn) return
+    btn.innerHTML = `
+      <div id="fullscreen-button-label" class="header-button-label">
+        ${state.isFullscreen ? 'Exit&nbsp;' : ''}Fullscreen
+      </div>
+      <div class="header-button-icon" title="Toggle Fullscreen (F11)">
+        <div id="fullscreen-icon">
+          ${state.isFullscreen ? fullscreenIcons.exit : fullscreenIcons.enter}
+        </div>
+      </div>
+    `
   }
 
-  // Function to update button content based on fullscreen state
-  const updateFullscreenButtonContent = (button) => {
-    // Query the fullscreen state from Electron
+  // Initial content updater for createHeaderButton (uses IPC query for first render)
+  const initialUpdate = (button) => {
     ipcRenderer
       .invoke('isFullScreen')
       .then((isFullscreen) => {
@@ -134,64 +150,58 @@ async function injectFullscreenButton() {
           </div>
           <div class="header-button-icon" title="Toggle Fullscreen (F11)">
             <div id="fullscreen-icon">
-              ${isFullscreen ? icons.exit : icons.enter}
+              ${isFullscreen ? fullscreenIcons.exit : fullscreenIcons.enter}
             </div>
           </div>
         `
       })
       .catch((error) => {
-        // Fallback if IPC fails
         utils.logError('Error getting fullscreen state:', error)
-        // Assume not fullscreen if error
-        button.innerHTML = `
-          <div id="fullscreen-button-label" class="header-button-label">
-            Fullscreen
-          </div>
-          <div class="header-button-icon" title="Toggle Fullscreen (F11)">
-            <div id="fullscreen-icon">
-              ${icons.enter}
-            </div>
-          </div>
-        `
       })
   }
 
-  // Listen for fullscreen state changes from Electron
-  ipcRenderer.on('fullscreen-change', (event, isFullscreen) => {
-    const button = document.getElementById('fullscreen-button')
-    if (button) {
-      updateFullscreenButtonContent(button)
-    }
-  })
-
-  // Use the generalized function to create the button
-  return createHeaderButton({
+  const created = await createHeaderButton({
     id: 'fullscreen-button',
     label: 'Fullscreen',
-    onClick: toggleFullscreen,
-    updateContent: updateFullscreenButtonContent,
-    icons: icons,
+    onClick: onClick || toggleFullscreen,
+    updateContent: initialUpdate,
   })
+
+  return created ? updater : null
 }
 
 /**
- * Inject a sidebar toggle button into the header
- * @returns {Promise<boolean>} True if button was injected successfully
+ * Inject a sidebar toggle button into the header.
+ * @param {Function} onClick - Click handler (provided by orchestration layer)
+ * @returns {Promise<Function|null>} Updater function `(state) => void`, or null on failure
  */
-async function injectSidebarButton() {
+async function injectSidebarButton(onClick) {
   // Ensure button styles are present
   if (!document.getElementById('unifi-protect-viewer-button-styles')) {
     buttonStyles.injectButtonStyles()
-    utils.logger.debug('Button styles were missing, injected them before creating sidebar button')
   }
 
-  // Function to update button content based on sidebar state
-  const updateSidebarButtonContent = async (button) => {
+  // Updater that reads authoritative state — no IPC or DOM re-reads needed
+  const updater = (state) => {
+    const btn = document.getElementById('sidebar-button')
+    if (!btn) return
+    btn.innerHTML = `
+      <div id="sidebar-button-label" class="header-button-label">
+        ${state.navHidden ? 'Show' : 'Hide'} Nav
+      </div>
+      <div class="header-button-icon" title="Toggle Sidebar">
+        <div id="sidebar-icon">
+          ${state.navHidden ? navIcons.sidebar.hidden : navIcons.sidebar.visible}
+        </div>
+      </div>
+    `
+  }
+
+  // Initial content updater for createHeaderButton (uses IPC query for first render)
+  const initialUpdate = async (button) => {
     try {
-      // Get config to check current nav state
       const config = (await ipcRenderer.invoke('configLoad')) || {}
       const isNavHidden = config.hideNav === true
-
       button.innerHTML = `
         <div id="sidebar-button-label" class="header-button-label">
           ${isNavHidden ? 'Show' : 'Hide'} Nav
@@ -204,182 +214,37 @@ async function injectSidebarButton() {
       `
     } catch (error) {
       utils.logError('Error getting sidebar state:', error)
-      // Default fallback
-      button.innerHTML = `
-        <div id="sidebar-button-label" class="header-button-label">
-          Toggle Sidebar
-        </div>
-        <div class="header-button-icon" title="Toggle Sidebar">
-          <div id="sidebar-icon">
-            ${navIcons.sidebar.visible}
-          </div>
-        </div>
-      `
     }
   }
 
-  // Function to toggle only the sidebar
-  const toggleSidebar = () => {
-    // Call the local togglePageElements function
-    togglePageElements({ toggleNav: true, toggleHeader: false })
-  }
-
-  // Use the generalized function to create the button
-  return createHeaderButton({
+  const created = await createHeaderButton({
     id: 'sidebar-button',
     label: 'Toggle Sidebar',
-    onClick: toggleSidebar,
-    updateContent: updateSidebarButtonContent,
+    onClick: onClick || (() => {}),
+    updateContent: initialUpdate,
     icons: navIcons.sidebar,
   })
+
+  return created ? updater : null
 }
 
 /**
- * Toggles fullscreen mode for the document
+ * Toggles fullscreen mode via IPC to the main process
  */
 function toggleFullscreen() {
-  // Use the IPC renderer to trigger fullscreen through Electron's API
-  // This matches how keyboard shortcuts handle fullscreen
   ipcRenderer.send('toggleFullscreen')
 }
-
-/**
- * Toggle visibility of the navigation and/or header elements
- * @param {Object} options - Options for toggling
- * @param {boolean} [options.toggleNav=true] - Whether to toggle the nav sidebar
- * @param {boolean} [options.toggleHeader=true] - Whether to toggle the header
- * @returns {Promise<void>} Promise resolving when toggle is complete
- */
-async function togglePageElements(options = {}) {
-  try {
-    // Set a global flag to indicate navigation toggle is in progress
-    window._navToggleInProgress = true
-
-    // Get the current configuration
-    const config = (await ipcRenderer.invoke('configLoad')) || {}
-
-    // Get navigation elements
-    const nav = document.querySelector('nav')
-    const header = document.querySelector('header')
-
-    if (!nav || !header) {
-      utils.logger.warn('Navigation elements not found')
-      window._navToggleInProgress = false
-      return
-    }
-
-    // Default behavior: toggle both elements unless specific toggle options are provided
-    const toggleNav = options.toggleNav !== undefined ? options.toggleNav : true
-    const toggleHeader = options.toggleHeader !== undefined ? options.toggleHeader : true
-
-    // Check if this is the ESC key toggling both (default behavior)
-    const isToggleAll = toggleNav && toggleHeader
-
-    // Get current visibility states
-    const navStyle = window.getComputedStyle(nav)
-    const headerStyle = window.getComputedStyle(header)
-    const isNavHidden = navStyle.display === 'none'
-    const isHeaderHidden = headerStyle.display === 'none'
-
-    // Create an object to hold just the navigation settings to save
-    const navSettings = {}
-
-    // For ESC key shortcut (toggle all) behavior
-    if (isToggleAll) {
-      // If everything is hidden, show both, otherwise hide both
-      const allHidden = isNavHidden && isHeaderHidden
-      const newState = !allHidden
-
-      // Update config and settings to save
-      navSettings.hideNav = newState
-      navSettings.hideHeader = newState
-
-      // Update the elements style
-      utils.setStyle(nav, 'display', newState ? 'none' : 'flex')
-      utils.setStyle(header, 'display', newState ? 'none' : 'flex')
-
-      // utils.logger.debug(`Toggling ALL navigation elements: ${newState ? 'hiding' : 'showing'}`)
-    } else {
-      // Handle individual element toggles
-
-      // For nav toggle (Alt+N)
-      if (toggleNav) {
-        const newNavState = !isNavHidden
-        navSettings.hideNav = newNavState
-        utils.setStyle(nav, 'display', newNavState ? 'none' : 'flex')
-        // utils.logger.debug(`Toggling nav sidebar: ${newNavState ? 'hiding' : 'showing'}`)
-
-        // Update sidebar button state immediately after style change
-        const sidebarButton = document.getElementById('sidebar-button')
-        if (sidebarButton) {
-          try {
-            sidebarButton.innerHTML = `
-              <div id="sidebar-button-label" class="header-button-label">
-                ${newNavState ? 'Show' : 'Hide'} Nav
-              </div>
-              <div class="header-button-icon" title="Toggle Sidebar">
-                <div id="sidebar-icon">
-                  ${newNavState ? navIcons.sidebar.hidden : navIcons.sidebar.visible}
-                </div>
-              </div>
-            `
-          } catch (error) {
-            // Log error but don't break the main toggle functionality
-            utils.logError('Error updating sidebar button content within togglePageElements:', error)
-          }
-        }
-      }
-
-      // For header toggle (Alt+H)
-      if (toggleHeader) {
-        const newHeaderState = !isHeaderHidden
-        navSettings.hideHeader = newHeaderState
-        utils.setStyle(header, 'display', newHeaderState ? 'none' : 'flex')
-
-        // Update the header toggle button icon immediately
-        const headerToggleButton = document.getElementById('header-toggle-button')
-        if (headerToggleButton && typeof window.updateHeaderToggleButton === 'function') {
-          // We need to pass the new state directly or call the function
-          // that can determine the state itself.
-          window.updateHeaderToggleButton(headerToggleButton)
-        }
-
-        // utils.logger.debug(`Toggling header: ${newHeaderState ? 'hiding' : 'showing'}`)
-      }
-    }
-
-    // Save settings using configSavePartial
-    // utils.logger.debug(
-    //   `Saving navigation settings: hideNav=${navSettings.hideNav}, hideHeader=${navSettings.hideHeader}`,
-    // )
-    await ipcRenderer.invoke('configSavePartial', navSettings)
-
-    // Update dashboard button visibility after toggling
-    await handleDashboardButton()
-
-    // Clear the toggle in progress flag after a short delay
-    setTimeout(() => {
-      window._navToggleInProgress = false
-    }, 100)
-  } catch (error) {
-    utils.logError('Error toggling navigation', error)
-    window._navToggleInProgress = false
-  }
-} // End of togglePageElements
 
 /**
  * Helper for dashboard button navigation
  */
 function triggerDashboardNavigation() {
-  // Get the URL up to the '/protect/' part
   const protectIndex = document.URL.indexOf('/protect/')
   const baseUrl = document.URL.substring(0, protectIndex + '/protect/'.length)
   const dashboardUrl = baseUrl + 'dashboard'
 
-  // Find the UniFi dashboard link
   const dashboardLink = document.querySelector('a[href*="/protect/dashboard"]')
 
-  // If the link is present, click it. Otherwise, navigate directly.
   if (dashboardLink) dashboardLink.click()
   else window.location.href = dashboardUrl
 }
@@ -387,39 +252,28 @@ function triggerDashboardNavigation() {
 /**
  * Dashboard button overlay function
  * Creates and injects the dashboard button into the DOM
- * Note: This only handles creation, not visibility - see handleDashboardButton for that logic
  */
 function injectDashboardButton() {
-  // Don't create duplicate buttons
   if (document.getElementById('dashboard-button')) return
 
-  // Ensure button styles are present
   if (!document.getElementById('unifi-protect-viewer-button-styles')) {
     buttonStyles.injectButtonStyles()
-    utils.logger.debug('Button styles were missing, injected them before creating dashboard button')
   }
 
-  // Create button element
   const button = document.createElement('button')
   button.id = 'dashboard-button'
   button.className = 'dashboard-button'
-
-  // Explicitly set to hidden initially
-  // This ensures the button is always hidden until handleDashboardButton explicitly shows it
   button.style.display = 'none'
 
-  // Load dashboard icon SVG
   const svgPath = path.join(__dirname, '../../img/dashboard-icon.svg')
   let dashboardSvg
   try {
     dashboardSvg = fs.readFileSync(svgPath, 'utf8')
   } catch (error) {
     console.error('Error reading dashboard SVG:', error)
-    // Fallback to text if SVG can't be loaded
     dashboardSvg = '<div>Dashboard</div>'
   }
 
-  // Set button content and click handler
   button.innerHTML = `
   <div style="display: flex;align-items: center;">
     <div style="margin-right:4px; font-size:18px;">←</div>
@@ -427,17 +281,14 @@ function injectDashboardButton() {
   </div>`
   button.onclick = triggerDashboardNavigation
 
-  // Add button to DOM
   document.body.appendChild(button)
 
-  // Create informational popup about keyboard shortcuts
   const showNavPopup = document.createElement('div')
   showNavPopup.id = 'show-nav-popup'
   showNavPopup.className = 'nav-popup'
   showNavPopup.innerHTML = `<div><kbd>Esc</kbd> Toggle Navigation</div>`
   document.body.appendChild(showNavPopup)
 
-  // Remove popup after animation completes
   setTimeout(() => {
     const popup = document.getElementById('show-nav-popup')
     if (popup) popup.remove()
@@ -447,59 +298,42 @@ function injectDashboardButton() {
 }
 
 /**
- * Function to handle dashboard button visibility
- * @returns {Promise<void>} Promise that resolves when visibility is handled
+ * Handle dashboard button visibility.
+ * Simplified: no global flags, just check DOM state directly.
+ * @returns {Promise<void>}
  */
 async function handleDashboardButton() {
-  // Inject the button if it doesn't exist yet
   injectDashboardButton()
 
-  // Check if we're already on dashboard page - never show button on dashboard
   if (document.URL.includes('/protect/dashboard')) {
     setDashboardButtonVisibility(false)
     return
   }
 
-  // Wait for navigation elements to be ready with a longer timeout
-  // This is important for initial page load and reloads
   try {
     await utils.waitUntil(
       () => document.querySelector('header') !== null && document.querySelector('nav') !== null,
-      2000, // Increased timeout to 5 seconds
+      2000,
     )
-  } catch (error) {
-    // utils.logger.debug('Navigation elements not found within timeout, proceeding with visible dashboard button')
+  } catch {
     setDashboardButtonVisibility(true)
     return
   }
 
-  // To handle potential race conditions with styles being applied,
-  // use a much shorter delay only on initial page load (not during toggle)
-  if (!window._navToggleInProgress) {
-    await utils.wait(50) // Reduced from 200ms to 50ms
-  }
-
-  // Check if nav sidebar is visible
   const nav = document.querySelector('nav')
-
-  // Use getComputedStyle to check if the nav is actually visible
-  // This works even if display style is not set inline
   let isNavVisible = false
 
   if (nav) {
     const navStyle = window.getComputedStyle(nav)
     isNavVisible = navStyle.display !== 'none' && navStyle.visibility !== 'hidden' && navStyle.opacity !== '0'
 
-    // Additional check for dimensions - if width or height is 0, it's not really visible
     if (nav.offsetWidth === 0 || nav.offsetHeight === 0) {
       isNavVisible = false
     }
   }
 
-  // More thorough check for dashboard link in the nav
   let hasDashboardLink = false
   if (isNavVisible && nav) {
-    // Look for links that contain "dashboard" in their href or text content
     const navLinks = nav.querySelectorAll('a')
     for (const link of navLinks) {
       if (
@@ -512,30 +346,8 @@ async function handleDashboardButton() {
     }
   }
 
-  // Show our dashboard button in these cases:
-  // - When we're not on dashboard page AND
-  // - (Nav is not visible OR nav doesn't have a dashboard link)
   const shouldShowButton = !isNavVisible || !hasDashboardLink
-
-  // Immediately set the button visibility
   setDashboardButtonVisibility(shouldShowButton)
-
-  // Special handling for initial page load
-  if (window._isInitialLoad) {
-    // utils.logger.debug('Initial load detected, forcing dashboard button visibility re-evaluation')
-    // Force dashboard button visibility check again after a slight delay
-    // This helps ensure the correct visibility on initial page load
-    setTimeout(() => {
-      // Double-check visibility if this is initial load
-      const nav = document.querySelector('nav')
-      const isNavVisible = nav && window.getComputedStyle(nav).display !== 'none'
-      const updatedShouldShow = !isNavVisible || !hasDashboardLink
-
-      if (updatedShouldShow !== shouldShowButton) {
-        setDashboardButtonVisibility(updatedShouldShow)
-      }
-    }, 300)
-  }
 }
 
 /**
@@ -550,101 +362,47 @@ function setDashboardButtonVisibility(show) {
 }
 
 /**
- * Generalizes button creation for navigation sidebar buttons
+ * Generalizes button creation for navigation sidebar buttons.
+ * Simplified: no per-button MutationObserver — the controller + ensureButtonsInjected handles re-injection.
  * @param {Object} options - Button creation options
  * @param {string} options.id - Button ID
  * @param {string} options.tooltip - Button tooltip text
  * @param {Function} options.onClick - Click handler function
  * @param {string} options.content - HTML content for the button (SVG icon, etc.)
- * @param {Function} options.updateContent - Function to update button content (gets called after creation)
  * @returns {Promise<boolean>} True if button was injected successfully
  */
 async function createNavButton(options) {
-  const { id, tooltip, onClick, content, updateContent } = options
+  const { id, tooltip, onClick, content } = options
 
-  // Check if button styles are present, inject them if not
   if (!document.getElementById('unifi-protect-viewer-button-styles')) {
-    // Inject button styles before proceeding
     buttonStyles.injectButtonStyles()
-    utils.logger.debug('Button styles were missing, injected them before creating nav button')
   }
 
-  // Create a function to generate the button element
-  const createButtonElement = () => {
-    // Create a standalone button element instead of mimicking the existing structure
+  // Avoid duplicate insertions
+  if (document.getElementById(id)) {
+    return true
+  }
+
+  try {
+    await utils.waitUntil(() => document.querySelector('nav') !== null, 5000)
+
+    // Re-check after wait
+    if (document.getElementById(id)) {
+      return true
+    }
+
+    const nav = document.querySelector('nav')
+    if (!nav) return false
+
     const buttonElement = document.createElement('button')
     buttonElement.id = id
     buttonElement.className = 'custom-nav-button'
     buttonElement.title = tooltip || ''
     buttonElement.setAttribute('role', 'button')
     buttonElement.innerHTML = content
-
-    // Set click handler
     buttonElement.onclick = onClick
 
-    return buttonElement
-  }
-
-  // Function to insert the button into the nav
-  const insertButton = () => {
-    // Avoid duplicate insertions
-    if (document.getElementById(id)) {
-      return false
-    }
-
-    const nav = document.querySelector('nav')
-    if (!nav) {
-      return false
-    }
-
-    const buttonElement = createButtonElement()
-
-    // Insert directly into the nav element
     nav.prepend(buttonElement)
-
-    return true
-  }
-
-  try {
-    // Wait for the nav element to be available
-    await utils.waitUntil(() => document.querySelector('nav') !== null, 5000)
-
-    // First insertion attempt
-    const wasInserted = insertButton()
-
-    // Set up a MutationObserver to detect when our button is removed
-    const observer = new MutationObserver((mutations) => {
-      // Check if our button is still in the DOM
-      if (!document.getElementById(id)) {
-        // Button was removed, try to add it back
-        const wasInserted = insertButton()
-        if (wasInserted && typeof updateContent === 'function') {
-          // If inserted and an update function exists, call it immediately
-          const buttonElement = document.getElementById(id)
-          if (buttonElement) {
-            updateContent(buttonElement)
-          }
-        }
-      }
-    })
-
-    // Watch for changes in the body that might affect our nav
-    const targetNode = document.body
-    const config = {
-      childList: true, // Watch for child additions/removals
-      subtree: true, // Watch the entire subtree
-      attributes: false, // No need to watch attributes
-    }
-
-    // Start observing
-    observer.observe(targetNode, config)
-
-    // Store the observer reference on window to prevent garbage collection
-    if (!window._navButtonObservers) {
-      window._navButtonObservers = {}
-    }
-    window._navButtonObservers[id] = observer
-
     return true
   } catch (error) {
     utils.logError(`Error injecting ${id} nav button`, error)
@@ -653,82 +411,28 @@ async function createNavButton(options) {
 }
 
 /**
- * Inject a red circle button into the nav sidebar as a demonstration
- * @returns {Promise<boolean>} True if button was injected successfully
+ * Inject the header toggle button into the nav sidebar.
+ * @param {Function} onClick - Click handler (provided by orchestration layer)
+ * @returns {Promise<Function|null>} Updater function `(state) => void`, or null on failure
  */
-async function injectHeaderToggleButton() {
-  // Create wrappers with the sidebar icons rotated by 90 degrees
-  const headerToggleButtonUp = `
-  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
-     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
-      ${navIcons.sidebar.visible}
-    </div>
-  </div>
-  `
-
-  const headerToggleButtonDown = `
-  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
-     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
-      ${navIcons.sidebar.hidden}
-    </div>
-  </div>
-  `
-
-  // Function to update button content based on header visibility
-  const updateHeaderToggleButtonContent = (button) => {
-    const header = document.querySelector('header')
-    if (!button || !header) return
-    try {
-      const headerStyle = window.getComputedStyle(header)
-      const isHeaderHidden = headerStyle.display === 'none'
-      button.innerHTML = isHeaderHidden ? headerToggleButtonDown : headerToggleButtonUp
-    } catch (error) {
-      utils.logError('Error updating header toggle button content:', error)
-      // Optionally set a default state or leave as is
-    }
+async function injectHeaderToggleButton(onClick) {
+  // Updater reads authoritative state — no DOM re-read needed (fixes the chevron bug)
+  const updater = (state) => {
+    const btn = document.getElementById('header-toggle-button')
+    if (!btn) return
+    btn.innerHTML = state.headerHidden ? headerToggleIcons.down : headerToggleIcons.up
   }
 
-  // Expose the update function globally for togglePageElements to call
-  window.updateHeaderToggleButton = updateHeaderToggleButtonContent
-
-  // Click handler for the button
-  const handleHeaderToggleClick = () => {
-    // No need to update button here, togglePageElements will do it
-    togglePageElements({ toggleHeader: true, toggleNav: false })
-  }
-
-  // Use the generalized function to create the button
   const created = await createNavButton({
     id: 'header-toggle-button',
     tooltip: 'Toggle Header',
-    onClick: handleHeaderToggleClick,
-    content: headerToggleButtonUp, // Initial content, will be updated
-    updateContent: updateHeaderToggleButtonContent, // Pass the update function
+    onClick: onClick || (() => {}),
+    content: headerToggleIcons.up,
   })
 
-  // Update content after creation, with a slight delay for initial styles
-  const button = document.getElementById('header-toggle-button')
-  if (button) {
-    await utils.wait(100) // Add delay
-    updateHeaderToggleButtonContent(button)
-  }
-
-  // Set up a MutationObserver to watch for header visibility changes
-  const header = document.querySelector('header')
-  if (header && button) {
-    if (!window._headerToggleButtonObserver) {
-      const observer = new MutationObserver(() => {
-        updateHeaderToggleButtonContent(button)
-      })
-      observer.observe(header, { attributes: true, attributeFilter: ['style', 'class'] })
-      window._headerToggleButtonObserver = observer
-    }
-  }
-
-  return created
+  return created ? updater : null
 }
 
-// Export the functions
 module.exports = {
   createHeaderButton,
   createNavButton,
@@ -736,7 +440,6 @@ module.exports = {
   injectSidebarButton,
   injectHeaderToggleButton,
   toggleFullscreen,
-  togglePageElements,
   triggerDashboardNavigation,
   injectDashboardButton,
   handleDashboardButton,

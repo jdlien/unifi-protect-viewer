@@ -195,7 +195,36 @@ function injectButtonStyles() {
   }
 }
 
+let styleCheckerInterval = null
+
+/**
+ * Sets up a periodic check to ensure button styles remain active.
+ * If the styles get removed by the application's own operations, re-injects them.
+ */
+function setupStyleChecker() {
+  stopStyleChecker()
+
+  styleCheckerInterval = setInterval(() => {
+    if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+      injectButtonStyles()
+      utils.logger.debug('Button styles were missing, re-injected during routine check')
+    }
+  }, 5000)
+}
+
+/**
+ * Stops the periodic style checker.
+ */
+function stopStyleChecker() {
+  if (styleCheckerInterval) {
+    clearInterval(styleCheckerInterval)
+    styleCheckerInterval = null
+  }
+}
+
 module.exports = {
   injectButtonStyles,
-  BUTTON_STYLES, // Export the styles too in case they're needed elsewhere
+  setupStyleChecker,
+  stopStyleChecker,
+  BUTTON_STYLES,
 }

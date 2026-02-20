@@ -58,14 +58,13 @@ function setupIpcHandlers(mainWindow, store) {
   })
 
   // Handle fullscreen toggle
+  // Note: We do NOT send fullscreen-change here. The enter-full-screen / leave-full-screen
+  // window events below are the single source of truth for fullscreen state changes.
   ipcMain.on('toggleFullscreen', (event) => {
     utils.log('Fullscreen toggle requested')
     if (mainWindow) {
       const isFullScreen = mainWindow.isFullScreen()
       mainWindow.setFullScreen(!isFullScreen)
-
-      // Notify renderer about fullscreen state change
-      event.sender.send('fullscreen-change', !isFullScreen)
     }
   })
 

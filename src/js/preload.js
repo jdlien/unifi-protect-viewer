@@ -1,10 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-const ui = require('./modules/ui.js')
+const uiController = require('./modules/uiController.js')
 const buttons = require('./modules/buttons.js')
 const navigation = require('./modules/navigation.js')
 const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
+const buttonStyles = require('./modules/buttonStyles.js')
 
 // Only import renderer-specific functions from updates module
 // to avoid loading electron-updater in the renderer process
@@ -15,11 +16,38 @@ const {
   checkForUpdates,
 } = require('./modules/updates.js')
 
-window.addEventListener('DOMContentLoaded', () => {
+/**
+ * Ensure all custom buttons are injected and registered with the controller.
+ * Idempotent — safe to call repeatedly (e.g. after SPA navigation).
+ */
+async function ensureButtonsInjected() {
+  if (!window.location.href.includes('/protect/')) return
+
+  // Ensure styles
+  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
+    buttonStyles.injectButtonStyles()
+  }
+
+  // Re-inject + re-register any missing buttons
+  if (!document.getElementById('sidebar-button')) {
+    const updater = await buttons.injectSidebarButton(() => uiController.toggleNav())
+    if (updater) uiController.registerButton('sidebar-button', updater)
+  }
+  if (!document.getElementById('header-toggle-button')) {
+    const updater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
+    if (updater) uiController.registerButton('header-toggle-button', updater)
+  }
+  if (!document.getElementById('fullscreen-button')) {
+    const updater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
+    if (updater) uiController.registerButton('fullscreen-button', updater)
+  }
+  await buttons.handleDashboardButton()
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
   utils.log('Page loaded, URL:', window.location.href)
   timeouts.clearTimeout('connection')
 
-  // Only initialize navigation and UI components on app pages (not error or config)
   const currentUrl = window.location.href
   const isAppPage = !currentUrl.includes('/html/error.html') && !currentUrl.includes('/html/config.html')
   const isProtectPage = currentUrl.includes('/protect/')
@@ -27,35 +55,53 @@ window.addEventListener('DOMContentLoaded', () => {
   if (isAppPage) {
     navigation.initializeWithPolling()
 
-    // Initialize common UI elements like the fullscreen button
-    ui.initializeCommonUI().catch((error) => {
-      utils.logError('Failed to initialize common UI elements', error)
-    })
-
-    // For Protect pages, ensure buttons are injected even if they're not dashboard pages
     if (isProtectPage) {
-      // Add a small delay to ensure DOM is ready
-      setTimeout(() => {
-        // First ensure styles are injected
-        const buttonStyles = require('./modules/buttonStyles.js')
-        if (!document.getElementById('unifi-protect-viewer-button-styles')) {
-          buttonStyles.injectButtonStyles()
-          utils.log('Injected button styles during page load')
+      // 1. Initialize the controller (loads config, sets state, waits for DOM, enforces, sets up observer)
+      try {
+        await uiController.initialize()
+      } catch (error) {
+        utils.logError('Failed to initialize UI controller', error)
+      }
+
+      // 2. Start the button style checker
+      buttonStyles.setupStyleChecker()
+
+      // 3. Inject buttons and register updaters with the controller
+      try {
+        const sidebarUpdater = await buttons.injectSidebarButton(() => uiController.toggleNav())
+        if (sidebarUpdater) uiController.registerButton('sidebar-button', sidebarUpdater)
+
+        const headerToggleUpdater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
+        if (headerToggleUpdater) uiController.registerButton('header-toggle-button', headerToggleUpdater)
+
+        const fullscreenUpdater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
+        if (fullscreenUpdater) uiController.registerButton('fullscreen-button', fullscreenUpdater)
+
+        await buttons.handleDashboardButton()
+      } catch (error) {
+        utils.logError('Failed to inject buttons', error)
+      }
+
+      // 4. Register dashboard button as state change listener (with async hygiene)
+      let dashboardUpdatePending = false
+      uiController.onStateChange(async () => {
+        if (dashboardUpdatePending) return
+        dashboardUpdatePending = true
+        try {
+          await buttons.handleDashboardButton()
+        } catch (err) {
+          utils.logError('Error updating dashboard button from state change:', err)
+        } finally {
+          dashboardUpdatePending = false
         }
+      })
 
-        // Then inject buttons
-        buttons.injectFullscreenButton().catch((err) => utils.logError('Failed to inject fullscreen button:', err))
-        buttons.injectSidebarButton().catch((err) => utils.logError('Failed to inject sidebar button:', err))
-        buttons.injectHeaderToggleButton().catch((err) => utils.logError('Failed to inject header toggle button:', err))
-
-        // Update dashboard button visibility
-        buttons.handleDashboardButton().catch((err) => utils.logError('Failed to handle dashboard button:', err))
-
-        // Apply navigation preferences
-        ui.applyUserNavigationPreferences().catch((err) =>
-          utils.logError('Failed to apply navigation preferences:', err),
-        )
-      }, 300) // Short delay to ensure DOM is ready
+      // 5. Register URL-change-aware listener for button re-injection
+      uiController.onStateChange(() => {
+        ensureButtonsInjected().catch((err) => {
+          utils.logError('Error in ensureButtonsInjected:', err)
+        })
+      })
     }
   }
 
@@ -64,23 +110,21 @@ window.addEventListener('DOMContentLoaded', () => {
     initializeUpdateListeners()
   }, 5000)
 
-  // Listen for toggle-navigation events from the main process (ESC key)
+  // Route IPC toggle events through the controller
   ipcRenderer.on('toggle-navigation', () => {
-    buttons.togglePageElements().catch((error) => {
+    uiController.toggleAll().catch((error) => {
       utils.logError('Error toggling navigation from menu:', error)
     })
   })
 
-  // Listen for toggle-nav-only events from the main process (Alt+N)
   ipcRenderer.on('toggle-nav-only', () => {
-    buttons.togglePageElements({ toggleNav: true, toggleHeader: false }).catch((error) => {
+    uiController.toggleNav().catch((error) => {
       utils.logError('Error toggling nav from menu:', error)
     })
   })
 
-  // Listen for toggle-header-only events from the main process (Alt+H)
   ipcRenderer.on('toggle-header-only', () => {
-    buttons.togglePageElements({ toggleNav: false, toggleHeader: true }).catch((error) => {
+    uiController.toggleHeader().catch((error) => {
       utils.logError('Error toggling header from menu:', error)
     })
   })
@@ -92,8 +136,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Listen for toggle-widget-panel events from the main process
   ipcRenderer.on('toggle-widget-panel', () => {
-    // Get the widget panel expand button and click it directly
-    // This lets UniFi Protect handle the state natively
     const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
     if (expandButton) {
       expandButton.click()
@@ -126,11 +168,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // UI controls
   ui: {
-    togglePageElements: () => buttons.togglePageElements(),
-    toggleNavOnly: () => buttons.togglePageElements({ toggleNav: true, toggleHeader: false }),
-    toggleHeaderOnly: () => buttons.togglePageElements({ toggleNav: false, toggleHeader: true }),
+    toggleAll: () => uiController.toggleAll(),
+    togglePageElements: () => uiController.toggleAll(), // backward compat alias
+    toggleNavOnly: () => uiController.toggleNav(),
+    toggleHeaderOnly: () => uiController.toggleHeader(),
     toggleWidgetPanel: () => {
-      // Click the widget panel button directly, letting UniFi Protect handle state
       const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
       if (expandButton) expandButton.click()
     },
