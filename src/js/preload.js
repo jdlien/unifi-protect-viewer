@@ -158,6 +158,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     reset: () => ipcRenderer.send('reset'),
     restart: () => ipcRenderer.send('restart'),
     showResetConfirmation: () => ipcRenderer.invoke('showResetConfirmation'),
+    getDiagnostics: () => ipcRenderer.invoke('getSystemDiagnostics'),
   },
 
   // Navigation
@@ -185,9 +186,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateError: (callback) => ipcRenderer.on('update-error', (_, message) => callback(message)),
     onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (_, progress) => callback(progress)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_, info) => callback(info)),
-    checkForUpdates: () => ipcRenderer.send('check-for-updates'),
-    downloadUpdate: () => ipcRenderer.send('download-update'),
-    installUpdate: () => ipcRenderer.send('install-update'),
+    checkForUpdates: () => ipcRenderer.invoke('updates:check-manual'),
+    downloadUpdate: () => ipcRenderer.invoke('updates:download'),
+    installUpdate: () => ipcRenderer.invoke('updates:install'),
   },
 
   // Timeout management
@@ -201,6 +202,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reset: () => ipcRenderer.send('reset'),
   restart: () => ipcRenderer.send('restart'),
 
-  // App version - accessed by About page
-  appVersion: ipcRenderer.sendSync('get-app-version'),
+  // App version
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 })

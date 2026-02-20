@@ -97,6 +97,17 @@ function setupIpcHandlers(mainWindow, store) {
     menu.updateDashboardState(isDashboardPage)
   })
 
+  // Return system diagnostics for the config page
+  ipcMain.handle('getSystemDiagnostics', () => {
+    return {
+      hardwareAcceleration: app.isHardwareAccelerationEnabled(),
+      platform: process.platform,
+      arch: process.arch,
+      electronVersion: process.versions.electron,
+      chromeVersion: process.versions.chrome,
+    }
+  })
+
   // Handle reset confirmation dialog
   ipcMain.handle('showResetConfirmation', async (event) => {
     const dialogs = require('./dialogs')

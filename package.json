@@ -63,6 +63,7 @@
     ]
   },
   "devDependencies": {
+    "@electron/fuses": "^2.0.0",
     "@electron/packager": "^19.0.5",
     "archiver": "^7.0.1",
     "electron": "^40.6.0",
@@ -78,97 +79,5 @@
     "dotenv": "^17.3.1",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.3"
-  },
-  "build": {
-    "appId": "com.jdlien.unifi-protect-viewer",
-    "productName": "UniFi Protect Viewer",
-    "mac": {
-      "category": "public.app-category.utilities",
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "publish": [
-        "github"
-      ],
-      "icon": "src/img/icon.icns",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": true,
-      "identity": "Joseph Lien (A93Q7MKECL)",
-      "timestamp": "http://timestamp.apple.com/ts01",
-      "artifactName": "UniFi-Protect-Viewer-${arch}.${ext}"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "icon": "src/img/256.png",
-      "publish": [
-        "github"
-      ],
-      "signtoolOptions": {
-        "sign": "./scripts/sign.js",
-        "certificateSubjectName": "SSL.com",
-        "signingHashAlgorithms": [
-          "sha256"
-        ]
-      },
-      "artifactName": "UniFi-Protect-Viewer-Setup-${arch}.${ext}"
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility",
-      "publish": [
-        "github"
-      ],
-      "artifactName": "UniFi-Protect-Viewer-${arch}.${ext}"
-    },
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "jdlien",
-        "repo": "unifi-protect-viewer",
-        "releaseType": "release",
-        "vPrefixedTagName": true,
-        "publishAutoUpdate": true
-      }
-    ],
-    "files": [
-      "**/*",
-      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
-      "!**/node_modules/*/{.git,.gitignore,.github,.npmignore,.prettierignore,.editorconfig}",
-      "!**/node_modules/.bin",
-      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
-      "!node_modules/.cache/*",
-      "!**/.cache/*",
-      "!.{git,github,vscode}",
-      "!{builds,releases,scripts,__tests__,test,coverage}",
-      "!{README.md,.git,.vscode,*.zip}"
-    ],
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "generateUpdatesFilesForAllChannels": true
   }
 }

@@ -463,6 +463,12 @@ function setupUpdateIpcHandlers(mainWindow) {
   const autoUpdaterInstance = getAutoUpdater()
   if (!autoUpdaterInstance) return
 
+  // Clean up old handlers if they exist - prevents duplicates on HMR
+  ipcMain.removeHandler('updates:check-manual')
+  ipcMain.removeHandler('updates:download')
+  ipcMain.removeHandler('updates:install')
+  ipcMain.removeHandler('get-app-version')
+
   // --- IPC Handlers ---
 
   // Manual check triggered from Renderer/Menu -> Use simplified dialog function
@@ -506,15 +512,10 @@ function setupUpdateIpcHandlers(mainWindow) {
     // No return needed as app will quit
   })
 
-  // Get app version (can remain synchronous)
-  ipcMain.on('get-app-version', (event) => {
-    event.returnValue = app.getVersion()
+  // Get app version
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion()
   })
-
-  // Clean up old handlers if they exist - prevents duplicates on HMR
-  ipcMain.removeHandler('check-for-updates')
-  ipcMain.removeHandler('download-update')
-  ipcMain.removeHandler('install-update')
 }
 
 /**

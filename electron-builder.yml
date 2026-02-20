@@ -1,35 +1,68 @@
 appId: 'com.jdlien.unifi-protect-viewer'
 productName: 'UniFi Protect Viewer'
+
+asar: true
+asarUnpack:
+  - 'node_modules/**/*.node'
+afterPack: './scripts/afterPack.js'
+
 directories:
-  output: 'releases'
-  buildResources: 'resources'
+  output: 'dist'
+  buildResources: 'build'
+
 files:
   - 'main.js'
   - 'src/**/*'
   - 'node_modules/**/*'
   - 'package.json'
+
 publish:
   provider: 'github'
   owner: 'jdlien'
   repo: 'unifi-protect-viewer'
   releaseType: 'release'
   vPrefixedTagName: true
+  publishAutoUpdate: true
+
+generateUpdatesFilesForAllChannels: true
+
 mac:
   category: 'public.app-category.utilities'
   target:
+    - 'dmg'
     - 'zip'
+  icon: 'src/img/icon.icns'
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: 'build/entitlements.mac.plist'
   entitlementsInherit: 'build/entitlements.mac.plist'
   darkModeSupport: true
+  notarize: true
+  identity: 'Joseph Lien (A93Q7MKECL)'
+  timestamp: 'http://timestamp.apple.com/ts01'
+  artifactName: 'UniFi-Protect-Viewer-${arch}.${ext}'
+
 win:
   target:
-    - 'zip'
-  sign: './scripts/sign.js'
-  signingHashAlgorithms: ['sha256']
-  certificateSubjectName: 'SSL.com'
+    - target: 'nsis'
+      arch:
+        - 'x64'
+        - 'arm64'
+    - target: 'zip'
+      arch:
+        - 'x64'
+        - 'arm64'
+  icon: 'src/img/256.png'
+  signtoolOptions:
+    sign: './scripts/sign.js'
+    certificateSubjectName: 'SSL.com'
+    signingHashAlgorithms:
+      - 'sha256'
+  artifactName: 'UniFi-Protect-Viewer-Setup-${arch}.${ext}'
+
 linux:
   target:
-    - 'zip'
+    - 'AppImage'
+    - 'deb'
   category: 'Utility'
+  artifactName: 'UniFi-Protect-Viewer-${arch}.${ext}'

@@ -289,3 +289,29 @@ small {
   margin-bottom: 0;
   cursor: pointer;
 }
+
+/* Diagnostics table */
+.diagnostics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.diagnostics-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #3333;
+}
+
+.diagnostics-table td:first-child {
+  color: #aaa;
+  white-space: nowrap;
+  padding-right: 16px;
+}
+
+.diagnostics-table .status-yes {
+  color: #4caf50;
+}
+
+.diagnostics-table .status-no {
+  color: #f44336;
+}
