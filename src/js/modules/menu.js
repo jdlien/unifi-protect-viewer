@@ -11,14 +11,21 @@ const windowManager = require('./window')
 const isDev = process.env.NODE_ENV === 'development'
 
 let mainMenu // Store the menu instance globally within the module
+let mainWindowRef = null
+let storeRef = null
+
+// Dynamic state used when building the menu template
+let visibilityState = { navHidden: false, headerHidden: false }
+let fullscreenState = false
 
 /**
- * Setup application menu
- * @param {BrowserWindow} mainWindow - The main browser window
- * @param {Object} store - The electron-store instance
+ * Build the menu template using current dynamic state
  */
-function setupApplicationMenu(mainWindow, store) {
-  const template = [
+function buildMenuTemplate() {
+  const mainWindow = mainWindowRef
+  const store = storeRef
+
+  return [
     {
       label: 'File',
       submenu: [
@@ -99,7 +106,7 @@ function setupApplicationMenu(mainWindow, store) {
         { role: 'reload' },
         { role: 'togglefullscreen', accelerator: process.platform === 'darwin' ? 'Ctrl+Cmd+F' : null },
         {
-          label: 'Toggle Fullscreen (F11)',
+          label: fullscreenState ? 'Exit Fullscreen (F11)' : 'Enter Fullscreen (F11)',
           accelerator: 'F11',
           click: () => {
             mainWindow.setFullScreen(!mainWindow.isFullScreen())
@@ -107,21 +114,23 @@ function setupApplicationMenu(mainWindow, store) {
         },
         { type: 'separator' },
         {
-          label: 'Toggle All Navigation',
+          label: visibilityState.navHidden && visibilityState.headerHidden
+            ? 'Show All Navigation'
+            : 'Hide All Navigation',
           accelerator: 'Escape',
           click: () => {
             mainWindow.webContents.send('toggle-navigation')
           },
         },
         {
-          label: 'Toggle Side Navigation',
+          label: visibilityState.navHidden ? 'Show Side Navigation' : 'Hide Side Navigation',
           accelerator: 'Alt+N',
           click: () => {
             mainWindow.webContents.send('toggle-nav-only')
           },
         },
         {
-          label: 'Toggle Header Only',
+          label: visibilityState.headerHidden ? 'Show Header' : 'Hide Header',
           accelerator: 'Alt+H',
           click: () => {
             mainWindow.webContents.send('toggle-header-only')
@@ -178,23 +187,27 @@ function setupApplicationMenu(mainWindow, store) {
       ],
     },
   ]
+}
 
-  // Add development menu in dev mode
-  // Reserved for future use, we don't need this now
-  // if (isDev) {
-  //   template.push({
-  //     label: 'Development',
-  //     submenu: [
-  //       {
-  //         label: 'Toggle Developer Tools',
-  //         role: 'toggleDevTools',
-  //       },
-  //     ],
-  //   })
-  // }
-
-  mainMenu = Menu.buildFromTemplate(template)
+/**
+ * Rebuild and re-set the application menu from current state
+ */
+function rebuildMenu() {
+  if (!mainWindowRef) return
+  mainMenu = Menu.buildFromTemplate(buildMenuTemplate())
   Menu.setApplicationMenu(mainMenu)
+}
+
+/**
+ * Setup application menu
+ * @param {BrowserWindow} mainWindow - The main browser window
+ * @param {Object} store - The electron-store instance
+ */
+function setupApplicationMenu(mainWindow, store) {
+  mainWindowRef = mainWindow
+  storeRef = store
+
+  rebuildMenu()
 
   // Set up listeners for navigation events to update menu
   mainWindow.webContents.on('did-navigate', () => {
@@ -252,8 +265,28 @@ function updateDashboardState(isDashboardPage) {
   }
 }
 
+/**
+ * Update menu labels to reflect current nav/header visibility state
+ * @param {Object} uiState - { navHidden: boolean, headerHidden: boolean }
+ */
+function updateUIState(uiState) {
+  visibilityState = uiState
+  rebuildMenu()
+}
+
+/**
+ * Update fullscreen menu label
+ * @param {boolean} isFullscreen - Whether the window is in fullscreen
+ */
+function updateFullscreenState(isFullscreen) {
+  fullscreenState = isFullscreen
+  rebuildMenu()
+}
+
 module.exports = {
   setupApplicationMenu,
   updateMenuState,
   updateDashboardState,
+  updateUIState,
+  updateFullscreenState,
 }

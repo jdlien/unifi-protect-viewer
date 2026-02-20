@@ -31,6 +31,8 @@ let navHeaderObserver = null
 let bodyObserver = null
 let enforcementTimer = null
 let fullscreenHandler = null
+let trackedNav = null
+let trackedHeader = null
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -73,6 +75,13 @@ async function persistState() {
   settings.hideNav = state.navHidden
   settings.hideHeader = state.headerHidden
   await ipcRenderer.invoke('configSavePartial', settings)
+}
+
+function notifyMainProcess() {
+  ipcRenderer.send('update-ui-state', {
+    navHidden: state.navHidden,
+    headerHidden: state.headerHidden,
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +131,9 @@ async function initialize() {
 
   // h. Mark ready
   state.initialized = true
+
+  // i. Sync menu labels with persisted state
+  notifyMainProcess()
 }
 
 /** Returns a shallow copy of the current state */
@@ -152,6 +164,7 @@ async function toggleAll() {
     applyHeaderState()
     notifyButtons()
     notifyStateChangeListeners()
+    notifyMainProcess()
     await persistState()
   } catch (err) {
     utils.logError('Error toggling all:', err)
@@ -169,6 +182,7 @@ async function toggleNav() {
     applyNavState()
     notifyButtons()
     notifyStateChangeListeners()
+    notifyMainProcess()
     await persistState()
   } catch (err) {
     utils.logError('Error toggling nav:', err)
@@ -186,6 +200,7 @@ async function toggleHeader() {
     applyHeaderState()
     notifyButtons()
     notifyStateChangeListeners()
+    notifyMainProcess()
     await persistState()
   } catch (err) {
     utils.logError('Error toggling header:', err)
@@ -281,6 +296,10 @@ function setupObserver() {
   const nav = document.querySelector('nav')
   const header = document.querySelector('header')
 
+  // Track current DOM references to detect React replacements
+  trackedNav = nav
+  trackedHeader = header
+
   if (nav || header) {
     navHeaderObserver = new MutationObserver(() => {
       if (!state.toggleInProgress) {
@@ -296,15 +315,26 @@ function setupObserver() {
     }
   }
 
-  // Watch body for element additions (React re-renders that recreate nav/header)
+  // Watch body for React re-renders that replace nav/header elements
   if (document.body) {
     bodyObserver = new MutationObserver(() => {
-      const newNav = document.querySelector('nav')
-      const newHeader = document.querySelector('header')
-      if (newNav || newHeader) {
-        // Re-setup to observe potentially new elements
-        setupObserver()
-        enforceCurrentState()
+      const currentNav = document.querySelector('nav')
+      const currentHeader = document.querySelector('header')
+
+      // Only act when elements are actually replaced (different DOM nodes)
+      const navReplaced = currentNav !== trackedNav
+      const headerReplaced = currentHeader !== trackedHeader
+
+      if (navReplaced || headerReplaced) {
+        trackedNav = currentNav
+        trackedHeader = currentHeader
+
+        if (currentNav || currentHeader) {
+          setupObserver()
+          enforceCurrentState()
+          // Trigger button re-injection since container elements were replaced
+          notifyStateChangeListeners()
+        }
       }
     })
     bodyObserver.observe(document.body, { childList: true, subtree: true })
@@ -329,6 +359,8 @@ function destroy() {
   }
   buttonRegistry.clear()
   stateChangeListeners.length = 0
+  trackedNav = null
+  trackedHeader = null
   state.initialized = false
 }
 

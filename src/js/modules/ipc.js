@@ -80,6 +80,8 @@ function setupIpcHandlers(mainWindow, store) {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send('fullscreen-change', true)
       }
+      const menu = require('./menu')
+      menu.updateFullscreenState(true)
     })
 
     mainWindow.on('leave-full-screen', () => {
@@ -87,14 +89,21 @@ function setupIpcHandlers(mainWindow, store) {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send('fullscreen-change', false)
       }
+      const menu = require('./menu')
+      menu.updateFullscreenState(false)
     })
   }
 
   // Handle menu state updates from renderer
   ipcMain.on('update-dashboard-state', (event, isDashboardPage) => {
-    // Get the menu module to update the dashboard state
     const menu = require('./menu')
     menu.updateDashboardState(isDashboardPage)
+  })
+
+  // Handle UI visibility state updates from renderer (for dynamic menu labels)
+  ipcMain.on('update-ui-state', (event, uiState) => {
+    const menu = require('./menu')
+    menu.updateUIState(uiState)
   })
 
   // Return system diagnostics for the config page
