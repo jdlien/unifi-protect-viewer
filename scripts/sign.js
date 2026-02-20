@@ -23,8 +23,8 @@ exports.default = async function (config) {
   const codeSignToolPath = process.env.CODE_SIGN_TOOL_PATH || path.join(os.homedir(), 'bin', 'CodeSignTool')
 
   if (!username || !password || !credentialId || !totpSecretRaw) {
-    console.error('Missing signing environment variables')
-    return false
+    console.log('SSL.com signing credentials not configured — skipping (signing may be handled externally)')
+    return true // Return true to avoid failing the build; CI uses Azure Trusted Signing post-build
   }
 
   const totpSecret = totpSecretRaw.includes('secret=') ? totpSecretRaw.split('secret=')[1].split('&')[0] : totpSecretRaw

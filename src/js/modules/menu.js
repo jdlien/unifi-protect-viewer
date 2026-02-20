@@ -15,7 +15,7 @@ let mainWindowRef = null
 let storeRef = null
 
 // Dynamic state used when building the menu template
-let visibilityState = { navHidden: false, headerHidden: false }
+let visibilityState = { navHidden: false, headerHidden: false, widgetPanelExpanded: false }
 let fullscreenState = false
 
 /**
@@ -137,7 +137,7 @@ function buildMenuTemplate() {
           },
         },
         {
-          label: 'Toggle Widget Panel',
+          label: visibilityState.widgetPanelExpanded ? 'Hide Widget Panel' : 'Show Widget Panel',
           accelerator: 'Alt+W',
           click: () => {
             mainWindow.webContents.send('toggle-widget-panel')
@@ -270,7 +270,7 @@ function updateDashboardState(isDashboardPage) {
  * @param {Object} uiState - { navHidden: boolean, headerHidden: boolean }
  */
 function updateUIState(uiState) {
-  visibilityState = uiState
+  visibilityState = { ...visibilityState, ...uiState }
   rebuildMenu()
 }
 

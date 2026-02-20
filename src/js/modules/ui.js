@@ -101,13 +101,18 @@ async function handleWidgetPanel() {
   try {
     await utils.waitUntil(() => {
       return (
-        document.querySelector('[class^=dashboard__Widgets]') !== null &&
-        document.querySelector('button[class^=dashboard__ExpandButton]') !== null
+        document.querySelector('[class*="dashboard__Widgets"]') !== null &&
+        document.querySelector('[class*="dashboard__StyledExpandButton"] button') !== null
       )
     }, 5000)
 
-    const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
+    const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
     utils.setStyle(expandButton, 'opacity', '0.5')
+
+    // Detect initial expanded state and notify main process
+    const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
+    const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
+    ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
 
     return true
   } catch (error) {

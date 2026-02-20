@@ -136,9 +136,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for toggle-widget-panel events from the main process
   ipcRenderer.on('toggle-widget-panel', () => {
-    const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
+    const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
     if (expandButton) {
       expandButton.click()
+      // Detect new state after CSS transition and notify main process
+      setTimeout(() => {
+        const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
+        const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
+        ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
+      }, 350)
     } else {
       utils.logError('Could not find widget panel expand button')
     }
@@ -174,8 +180,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     toggleNavOnly: () => uiController.toggleNav(),
     toggleHeaderOnly: () => uiController.toggleHeader(),
     toggleWidgetPanel: () => {
-      const expandButton = document.querySelector('button[class^=dashboard__ExpandButton]')
-      if (expandButton) expandButton.click()
+      const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
+      if (expandButton) {
+        expandButton.click()
+        // Detect new state after CSS transition and notify main process
+        setTimeout(() => {
+          const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
+          const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
+          ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
+        }, 350)
+      }
     },
     returnToDashboard: () => buttons.triggerDashboardNavigation(),
   },
