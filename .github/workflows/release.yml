@@ -30,7 +30,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Build macOS (x64, arm64, universal)
+      - name: Build macOS (universal)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -43,7 +43,7 @@ jobs:
             echo "No signing cert — building unsigned"
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          pnpm exec electron-builder --mac --x64 --arm64 --universal --publish never
+          pnpm exec electron-builder --mac --universal --publish never
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
