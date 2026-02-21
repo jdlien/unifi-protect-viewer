@@ -72,16 +72,7 @@ async function initializeProtectPage() {
 
   // 3. Inject buttons and register updaters with the controller
   try {
-    const sidebarUpdater = await buttons.injectSidebarButton(() => uiController.toggleNav())
-    if (sidebarUpdater) uiController.registerButton('sidebar-button', sidebarUpdater)
-
-    const headerToggleUpdater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
-    if (headerToggleUpdater) uiController.registerButton('header-toggle-button', headerToggleUpdater)
-
-    const fullscreenUpdater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
-    if (fullscreenUpdater) uiController.registerButton('fullscreen-button', fullscreenUpdater)
-
-    await buttons.handleDashboardButton()
+    await ensureButtonsInjected()
   } catch (error) {
     utils.logError('Failed to inject buttons', error)
   }
