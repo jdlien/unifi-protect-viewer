@@ -43,7 +43,7 @@ function buildMenuTemplate() {
         {
           label: 'Check for Updates',
           click: () => {
-            const updates = require('./updates')
+            const updates = require('./updates-main')
             updates.checkForUpdatesWithDialog(mainWindow)
           },
         },
@@ -188,7 +188,7 @@ function buildMenuTemplate() {
         {
           label: 'Check for Updates',
           click: () => {
-            const updates = require('./updates')
+            const updates = require('./updates-main')
             updates.checkForUpdatesWithDialog(mainWindow)
           },
         },

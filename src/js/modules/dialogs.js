@@ -5,7 +5,7 @@
 const { dialog, app, shell } = require('electron')
 const path = require('node:path')
 const utils = require('./utils')
-const updates = require('./updates')
+const updates = require('./updates-main')
 
 /**
  * Show native About dialog

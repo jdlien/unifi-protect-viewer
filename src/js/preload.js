@@ -9,14 +9,8 @@ const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
 const buttonStyles = require('./modules/buttonStyles.js')
 
-// Only import renderer-specific functions from updates module
-// to avoid loading electron-updater in the renderer process
-const {
-  initializeUpdateListeners,
-  showUpdateNotification,
-  removeUpdateNotification,
-  checkForUpdates,
-} = require('./modules/updates.js')
+// Renderer-only update functions (notification UI, progress bar)
+const { initializeUpdateListeners } = require('./modules/updates-renderer.js')
 
 /**
  * Ensure all custom buttons are injected and registered with the controller.
