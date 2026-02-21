@@ -1,0 +1,95 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Add Configuration menu item to open settings without clearing them",
+        "description": "Add a 'Configuration' option to the File menu (between 'Check for Updates' and the separator before 'Restart Application') that navigates back to config.html so the user can view and adjust settings (URL, username, password, ignore SSL errors) without clearing existing settings. The config page already loads stored values on DOMContentLoaded via window.electronAPI.config.load(), so the main work is: (1) add the menu item in menu.js that sends an IPC message or directly loads the config page URL, (2) handle the navigation in the main process (window.loadURL to the config.html file:// path), (3) optionally disable the menu item when already on the config page. This should NOT clear the store — it simply re-shows the config form with current values pre-filled.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [],
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add 'Configuration' menu item in menu.js",
+            "description": "Add a new menu item in the File submenu that triggers navigation to config.html. Place it after 'Check for Updates' and before the separator. Use an accelerator like F8 or similar.",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Load config.html via main process window.loadURL",
+            "description": "When the menu item is clicked, load the config.html file:// URL into the main window. The config page already pre-fills saved values, so no store clearing is needed.",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Disable menu item when already on config page",
+            "description": "Optionally track whether we're on the config page and disable the menu item to prevent redundant navigation.",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Refactor codebase into highly testable TypeScript",
+        "description": "Convert the existing JavaScript codebase to TypeScript with a focus on testability. This is a large refactor touching all modules (main process: main.js, window.js, ipc.js, menu.js, updates-main.js, version.js, dialogs.js; renderer/preload: preload.js, uiController.js, buttons.js, buttonStyles.js, navigation.js, cameras.js, dashboard.js, ui.js, auth.js, updates.js, utils.js, timeouts.js, constants.js). Key goals: (1) add TypeScript with strict mode and proper type definitions for Electron APIs, IPC channels, and DOM interactions, (2) use dependency injection patterns instead of direct require/import of modules to make units independently testable, (3) define interfaces for external dependencies (Electron APIs, DOM, IPC) so they can be mocked cleanly, (4) maintain the existing architecture and module boundaries documented in CLAUDE.md, (5) update build tooling (electron-builder, Vitest config) to handle .ts compilation, (6) migrate existing unit tests to TypeScript and expand coverage. Should be done incrementally — module by module — to keep the app functional throughout.",
+        "status": "pending",
+        "priority": "high",
+        "dependencies": [],
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up TypeScript tooling and config",
+            "description": "Add typescript, ts-node, and @types/electron as dev dependencies. Create tsconfig.json with strict mode. Update electron-builder config to compile .ts files. Update Vitest config for TypeScript support.",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Define shared interfaces and types",
+            "description": "Create type definitions for IPC channel names/payloads, UI state shape, button updater functions, store schema, and other shared contracts between modules.",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Convert utility modules (utils.ts, timeouts.ts, constants.ts)",
+            "description": "Start with leaf modules that have no internal dependencies. Add types, convert to .ts, and update or add unit tests.",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Convert main process modules (window.ts, ipc.ts, menu.ts, etc.)",
+            "description": "Convert main process modules to TypeScript with dependency injection for BrowserWindow, store, and dialog references. Define interfaces for testable boundaries.",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Convert renderer/preload modules (uiController.ts, buttons.ts, navigation.ts, etc.)",
+            "description": "Convert renderer modules to TypeScript. Use interfaces for DOM access and IPC renderer calls so they can be mocked in tests. Maintain the existing one-way dependency flow.",
+            "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "Migrate and expand test suite",
+            "description": "Convert existing Vitest tests to TypeScript. Add tests for modules that lack coverage. Target high coverage for all converted modules using the new DI-friendly interfaces.",
+            "status": "pending"
+          },
+          {
+            "id": 7,
+            "title": "Update CLAUDE.md and build documentation",
+            "description": "Update CLAUDE.md to reflect the TypeScript codebase: file extensions, build commands, tsconfig details, testing patterns with DI, and any new conventions.",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Improve design of diagnostic information on the configuration screen",
+        "description": "Redesign the diagnostics section in config.html to be more polished and visually appealing. Currently it's a basic table with minimal styling inside a semi-transparent box. Consider improving layout, typography, spacing, status indicators, and overall visual hierarchy to better match a modern Electron app settings page. The diagnostics show platform, Electron/Chrome versions, hardware acceleration status, H.264/H.265 codec support, and app version.",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [1],
+        "subtasks": []
+      }
+    ]
+  }
+}
