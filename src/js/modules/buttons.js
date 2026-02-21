@@ -1,7 +1,5 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils')
-const fs = require('fs')
-const path = require('path')
 const buttonStyles = require('./buttonStyles')
 
 // Shared icon constants for navigation elements
@@ -27,6 +25,9 @@ const headerToggleIcons = {
     </div>
   </div>`,
 }
+
+// Dashboard icon
+const dashboardIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"><rect x="3" y="3" width="18" height="15" rx="1" fill-opacity=".2"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20 10V4h-7.5v6H20Zm-8.5 0V4H4v6h7.5ZM4 3h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm0 8h7.5v6H4v-6Zm16 6h-7.5v-6H20v6Zm-2.5 3a.5.5 0 0 1 0 1h-11a.5.5 0 0 1 0-1h11Z"/></svg>`
 
 // Fullscreen icons
 const fullscreenIcons = {
@@ -265,19 +266,10 @@ function injectDashboardButton() {
   button.className = 'dashboard-button'
   button.style.display = 'none'
 
-  const svgPath = path.join(__dirname, '../../img/dashboard-icon.svg')
-  let dashboardSvg
-  try {
-    dashboardSvg = fs.readFileSync(svgPath, 'utf8')
-  } catch (error) {
-    console.error('Error reading dashboard SVG:', error)
-    dashboardSvg = '<div>Dashboard</div>'
-  }
-
   button.innerHTML = `
   <div style="display: flex;align-items: center;">
     <div style="margin-right:4px; font-size:18px;">←</div>
-    ${dashboardSvg}
+    ${dashboardIcon}
   </div>`
   button.onclick = triggerDashboardNavigation
 
