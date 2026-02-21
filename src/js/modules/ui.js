@@ -121,8 +121,28 @@ async function handleWidgetPanel() {
   }
 }
 
+/**
+ * Toggle the widget panel expand/collapse state.
+ * Clicks the expand button, waits for the CSS transition, then notifies main process.
+ */
+function toggleWidgetPanel() {
+  const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
+  if (expandButton) {
+    expandButton.click()
+    // Detect new state after CSS transition and notify main process
+    setTimeout(() => {
+      const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
+      const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
+      ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
+    }, 350)
+  } else {
+    utils.logError('Could not find widget panel expand button')
+  }
+}
+
 module.exports = {
   handleLiveView,
   initializeDashboardPage,
   handleWidgetPanel,
+  toggleWidgetPanel,
 }

@@ -4,6 +4,7 @@ const uiController = require('./modules/uiController.js')
 const buttons = require('./modules/buttons.js')
 const navigation = require('./modules/navigation.js')
 const cameras = require('./modules/cameras.js')
+const ui = require('./modules/ui.js')
 const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
 const buttonStyles = require('./modules/buttonStyles.js')
@@ -191,18 +192,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Listen for toggle-widget-panel events from the main process
   ipcRenderer.on('toggle-widget-panel', () => {
-    const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
-    if (expandButton) {
-      expandButton.click()
-      // Detect new state after CSS transition and notify main process
-      setTimeout(() => {
-        const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
-        const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
-        ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
-      }, 350)
-    } else {
-      utils.logError('Could not find widget panel expand button')
-    }
+    ui.toggleWidgetPanel()
   })
 })
 
@@ -234,18 +224,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     togglePageElements: () => uiController.toggleAll(), // backward compat alias
     toggleNavOnly: () => uiController.toggleNav(),
     toggleHeaderOnly: () => uiController.toggleHeader(),
-    toggleWidgetPanel: () => {
-      const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
-      if (expandButton) {
-        expandButton.click()
-        // Detect new state after CSS transition and notify main process
-        setTimeout(() => {
-          const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
-          const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
-          ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
-        }, 350)
-      }
-    },
+    toggleWidgetPanel: () => ui.toggleWidgetPanel(),
     returnToDashboard: () => buttons.triggerDashboardNavigation(),
   },
 
