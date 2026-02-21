@@ -34,13 +34,34 @@ let cameraZoomSupported = true
 let configPageState = false
 
 /**
+ * Build the Window menu using platform conventions.
+ * - macOS: native window menu role
+ * - Windows: minimal Window menu (minimize/close)
+ */
+function buildWindowMenu(): Electron.MenuItemConstructorOptions | null {
+  if (process.platform === 'darwin') {
+    return { role: 'windowMenu' }
+  }
+
+  if (process.platform === 'win32') {
+    return {
+      label: 'Window',
+      submenu: [{ role: 'minimize' }, { role: 'close' }],
+    }
+  }
+
+  return null
+}
+
+/**
  * Build the menu template using current dynamic state
  */
 function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
   const mainWindow = mainWindowRef!
   const store = storeRef!
+  const windowMenu = buildWindowMenu()
 
-  return [
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'File',
       submenu: [
@@ -234,6 +255,12 @@ function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
       ],
     },
   ]
+
+  if (windowMenu) {
+    template.splice(template.length - 1, 0, windowMenu)
+  }
+
+  return template
 }
 
 /**
