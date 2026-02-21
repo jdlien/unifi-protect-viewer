@@ -47,13 +47,15 @@ Only `GITHUB_TOKEN` is strictly required (provided automatically). Without signi
 
 ## Local Release (manual)
 
-For signed local builds, use the existing release script:
+CI-based tag releases are the recommended path. Local release scripts are available for emergency/manual workflows only.
+
+For local pre-release build validation:
 
 ```bash
-# Requires .env with GH_TOKEN, APPLE_*, SSL_COM_* variables
-pnpm release:major   # 2.0.0 → 3.0.0
-pnpm release:minor   # 2.0.0 → 2.1.0
-pnpm release:patch   # 2.0.0 → 2.0.1
+# Compiles TypeScript, then packages
+pnpm build:mac
+pnpm build:win-x64
+pnpm build:linux
 ```
 
 ### Local Signing Credentials (.env)

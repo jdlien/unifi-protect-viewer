@@ -40,7 +40,6 @@ mac:
   entitlementsInherit: 'build/entitlements.mac.plist'
   darkModeSupport: true
   notarize: true
-  identity: 'Joseph Lien (A93Q7MKECL)'
   timestamp: 'http://timestamp.apple.com/ts01'
   artifactName: 'UniFi-Protect-Viewer-${arch}.${ext}'
 

@@ -103,6 +103,15 @@ console.log('\n=== Starting super build for all platforms ===\n')
 // Set build environment
 process.env.NODE_ENV = 'production'
 
+// Compile TypeScript before any packaging commands to avoid stale/missing out/
+console.log('Compiling TypeScript...')
+try {
+  execSync('pnpm build:ts', { stdio: 'inherit' })
+} catch (error) {
+  console.error('Error compiling TypeScript:', error.message)
+  process.exit(1)
+}
+
 // Function to create build configurations
 function createBuildConfigs() {
   const macBaseConfig = `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} CSC_DISABLE_TIMESTAMP=true`

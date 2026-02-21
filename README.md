@@ -49,19 +49,26 @@ Copy the finished build to a location of your choice, then start the application
 
 ## Building
 
-Install all dependencies with `npm install`. After this, you can build the application yourself for the platform you need.
+Install dependencies:
 
-For some platforms, there are scripts inside the package.json.
+```bash
+pnpm install
+```
 
-`npm run build:windows:ia32:windows`
+Local builds (TypeScript compile runs automatically before packaging):
 
-`npm run build:macos:x64`
+```bash
+pnpm build:mac
+pnpm build:win-x64
+pnpm build:linux
+```
 
-`npm run build:macos:arm64`
+Releases are CI-driven from tags:
 
-`npm run build:linux:x64`
-
-There is an `npm run super-release` script that will build and sign the app for all platforms.
+```bash
+git tag v2.1.3
+git push origin v2.1.3
+```
 
 ### Code Signing
 

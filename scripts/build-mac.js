@@ -22,6 +22,15 @@ try {
 // Set build environment
 process.env.NODE_ENV = 'production'
 
+// Compile TypeScript before packaging to avoid stale/missing out/
+console.log('Compiling TypeScript...')
+try {
+  execSync('pnpm build:ts', { stdio: 'inherit' })
+} catch (error) {
+  console.error(`TypeScript compilation failed: ${error.message}`)
+  process.exit(1)
+}
+
 // Create the command with specific timestamp option
 const macBuildCommand = `NODE_ENV=production APPLE_ID=${process.env.APPLE_ID} APPLE_APP_SPECIFIC_PASSWORD=${process.env.APPLE_APP_SPECIFIC_PASSWORD} APPLE_TEAM_ID=${process.env.APPLE_TEAM_ID} DEBUG=electron-builder electron-builder --mac --x64 --publish never --debug`
 
