@@ -6,7 +6,7 @@
  */
 
 import { log, logError, logWarn, logger } from './utils'
-import { htmlPath, downloadPreloadPath } from './paths'
+import { htmlUrl, downloadPreloadPath } from './paths'
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -201,7 +201,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         },
       })
       checkingDialog.removeMenu()
-      checkingDialog.loadFile(htmlPath('update-checking.html'))
+      checkingDialog.loadURL(htmlUrl('update-checking.html'))
       checkingDialog.once('ready-to-show', () => checkingDialog!.show())
       checkingDialog.on('closed', () => {
         checkingDialog = null
@@ -269,7 +269,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         },
       })
       downloadDialog.removeMenu()
-      downloadDialog.loadFile(htmlPath('update-downloading.html'))
+      downloadDialog.loadURL(htmlUrl('update-downloading.html'))
       downloadDialog.once('ready-to-show', () => downloadDialog!.show())
       downloadDialog.on('closed', () => {
         downloadDialog = null

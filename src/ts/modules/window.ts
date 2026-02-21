@@ -5,7 +5,7 @@
 import { URL } from 'node:url'
 import { log, logError } from './utils'
 import * as version from './version'
-import { htmlPath, htmlUrl, imgPath, preloadPath } from './paths'
+import { htmlUrl, imgPath, preloadPath } from './paths'
 
 const { BrowserWindow, app, shell, globalShortcut } = require('electron') as typeof import('electron')
 

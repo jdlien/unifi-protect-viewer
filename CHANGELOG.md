@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.3] - 2026-02-21
+
+### Fixed
+
+- Update checking and download progress dialogs showing blank on macOS production builds — same `file://` vs `app://` protocol issue as the config page white screen fix in 2.2.2
+
 ## [2.2.2] - 2026-02-21
 
 ### Fixed
