@@ -10,6 +10,12 @@
 - Smart camera switching: pressing a different number while zoomed switches directly to the new camera
 - "Show All Cameras" menu item to return to grid view
 - Zoom is disabled on the "All Cameras" dashboard view where Protect doesn't support it
+- Freeze-frame overlay during camera switching hides the unzoom/zoom transition for a clean visual cut between cameras
+
+### Changed
+
+- Programmatic camera zoom (keyboard/menu) bypasses CSS transition animations for near-instant switching
+- Zoom state polling uses requestAnimationFrame instead of fixed timeouts, adapting to actual render speed
 
 ## [2.0.0] - 2026-02-20
 

@@ -103,9 +103,6 @@ function enableZoomTransitions() {
 /**
  * Poll until React's zoom state matches the expected value, or timeout.
  * Uses requestAnimationFrame for efficient, frame-aligned checks.
- * After the fiber state matches, waits 2 extra frames for React's DOM
- * commit phase to complete (fiber updates during reconciliation, but the
- * actual tile repositioning happens on subsequent frames).
  * @param {number} expected - The expected zoomedSlotIdx (-1 for unzoomed)
  * @returns {Promise<void>}
  */
@@ -114,8 +111,7 @@ function waitForZoomState(expected) {
     const deadline = Date.now() + ZOOM_WAIT_TIMEOUT_MS
     function check() {
       if (getCurrentZoomIndex() === expected || Date.now() > deadline) {
-        // State matches — wait 2 more frames for React to commit DOM changes
-        requestAnimationFrame(() => requestAnimationFrame(resolve))
+        resolve()
         return
       }
       requestAnimationFrame(check)
@@ -125,8 +121,92 @@ function waitForZoomState(expected) {
 }
 
 /**
+ * Wait N animation frames for the browser to paint.
+ * @param {number} n - Number of frames to wait
+ * @returns {Promise<void>}
+ */
+function waitFrames(n) {
+  return new Promise((resolve) => {
+    let remaining = n
+    function tick() {
+      if (--remaining <= 0) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+/**
+ * Create a canvas overlay showing the current zoomed camera's video frame.
+ * Acts as a "curtain" to hide the unzoom→zoom transition during camera switching.
+ * Uses the video's native resolution for the canvas buffer and object-fit: contain
+ * to preserve aspect ratio. Returns null if capture fails (caller falls back to
+ * the normal transition without an overlay).
+ * @param {number} viewportIndex - The currently zoomed viewport index
+ * @returns {HTMLCanvasElement|null} The overlay element, or null if capture failed
+ */
+function createFreezeFrame(viewportIndex) {
+  const tile = document.querySelector(`[data-viewport="${viewportIndex}"]`)
+  if (!tile) return null
+
+  const video = tile.querySelector('video')
+  if (!video || !video.videoWidth) return null
+
+  // Append to the liveview container itself — position: absolute + inset: 0
+  // gives pixel-perfect alignment without any coordinate math
+  const container = document.querySelector('[class*="liveView__FullscreenWrapper"]')
+  if (!container) return null
+  const containerRect = container.getBoundingClientRect()
+  const dpr = window.devicePixelRatio || 1
+
+  const canvas = document.createElement('canvas')
+  canvas.width = containerRect.width * dpr
+  canvas.height = containerRect.height * dpr
+  canvas.style.cssText = `
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99999;
+    pointer-events: none;
+  `
+
+  try {
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // Draw video centered, preserving aspect ratio (manual object-fit: contain)
+    const videoAspect = video.videoWidth / video.videoHeight
+    const canvasAspect = canvas.width / canvas.height
+    let drawW, drawH, drawX, drawY
+    if (videoAspect > canvasAspect) {
+      drawW = canvas.width
+      drawH = canvas.width / videoAspect
+      drawX = 0
+      drawY = (canvas.height - drawH) / 2
+    } else {
+      drawH = canvas.height
+      drawW = canvas.height * videoAspect
+      drawX = (canvas.width - drawW) / 2
+      drawY = 0
+    }
+    ctx.drawImage(video, drawX, drawY, drawW, drawH)
+  } catch {
+    return null
+  }
+
+  container.appendChild(canvas)
+  return canvas
+}
+
+/**
  * Zoom into a specific camera tile. If already zoomed into a different camera,
  * unzooms first, waits for React to confirm, then zooms to the target.
+ * When switching cameras, a freeze-frame overlay hides the transition so
+ * the user sees a clean cut from one camera to another.
  * If already zoomed into the same camera, toggles back to grid.
  * Disables CSS transitions during programmatic zoom for instant switching.
  * @param {number} index - The viewport index (0-based)
@@ -140,17 +220,26 @@ async function zoomToCamera(index) {
       // Toggle off — click the same tile to unzoom
       clickTileOverlay(index)
       await waitForZoomState(-1)
+      await waitFrames(2)
       ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
       return
     }
 
     if (currentZoom >= 0) {
-      // Already zoomed to a different camera — unzoom first, wait for
-      // React to confirm grid is restored, then zoom to target
-      clickTileOverlay(currentZoom)
-      await waitForZoomState(-1)
-      clickTileOverlay(index)
-      await waitForZoomState(index)
+      // Switching cameras — freeze the current view as an overlay to hide
+      // the unzoom→zoom transition. Remove overlay as soon as the target
+      // camera is zoomed so the live feed is revealed immediately.
+      const overlay = createFreezeFrame(currentZoom)
+      try {
+        clickTileOverlay(currentZoom)
+        await waitForZoomState(-1)
+        clickTileOverlay(index)
+        await waitForZoomState(index)
+      } finally {
+        if (overlay) overlay.remove()
+      }
+      // Wait for DOM to settle after overlay removal before re-enabling transitions
+      await waitFrames(2)
       ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
       return
     }
@@ -158,6 +247,7 @@ async function zoomToCamera(index) {
     // Not zoomed — zoom directly
     clickTileOverlay(index)
     await waitForZoomState(index)
+    await waitFrames(2)
     ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
   } finally {
     enableZoomTransitions()
@@ -175,6 +265,7 @@ async function unzoomAll() {
     try {
       clickTileOverlay(currentIndex)
       await waitForZoomState(-1)
+      await waitFrames(2)
       ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
     } finally {
       enableZoomTransitions()
