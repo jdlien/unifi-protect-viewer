@@ -78,6 +78,24 @@ function logError(message, error) {
 }
 
 /**
+ * Utility function for warning logging
+ * Logs in development mode, simplified in production
+ * @param {string} message - Warning message
+ * @param {...any} args - Additional arguments
+ */
+function logWarn(message, ...args) {
+  try {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(message, ...args)
+    } else {
+      console.warn(message)
+    }
+  } catch (err) {
+    console.error('Error in logWarn function:', err)
+  }
+}
+
+/**
  * Wait for a specified amount of time
  * @param {number} amount - Time to wait in milliseconds
  * @returns {Promise<void>}
@@ -145,5 +163,6 @@ module.exports = {
   clickElement,
   log,
   logError,
+  logWarn,
   logger,
 }

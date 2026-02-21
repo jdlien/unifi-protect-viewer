@@ -1,4 +1,5 @@
 const { ipcRenderer } = require('electron')
+const utils = require('./utils')
 const {
   LOGIN_ATTEMPTS_RESET_MS,
   LOGIN_SUCCESS_CHECK_INTERVAL_MS,
@@ -77,11 +78,11 @@ async function attemptLogin() {
     const { attempts } = await getLoginAttempts()
     const currentAttempts = attempts + 1
 
-    console.log(`Login attempt ${currentAttempts}/${MAX_LOGIN_ATTEMPTS}`)
+    utils.log(`Login attempt ${currentAttempts}/${MAX_LOGIN_ATTEMPTS}`)
 
     // Check max attempts
     if (currentAttempts > MAX_LOGIN_ATTEMPTS) {
-      console.error('Maximum login attempts reached, stopping auto-login')
+      utils.logError('Maximum login attempts reached, stopping auto-login')
       return false
     }
 
@@ -95,12 +96,12 @@ async function attemptLogin() {
     // Load credentials
     const config = await ipcRenderer.invoke('configLoad')
     if (!config?.username || !config?.password) {
-      console.log('No credentials found in config')
+      utils.log('No credentials found in config')
       return false
     }
 
     // Find form elements
-    console.log('Searching for login form elements')
+    utils.log('Searching for login form elements')
     const usernameField =
       document.querySelector('input[name="username"]') ||
       document.querySelector('input[type="email"]') ||
@@ -115,7 +116,7 @@ async function attemptLogin() {
       )
 
     if (!usernameField || !passwordField || !submitButton) {
-      console.warn('Could not find all login form elements:', {
+      utils.logWarn('Could not find all login form elements:', {
         username: !!usernameField,
         password: !!passwordField,
         button: !!submitButton,
@@ -154,7 +155,7 @@ async function attemptLogin() {
 
     return true
   } catch (error) {
-    console.error('Auto-login failed:', error)
+    utils.logError('Auto-login failed:', error)
     return false
   }
 }
@@ -186,7 +187,7 @@ function setupLoginSuccessMonitor() {
 
       // Reset login attempts counter
       resetLoginAttempts().catch((err) => {
-        console.error('Failed to reset login attempts counter:', err)
+        utils.logError('Failed to reset login attempts counter:', err)
       })
 
       // Wait for dashboard to fully load then apply customizations
@@ -208,7 +209,7 @@ function setupLoginSuccessMonitor() {
             }, POST_LOGIN_DASHBOARD_RETRY_DELAY_MS)
           }
         } catch (error) {
-          console.error('Error during post-login dashboard customization:', error)
+          utils.logError('Error during post-login dashboard customization:', error)
         }
       }, POST_LOGIN_DASHBOARD_DELAY_MS)
 
