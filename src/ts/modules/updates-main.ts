@@ -19,10 +19,40 @@ let dialog: typeof import('electron').dialog
 let app: typeof import('electron').app
 let ipcMain: typeof import('electron').ipcMain
 let BrowserWindow: typeof import('electron').BrowserWindow
+let nativeTheme: typeof import('electron').nativeTheme
 let _mainWindow: Electron.BrowserWindow | null = null
 let isManualCheckInProgress = false
 let checkingDialog: Electron.BrowserWindow | null = null
 let downloadDialog: Electron.BrowserWindow | null = null
+
+/**
+ * Platform-specific BrowserWindow options for translucent dialog appearance.
+ * - macOS: vibrancy blur effect with transparent background
+ * - Windows: Mica material (Win11) with solid fallback color
+ * - Linux: solid background color
+ */
+function getDialogAppearanceOptions(): Partial<Electron.BrowserWindowConstructorOptions> {
+  if (process.platform === 'darwin') {
+    return {
+      vibrancy: 'under-window',
+      visualEffectState: 'active',
+      backgroundColor: '#00000000',
+    }
+  }
+
+  if (!nativeTheme) nativeTheme = require('electron').nativeTheme
+  const bgColor = nativeTheme.shouldUseDarkColors ? '#2d2d2d' : '#f0f0f0'
+
+  if (process.platform === 'win32') {
+    return {
+      backgroundMaterial: 'mica',
+      backgroundColor: bgColor,
+    }
+  }
+
+  // Linux and other platforms
+  return { backgroundColor: bgColor }
+}
 
 /**
  * Handle GitHub authentication error messages
@@ -163,9 +193,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         maximizable: false,
         fullscreenable: false,
         title: 'Checking for Updates',
-        vibrancy: 'under-window',
-        visualEffectState: 'active',
-        backgroundColor: '#00000000',
+        ...getDialogAppearanceOptions(),
         webPreferences: {
           contextIsolation: true,
           nodeIntegration: false,
@@ -230,9 +258,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         maximizable: false,
         fullscreenable: false,
         title: 'Downloading Update',
-        vibrancy: 'under-window',
-        visualEffectState: 'active',
-        backgroundColor: '#00000000',
+        ...getDialogAppearanceOptions(),
         webPreferences: {
           contextIsolation: true,
           nodeIntegration: false,
@@ -482,7 +508,7 @@ export function checkForUpdatesWithDialog(mainWindow: Electron.BrowserWindow): v
       type: 'info',
       title: 'Updates Disabled',
       message: 'Update checking is disabled in development mode.',
-      detail: 'To test updates, please build a production version.',
+      detail: 'Use Help → Simulate Update Download to test the download progress UI.',
       buttons: ['OK'],
     })
     return
@@ -490,4 +516,60 @@ export function checkForUpdatesWithDialog(mainWindow: Electron.BrowserWindow): v
 
   log('Manual update check triggered (checkForUpdatesWithDialog).')
   _manageUpdateUI('check')
+}
+
+/**
+ * Simulate an update download with fake progress for UI testing.
+ * Only works in dev mode — used to verify the download progress dialog renders correctly.
+ */
+export async function simulateUpdateDownload(mainWindow: Electron.BrowserWindow): Promise<void> {
+  _mainWindow = mainWindow
+  if (!BrowserWindow) BrowserWindow = require('electron').BrowserWindow
+  if (!dialog) dialog = require('electron').dialog
+
+  log('Simulating update download...')
+
+  await _manageUpdateUI('downloading')
+
+  // Wait for the dialog to be ready before sending progress
+  await new Promise<void>((resolve) => setTimeout(resolve, 500))
+
+  const totalBytes = 85 * 1024 * 1024 // Simulate 85 MB download
+  const steps = 50
+  const intervalMs = 100
+
+  for (let i = 1; i <= steps; i++) {
+    if (!downloadDialog || downloadDialog.isDestroyed()) break
+
+    const percent = (i / steps) * 100
+    const transferred = (i / steps) * totalBytes
+    // Simulate varying speed (2-8 MB/s)
+    const bytesPerSecond = (2 + Math.random() * 6) * 1024 * 1024
+
+    await _manageUpdateUI('progress', {
+      progress: {
+        percent,
+        transferred,
+        total: totalBytes,
+        bytesPerSecond,
+        delta: transferred / i,
+      },
+    })
+
+    await new Promise<void>((resolve) => setTimeout(resolve, intervalMs))
+  }
+
+  _closeDownloadDialog()
+
+  if (_mainWindow && !_mainWindow.isDestroyed()) {
+    dialog.showMessageBox(_mainWindow, {
+      type: 'info',
+      title: 'Simulation Complete',
+      message: 'Update Download Simulation Complete',
+      detail: 'The download progress dialog has been tested. In production, this would prompt to restart.',
+      buttons: ['OK'],
+    })
+  }
+
+  log('Update download simulation complete.')
 }

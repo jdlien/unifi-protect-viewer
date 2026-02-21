@@ -252,6 +252,18 @@ function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
             }
           },
         },
+        ...(isDev
+          ? [
+              { type: 'separator' as const },
+              {
+                label: 'Simulate Update Download',
+                click: () => {
+                  const updates = require('./updates-main') as typeof import('./updates-main')
+                  updates.simulateUpdateDownload(mainWindow)
+                },
+              },
+            ]
+          : []),
       ],
     },
   ]

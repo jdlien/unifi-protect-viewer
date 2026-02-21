@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.1] - 2026-02-21
+
+### Fixed
+
+- Update download progress dialog rendering as a blank dark rectangle — inlined CSS to eliminate external stylesheet dependency and added default text colors
+- Download status text clipping below the dialog window — reduced padding/gaps for compact layout
+
+### Changed
+
+- Redesigned update dialogs with macOS-native styling: custom rounded progress bar with system blue accent, translucent text, tabular-nums for stable digit widths, and a spinner for the "checking" dialog
+- Cross-platform dialog appearance: macOS vibrancy, Windows 11 Mica material, solid background fallback for Windows 10/Linux
+- Added "Simulate Update Download" menu item (dev mode only) under Help for testing the download progress UI without a real update
+
+### Removed
+
+- `src/css/update-styles.css` — styles are now inlined in each HTML dialog
+
 ## [2.2.0] - 2026-02-21
 
 ### Added

@@ -2,23 +2,97 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="../css/update-styles.css" />
     <style>
-      /* Additional styles to ensure proper height and spacing */
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        padding: 20px 24px;
+        text-align: center;
+        overflow: hidden;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: transparent;
+        color: #333333;
+      }
       .container {
-        min-height: 160px; /* Ensure minimum height to prevent cut-off */
-        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+      }
+      h3 {
+        font-weight: 600;
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+      /* Custom progress bar — macOS-inspired rounded track */
+      .progress-track {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        margin: 2px 0;
+      }
+      .progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: #007aff;
+        width: 0%;
+        transition: width 0.15s ease-out;
+      }
+      .percent {
+        font-weight: 600;
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
       }
       #status {
-        min-height: 20px; /* Ensure status line has minimum height */
-        margin-top: 12px;
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.45);
+        font-variant-numeric: tabular-nums;
+      }
+      .speed {
+        color: #333333;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #ffffffdd;
+        }
+        .progress-track {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .progress-fill {
+          background: #0a84ff;
+        }
+        #status {
+          color: rgba(255, 255, 255, 0.5);
+        }
+        .speed {
+          color: #ffffffdd;
+          margin-top: 4px;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h3>Downloading Update...</h3>
-      <progress id="progressBar" value="0" max="100"></progress>
+      <h3>Downloading Update&hellip;</h3>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressBar"></div>
+      </div>
       <div class="percent" id="percent">0%</div>
       <div id="status"></div>
     </div>
@@ -30,13 +104,14 @@
           if (progress && typeof progress === 'object') {
             const percent = Math.round(progress.percent || 0)
             document.getElementById('percent').textContent = percent + '%'
-            document.getElementById('progressBar').value = percent
+            document.getElementById('progressBar').style.width = percent + '%'
 
             if (progress.bytesPerSecond) {
-              const speed = (progress.bytesPerSecond / 1024 / 1024).toFixed(2)
-              const downloaded = (progress.transferred / 1024 / 1024).toFixed(2)
-              const total = (progress.total / 1024 / 1024).toFixed(2)
-              document.getElementById('status').textContent = `${downloaded} MB of ${total} MB (${speed} MB/s)`
+              const speed = (progress.bytesPerSecond / 1024 / 1024).toFixed(1)
+              const downloaded = (progress.transferred / 1024 / 1024).toFixed(1)
+              const total = (progress.total / 1024 / 1024).toFixed(1)
+              document.getElementById('status').innerHTML = downloaded + ' / ' + total + ' MB'
+              // Could show speed above with <div class="speed">' + speed + ' MB/s</div>
             }
           }
         })
