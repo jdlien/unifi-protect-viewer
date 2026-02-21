@@ -4,14 +4,33 @@ const auth = require('./auth.js')
 const dashboard = require('./dashboard.js')
 const { DASHBOARD_RETRY_DELAY_MS } = require('./constants')
 
+// Guard to prevent duplicate monitor setup
+let monitorSetup = false
+
 /**
  * Setup navigation monitoring to detect URL changes in SPA.
  * Delegates UI state enforcement and button injection to uiController (via handleUrlChange)
  * and preload.js (via onStateChange listener).
+ * Idempotent — safe to call multiple times, only creates one monitor.
  * @returns {Function} Cleanup function
  */
 function setupNavigationMonitor() {
+  if (monitorSetup) return () => {}
+  monitorSetup = true
+
   let lastUrl = window.location.href
+
+  const applyDashboardCustomizations = async () => {
+    try {
+      const success = await dashboard.initializeDashboard()
+      if (!success) {
+        utils.log('Dashboard not ready yet, will retry')
+        setTimeout(applyDashboardCustomizations, DASHBOARD_RETRY_DELAY_MS)
+      }
+    } catch (error) {
+      utils.logError('Error applying dashboard customizations:', error)
+    }
+  }
 
   const handleURLChange = () => {
     if (window.location.href !== lastUrl) {
@@ -42,18 +61,6 @@ function setupNavigationMonitor() {
     }
   }
 
-  const applyDashboardCustomizations = async () => {
-    try {
-      const success = await dashboard.initializeDashboard()
-      if (!success) {
-        utils.log('Dashboard not ready yet, will retry')
-        setTimeout(applyDashboardCustomizations, DASHBOARD_RETRY_DELAY_MS)
-      }
-    } catch (error) {
-      utils.logError('Error applying dashboard customizations:', error)
-    }
-  }
-
   // Single MutationObserver to watch for DOM changes that might indicate navigation
   const observer = new MutationObserver(() => handleURLChange())
 
@@ -74,61 +81,48 @@ function setupNavigationMonitor() {
     window.addEventListener(event, listener)
   })
 
-  // Initialize UI based on page readiness
-  function initializeUI() {
-    if (document.readyState !== 'loading') {
-      if (window.location.href.includes('/protect/dashboard')) {
-        applyDashboardCustomizations()
-      }
-    } else {
-      document.addEventListener(
-        'DOMContentLoaded',
-        () => {
-          if (window.location.href.includes('/protect/dashboard')) {
-            applyDashboardCustomizations()
-          }
-        },
-        { once: true },
-      )
-    }
-  }
-
-  initializeUI()
-
   return () => {
     observer.disconnect()
     navigationEvents.forEach((event) => {
       window.removeEventListener(event, eventListeners[event])
     })
+    monitorSetup = false
   }
 }
 
 /**
- * Initialize the application based on the current page type
- * @returns {boolean} True if initialization was successful
+ * Handle first-render setup for the current page.
+ * Detects the page type (login, dashboard, protect) and applies appropriate initialization.
+ * @returns {boolean} True if initialization was successful or page was recognized
  */
-function initializePageByType() {
+function initializeCurrentPage() {
   if (auth.isLoginPage()) {
     return auth.initializeLoginPage()
-  } else if (window.location.href.includes('/protect/dashboard')) {
-    setupNavigationMonitor()
+  }
+
+  if (window.location.href.includes('/protect/dashboard')) {
     return ui.initializeDashboardPage()
-  } else if (window.location.href.includes('/protect/')) {
-    setupNavigationMonitor()
-    return true
-  } else {
-    setupNavigationMonitor()
+  }
+
+  if (window.location.href.includes('/protect/')) {
     return true
   }
+
+  return false
 }
 
 /**
- * Initialize page with readiness polling if needed
+ * Initialize navigation: set up the URL change monitor once, then handle
+ * the current page with polling if needed.
  */
 function initializeWithPolling() {
-  if (!initializePageByType()) {
+  // 1. Set up navigation monitor once (watches for future URL changes)
+  setupNavigationMonitor()
+
+  // 2. Handle first-render setup for the current page
+  if (!initializeCurrentPage()) {
     requestAnimationFrame(function pollForPageReady() {
-      if (!initializePageByType()) {
+      if (!initializeCurrentPage()) {
         requestAnimationFrame(pollForPageReady)
       }
     })
@@ -137,6 +131,6 @@ function initializeWithPolling() {
 
 module.exports = {
   setupNavigationMonitor,
-  initializePageByType,
+  initializeCurrentPage,
   initializeWithPolling,
 }
