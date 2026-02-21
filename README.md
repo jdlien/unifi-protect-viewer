@@ -84,4 +84,4 @@ After configuration, the app will automatically start the live view upon startup
 
 ## Planned Features
 
-- Hotkeys to switch between cameras or Multi-Views.
+- Menu option to edit settings (e.g., change the Protect URL) without resetting credentials.
