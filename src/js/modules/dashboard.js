@@ -45,6 +45,10 @@ async function initializeDashboard() {
     // Update dashboard button state - use buttons module instead of ui
     buttons.handleDashboardButton().catch((err) => utils.logError('Error handling dashboard button:', err))
 
+    // Detect cameras for the Cameras menu
+    const cameras = require('./cameras.js')
+    cameras.detectCameras()
+
     return true
   } catch (error) {
     utils.logError('Error initializing dashboard:', error)

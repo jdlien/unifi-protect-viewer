@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 const uiController = require('./modules/uiController.js')
 const buttons = require('./modules/buttons.js')
 const navigation = require('./modules/navigation.js')
+const cameras = require('./modules/cameras.js')
 const utils = require('./modules/utils.js')
 const timeouts = require('./modules/timeouts.js')
 const buttonStyles = require('./modules/buttonStyles.js')
@@ -96,7 +97,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       })
 
-      // 5. Register URL-change-aware listener for button re-injection
+      // 5. Set up camera hotkey listener (bare number keys for zoom)
+      cameras.setupHotkeyListener()
+
+      // 6. Register URL-change-aware listener for button re-injection
       uiController.onStateChange(() => {
         ensureButtonsInjected().catch((err) => {
           utils.logError('Error in ensureButtonsInjected:', err)
@@ -132,6 +136,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Listen for return-to-dashboard events from the main process
   ipcRenderer.on('return-to-dashboard', () => {
     buttons.triggerDashboardNavigation()
+  })
+
+  // Listen for camera zoom requests from the main process (Cameras menu)
+  ipcRenderer.on('zoom-camera', (event, index) => {
+    if (index === -1) {
+      cameras.unzoomAll()
+    } else {
+      cameras.zoomToCamera(index)
+    }
   })
 
   // Listen for toggle-widget-panel events from the main process

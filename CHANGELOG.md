@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.0] - 2026-02-20
+
+### Added
+
+- **Cameras menu** between View and Help that dynamically lists cameras on the current liveview dashboard
+- **Number key hotkeys** (1-9) to zoom into individual cameras, 0 to unzoom back to grid
+- Camera zoom via menu items with checkbox indicators showing the currently zoomed camera
+- Smart camera switching: pressing a different number while zoomed switches directly to the new camera
+- "Show All Cameras" menu item to return to grid view
+- Zoom is disabled on the "All Cameras" dashboard view where Protect doesn't support it
+
 ## [2.0.0] - 2026-02-20
 
 Major release targeting UniFi Protect v6+ with a complete architecture overhaul.

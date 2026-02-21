@@ -106,6 +106,18 @@ function setupIpcHandlers(mainWindow, store) {
     menu.updateUIState(uiState)
   })
 
+  // Handle camera list updates from renderer (for Cameras menu)
+  ipcMain.on('update-camera-list', (event, data) => {
+    const menu = require('./menu')
+    menu.updateCameraList(data.cameras, data.zoomSupported)
+  })
+
+  // Handle camera zoom state updates from renderer
+  ipcMain.on('update-camera-zoom', (event, zoomedIndex) => {
+    const menu = require('./menu')
+    menu.updateCameraZoom(zoomedIndex)
+  })
+
   // Return system diagnostics for the config page
   ipcMain.handle('getSystemDiagnostics', () => {
     return {

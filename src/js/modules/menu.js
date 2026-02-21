@@ -18,6 +18,11 @@ let storeRef = null
 let visibilityState = { navHidden: false, headerHidden: false, widgetPanelExpanded: false }
 let fullscreenState = false
 
+// Camera menu state
+let cameraListState = [] // [{ index: 0, name: 'Front Porch' }, ...]
+let zoomedCameraIndex = -1
+let cameraZoomSupported = true
+
 /**
  * Build the menu template using current dynamic state
  */
@@ -153,6 +158,31 @@ function buildMenuTemplate() {
       ],
     },
     {
+      label: 'Cameras',
+      submenu:
+        cameraListState.length > 0
+          ? [
+              ...cameraListState.map((cam, i) => ({
+                label: cam.name,
+                accelerator: i < 9 ? `${i + 1}` : undefined,
+                registerAccelerator: false,
+                type: 'checkbox',
+                checked: zoomedCameraIndex === cam.index,
+                enabled: cameraZoomSupported,
+                click: () => mainWindow.webContents.send('zoom-camera', cam.index),
+              })),
+              { type: 'separator' },
+              {
+                label: 'Show All Cameras',
+                accelerator: '0',
+                registerAccelerator: false,
+                enabled: cameraZoomSupported && zoomedCameraIndex !== -1,
+                click: () => mainWindow.webContents.send('zoom-camera', -1),
+              },
+            ]
+          : [{ label: 'No cameras on this view', enabled: false }],
+    },
+    {
       label: 'Help',
       submenu: [
         {
@@ -282,10 +312,33 @@ function updateFullscreenState(isFullscreen) {
   rebuildMenu()
 }
 
+/**
+ * Update the camera list shown in the Cameras menu
+ * @param {Array<{index: number, name: string}>} cameras
+ * @param {boolean} zoomSupported
+ */
+function updateCameraList(cameras, zoomSupported) {
+  cameraListState = cameras
+  cameraZoomSupported = zoomSupported
+  zoomedCameraIndex = -1
+  rebuildMenu()
+}
+
+/**
+ * Update which camera is currently zoomed (for checkmark in menu)
+ * @param {number} index - Zoomed viewport index, or -1 for none
+ */
+function updateCameraZoom(index) {
+  zoomedCameraIndex = index
+  rebuildMenu()
+}
+
 module.exports = {
   setupApplicationMenu,
   updateMenuState,
   updateDashboardState,
   updateUIState,
   updateFullscreenState,
+  updateCameraList,
+  updateCameraZoom,
 }
