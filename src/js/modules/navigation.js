@@ -18,9 +18,12 @@ function setupNavigationMonitor() {
       lastUrl = window.location.href
 
       const isProtectPage = window.location.href.includes('/protect/')
-      const isDashboardPage = dashboard.isDashboardPage()
+      const onDashboard = dashboard.isDashboardPage()
 
-      if (isDashboardPage) {
+      // Notify main process about dashboard state (for menu updates)
+      dashboard.notifyDashboardState()
+
+      if (onDashboard) {
         utils.log('Dashboard page detected, applying UI customizations')
 
         auth.resetLoginAttempts().catch((err) => {

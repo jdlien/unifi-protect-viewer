@@ -57,22 +57,28 @@ async function initializeDashboard() {
 }
 
 /**
- * Check if the current page is a dashboard page
+ * Check if the current page is a dashboard page (pure — no side effects)
  * @returns {boolean} True if current page is a dashboard
  */
 function isDashboardPage() {
-  const isOnDashboard = window.location.href.includes('/protect/dashboard')
-  // Report status to main process for menu state update
+  return window.location.href.includes('/protect/dashboard')
+}
+
+/**
+ * Notify the main process about the current dashboard state.
+ * Call this explicitly from navigation monitors, not from isDashboardPage().
+ */
+function notifyDashboardState() {
   try {
-    ipcRenderer.send('update-dashboard-state', isOnDashboard)
+    ipcRenderer.send('update-dashboard-state', isDashboardPage())
   } catch (error) {
     // Silently ignore errors as this is just a UI enhancement
   }
-  return isOnDashboard
 }
 
 module.exports = {
   waitForDashboardReady,
   initializeDashboard,
   isDashboardPage,
+  notifyDashboardState,
 }
