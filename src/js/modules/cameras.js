@@ -8,6 +8,17 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils.js')
 
+const INSTANT_ZOOM_ID = 'upv-instant-zoom'
+const INSTANT_ZOOM_CSS = `
+[class*="ZoomableViewport"],
+[class*="ViewportRemoveOnceFirefox"],
+[class*="SizeTransitionWrapper"] {
+  transition-duration: 0s !important;
+}
+`
+// Max time to wait for React to reach the expected zoom state
+const ZOOM_WAIT_TIMEOUT_MS = 2000
+
 /**
  * Detect cameras on the current dashboard liveview.
  * Sends the camera list and zoom-support flag to the main process.
@@ -71,52 +82,103 @@ function clickTileOverlay(index) {
 }
 
 /**
+ * Inject CSS that disables zoom transitions, making tile repositioning instant.
+ */
+function disableZoomTransitions() {
+  if (document.getElementById(INSTANT_ZOOM_ID)) return
+  const style = document.createElement('style')
+  style.id = INSTANT_ZOOM_ID
+  style.textContent = INSTANT_ZOOM_CSS
+  document.head.appendChild(style)
+}
+
+/**
+ * Remove the instant-zoom CSS override, restoring normal transitions.
+ */
+function enableZoomTransitions() {
+  const style = document.getElementById(INSTANT_ZOOM_ID)
+  if (style) style.remove()
+}
+
+/**
+ * Poll until React's zoom state matches the expected value, or timeout.
+ * Uses requestAnimationFrame for efficient, frame-aligned checks.
+ * After the fiber state matches, waits 2 extra frames for React's DOM
+ * commit phase to complete (fiber updates during reconciliation, but the
+ * actual tile repositioning happens on subsequent frames).
+ * @param {number} expected - The expected zoomedSlotIdx (-1 for unzoomed)
+ * @returns {Promise<void>}
+ */
+function waitForZoomState(expected) {
+  return new Promise((resolve) => {
+    const deadline = Date.now() + ZOOM_WAIT_TIMEOUT_MS
+    function check() {
+      if (getCurrentZoomIndex() === expected || Date.now() > deadline) {
+        // State matches — wait 2 more frames for React to commit DOM changes
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+        return
+      }
+      requestAnimationFrame(check)
+    }
+    requestAnimationFrame(check)
+  })
+}
+
+/**
  * Zoom into a specific camera tile. If already zoomed into a different camera,
- * unzooms first, waits for animation, then zooms to the target.
+ * unzooms first, waits for React to confirm, then zooms to the target.
  * If already zoomed into the same camera, toggles back to grid.
+ * Disables CSS transitions during programmatic zoom for instant switching.
  * @param {number} index - The viewport index (0-based)
  */
-function zoomToCamera(index) {
+async function zoomToCamera(index) {
   const currentZoom = getCurrentZoomIndex()
+  disableZoomTransitions()
 
-  if (currentZoom === index) {
-    // Toggle off — click the same tile to unzoom
-    clickTileOverlay(index)
-    setTimeout(() => {
-      ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
-    }, 500)
-    return
-  }
-
-  if (currentZoom >= 0) {
-    // Already zoomed to a different camera — unzoom first, then zoom to target
-    clickTileOverlay(currentZoom)
-    setTimeout(() => {
+  try {
+    if (currentZoom === index) {
+      // Toggle off — click the same tile to unzoom
       clickTileOverlay(index)
-      setTimeout(() => {
-        ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
-      }, 500)
-    }, 600)
-    return
-  }
+      await waitForZoomState(-1)
+      ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
+      return
+    }
 
-  // Not zoomed — zoom directly
-  clickTileOverlay(index)
-  setTimeout(() => {
+    if (currentZoom >= 0) {
+      // Already zoomed to a different camera — unzoom first, wait for
+      // React to confirm grid is restored, then zoom to target
+      clickTileOverlay(currentZoom)
+      await waitForZoomState(-1)
+      clickTileOverlay(index)
+      await waitForZoomState(index)
+      ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
+      return
+    }
+
+    // Not zoomed — zoom directly
+    clickTileOverlay(index)
+    await waitForZoomState(index)
     ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
-  }, 500)
+  } finally {
+    enableZoomTransitions()
+  }
 }
 
 /**
  * Unzoom back to the grid view by clicking the currently-zoomed tile.
+ * Disables CSS transitions for instant unzoom.
  */
-function unzoomAll() {
+async function unzoomAll() {
   const currentIndex = getCurrentZoomIndex()
   if (currentIndex >= 0) {
-    clickTileOverlay(currentIndex)
-    setTimeout(() => {
+    disableZoomTransitions()
+    try {
+      clickTileOverlay(currentIndex)
+      await waitForZoomState(-1)
       ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
-    }, 500)
+    } finally {
+      enableZoomTransitions()
+    }
   }
 }
 
