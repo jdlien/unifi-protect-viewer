@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.2] - 2026-02-21
+
+### Fixed
+
+- Configuration page showing white screen in production builds — replaced `file://` URLs with custom `app://` protocol to work with `GrantFileProtocolExtraPrivileges` security fuse
+- Error page infinite recursion loop when a page fails to load — added `isMainFrame` check and recursion guard to `did-fail-load` handler
+- Windows auto-updater SHA-512 checksum mismatch — fixed YAML list item regex in `recompute-checksums.js` (`  - url:` was not matched by `\s+`)
+- Update dialogs on Windows showing application menu bar (File, Edit, etc.)
+
+### Changed
+
+- Added logging, validation, and error handling to `recompute-checksums.js` so CI failures are visible instead of silent
+
 ## [2.2.1] - 2026-02-21
 
 ### Fixed

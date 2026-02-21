@@ -4,30 +4,29 @@
       {
         "id": 1,
         "title": "Add Configuration menu item to open settings without clearing them",
-        "description": "Add a 'Configuration' option to the File menu (between 'Check for Updates' and the separator before 'Restart Application') that navigates back to config.html so the user can view and adjust settings (URL, username, password, ignore SSL errors) without clearing existing settings. The config page already loads stored values on DOMContentLoaded via window.electronAPI.config.load(), so the main work is: (1) add the menu item in menu.js that sends an IPC message or directly loads the config page URL, (2) handle the navigation in the main process (window.loadURL to the config.html file:// path), (3) optionally disable the menu item when already on the config page. This should NOT clear the store — it simply re-shows the config form with current values pre-filled.",
-        "status": "pending",
+        "description": "Add a 'Configuration' option to the File menu that navigates back to config.html so the user can view and adjust settings without clearing existing settings.",
+        "status": "done",
         "priority": "medium",
         "dependencies": [],
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Add 'Configuration' menu item in menu.js",
-            "description": "Add a new menu item in the File submenu that triggers navigation to config.html. Place it after 'Check for Updates' and before the separator. Use an accelerator like F8 or similar.",
-            "status": "pending"
-          },
-          {
-            "id": 2,
-            "title": "Load config.html via main process window.loadURL",
-            "description": "When the menu item is clicked, load the config.html file:// URL into the main window. The config page already pre-fills saved values, so no store clearing is needed.",
-            "status": "pending"
-          },
-          {
-            "id": 3,
-            "title": "Disable menu item when already on config page",
-            "description": "Optionally track whether we're on the config page and disable the menu item to prevent redundant navigation.",
-            "status": "pending"
-          }
-        ]
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Fix Windows SHA-512 checksum mismatch in CI auto-update builds",
+        "description": "Fixed: recompute-checksums.js URL regex didn't match YAML list item syntax ('  - url:' has a dash that \\s+ doesn't match). Updated regex to handle '- ' prefix. Also added logging, error handling, and validation.",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [],
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Investigate/fix update dialog showing File/Edit menus on Windows",
+        "description": "Fixed: added autoHideMenuBar:true and removeMenu() to both checking and downloading dialog BrowserWindows in updates-main.ts.",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [],
+        "subtasks": []
       },
       {
         "id": 3,

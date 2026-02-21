@@ -5,7 +5,7 @@
 import { URL } from 'node:url'
 import { log, logError } from './utils'
 import * as version from './version'
-import { htmlPath, imgPath, preloadPath } from './paths'
+import { htmlPath, htmlUrl, imgPath, preloadPath } from './paths'
 
 const { BrowserWindow, app, shell, globalShortcut } = require('electron') as typeof import('electron')
 
@@ -73,8 +73,7 @@ export async function createWindow(store: StoreInterface): Promise<Electron.Brow
   mainWindow.loadURL(initialUrl)
 
   if (initialUrl === 'about:blank') {
-    const configUrl = `file://${htmlPath('config.html')}`
-    mainWindow.loadURL(configUrl)
+    mainWindow.loadURL(htmlUrl('config.html'))
   }
 
   setupWindowNavigation(mainWindow, store)
@@ -131,7 +130,7 @@ export function setupWindowNavigation(mainWindow: Electron.BrowserWindow, store:
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     log(`Window open request for ${url}`)
 
-    if (url.startsWith((store.get('url') as string) || '') || url.startsWith('file://')) {
+    if (url.startsWith((store.get('url') as string) || '') || url.startsWith('file://') || url.startsWith('app://')) {
       mainWindow.loadURL(url)
     } else {
       log(`Blocked navigation to external URL: ${url}`)
@@ -140,15 +139,28 @@ export function setupWindowNavigation(mainWindow: Electron.BrowserWindow, store:
     return { action: 'deny' }
   })
 
+  let isShowingErrorPage = false
+
   mainWindow.webContents.on(
     'did-fail-load',
-    (_event: Electron.Event, errorCode: number, errorDescription: string, validatedURL: string) => {
-      if (errorCode !== -3) {
-        const errorPage = `file://${htmlPath('error.html')}?error=${encodeURIComponent(errorDescription)}&url=${encodeURIComponent(validatedURL)}`
-        mainWindow.loadURL(errorPage)
-      }
+    (
+      _event: Electron.Event,
+      errorCode: number,
+      errorDescription: string,
+      validatedURL: string,
+      isMainFrame: boolean,
+    ) => {
+      if (errorCode === -3 || !isMainFrame || isShowingErrorPage) return
+
+      isShowingErrorPage = true
+      const errorPage = `${htmlUrl('error.html')}?error=${encodeURIComponent(errorDescription)}&url=${encodeURIComponent(validatedURL)}`
+      mainWindow.loadURL(errorPage)
     },
   )
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    isShowingErrorPage = false
+  })
 }
 
 /**

@@ -4,7 +4,7 @@
 
 import { log, logError } from './utils'
 import * as dialogs from './dialogs'
-import { htmlPath } from './paths'
+import { htmlUrl } from './paths'
 
 const { app, Menu, shell, dialog } = require('electron') as typeof import('electron')
 
@@ -83,8 +83,7 @@ function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
           accelerator: 'CmdOrCtrl+,',
           enabled: !configPageState,
           click: () => {
-            const configUrl = `file://${htmlPath('config.html')}`
-            mainWindow.loadURL(configUrl)
+            mainWindow.loadURL(htmlUrl('config.html'))
           },
         },
         { type: 'separator' },

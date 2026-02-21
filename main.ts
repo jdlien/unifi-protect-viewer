@@ -1,11 +1,26 @@
 // Modules to control application life and create native browser window
+import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import * as utils from './src/ts/modules/utils'
 import * as updates from './src/ts/modules/updates-main'
 import * as windowManager from './src/ts/modules/window'
 import * as ipcManager from './src/ts/modules/ipc'
 import * as menuManager from './src/ts/modules/menu'
 
-const { app } = require('electron') as typeof import('electron')
+const { app, protocol, net } = require('electron') as typeof import('electron')
+
+// Register custom app:// protocol for secure local file access
+// Must be called before app.whenReady() — file:// is blocked by GrantFileProtocolExtraPrivileges fuse
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+    },
+  },
+])
 
 // Enable hot reloading in development mode
 if (process.env.NODE_ENV === 'development') {
@@ -54,6 +69,18 @@ async function initializeStore(): Promise<void> {
 // Wait until Electron app is ready
 async function start(): Promise<void> {
   await app.whenReady()
+
+  // Register app:// protocol handler to serve local files from the app root
+  const appRoot = app.getAppPath()
+  protocol.handle('app', (request) => {
+    const { pathname } = new URL(request.url)
+    const filePath = path.resolve(appRoot, decodeURIComponent(pathname).replace(/^\//, ''))
+    if (!filePath.startsWith(appRoot)) {
+      return new Response('Forbidden', { status: 403 })
+    }
+    return net.fetch(pathToFileURL(filePath).href)
+  })
+
   await initializeStore()
 
   const mainWindow = await windowManager.createWindow(store)

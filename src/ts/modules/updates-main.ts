@@ -192,6 +192,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         minimizable: false,
         maximizable: false,
         fullscreenable: false,
+        autoHideMenuBar: true,
         title: 'Checking for Updates',
         ...getDialogAppearanceOptions(),
         webPreferences: {
@@ -199,6 +200,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
           nodeIntegration: false,
         },
       })
+      checkingDialog.removeMenu()
       checkingDialog.loadFile(htmlPath('update-checking.html'))
       checkingDialog.once('ready-to-show', () => checkingDialog!.show())
       checkingDialog.on('closed', () => {
@@ -257,6 +259,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
         minimizable: false,
         maximizable: false,
         fullscreenable: false,
+        autoHideMenuBar: true,
         title: 'Downloading Update',
         ...getDialogAppearanceOptions(),
         webPreferences: {
@@ -265,6 +268,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
           preload: downloadPreloadPath(),
         },
       })
+      downloadDialog.removeMenu()
       downloadDialog.loadFile(htmlPath('update-downloading.html'))
       downloadDialog.once('ready-to-show', () => downloadDialog!.show())
       downloadDialog.on('closed', () => {

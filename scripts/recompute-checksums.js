@@ -19,8 +19,13 @@ if (!ymlPath) {
   process.exit(1)
 }
 
+if (!fs.existsSync(ymlPath)) {
+  console.error(`File not found: ${ymlPath}`)
+  process.exit(1)
+}
+
 const dir = path.dirname(path.resolve(ymlPath))
-let yml = fs.readFileSync(ymlPath, 'utf8')
+const yml = fs.readFileSync(ymlPath, 'utf8')
 
 function sha512Base64(filePath) {
   const buf = fs.readFileSync(filePath)
@@ -31,9 +36,11 @@ function sha512Base64(filePath) {
 const lines = yml.split('\n')
 const result = []
 let currentUrl = null
+let updatedCount = 0
 
 for (const line of lines) {
-  const urlMatch = line.match(/^\s+url:\s+(.+)$/)
+  // Match url field — handles both "  - url:" (YAML list item) and "    url:" (plain key)
+  const urlMatch = line.match(/^\s+(?:-\s+)?url:\s+(.+)$/)
   if (urlMatch) {
     currentUrl = urlMatch[1].trim()
     result.push(line)
@@ -45,8 +52,12 @@ for (const line of lines) {
     const filePath = path.join(dir, currentUrl)
     if (fs.existsSync(filePath)) {
       const hash = sha512Base64(filePath)
+      console.log(`  ${currentUrl}: sha512 updated`)
       result.push(`${sha512Match[1]}sha512: ${hash}`)
+      updatedCount++
       continue
+    } else {
+      console.warn(`  WARNING: file not found: ${filePath}`)
     }
   }
 
@@ -55,9 +66,13 @@ for (const line of lines) {
     const filePath = path.join(dir, currentUrl)
     if (fs.existsSync(filePath)) {
       const size = fs.statSync(filePath).size
+      console.log(`  ${currentUrl}: size updated (${size})`)
       result.push(`${sizeMatch[1]}size: ${size}`)
       currentUrl = null
+      updatedCount++
       continue
+    } else {
+      console.warn(`  WARNING: file not found: ${filePath}`)
     }
   }
 
@@ -70,8 +85,12 @@ for (const line of lines) {
       const filePath = path.join(dir, pathMatch[1].trim())
       if (fs.existsSync(filePath)) {
         const hash = sha512Base64(filePath)
+        console.log(`  ${pathMatch[1].trim()}: top-level sha512 updated`)
         result.push(`sha512: ${hash}`)
+        updatedCount++
         continue
+      } else {
+        console.warn(`  WARNING: file not found for top-level sha512: ${filePath}`)
       }
     }
   }
@@ -80,4 +99,10 @@ for (const line of lines) {
 }
 
 fs.writeFileSync(ymlPath, result.join('\n'))
-console.log(`Updated checksums in ${ymlPath}`)
+
+if (updatedCount === 0) {
+  console.error(`ERROR: No checksums were updated in ${ymlPath} — check file paths`)
+  process.exit(1)
+}
+
+console.log(`Updated ${updatedCount} entries in ${ymlPath}`)

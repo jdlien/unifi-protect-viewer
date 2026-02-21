@@ -19,6 +19,11 @@ export function htmlPath(file: string): string {
   return path.join(getAppRoot(), 'src', 'html', file)
 }
 
+/** Return an app:// URL for an HTML file (works with GrantFileProtocolExtraPrivileges disabled) */
+export function htmlUrl(file: string): string {
+  return `app://local/src/html/${file}`
+}
+
 export function imgPath(file: string): string {
   return path.join(getAppRoot(), 'src', 'img', file)
 }
