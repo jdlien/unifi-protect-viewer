@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.1.2] - 2026-02-20
+
+### Fixed
+
+- Cameras menu items stuck grayed out after navigating to/from the "All Cameras" dashboard view
+- Number key hotkeys not working on "All Cameras" dashboard view
+
+### Changed
+
+- Removed freeze-frame canvas overlay during camera switching (added complexity without visual improvement)
+- Camera switching now uses fast (45ms) transitions instead of disabling them entirely, smoothing out the visual transition
+
+## [2.1.1] - 2026-02-20
+
+### Fixed
+
+- Custom buttons (sidebar toggle, header toggle, fullscreen) not appearing after first login on a new computer where the initial page is the login screen instead of a /protect/ page
+
 ## [2.1.0] - 2026-02-20
 
 ### Added
@@ -9,12 +27,10 @@
 - Camera zoom via menu items with checkbox indicators showing the currently zoomed camera
 - Smart camera switching: pressing a different number while zoomed switches directly to the new camera
 - "Show All Cameras" menu item to return to grid view
-- Zoom is disabled on the "All Cameras" dashboard view where Protect doesn't support it
-- Freeze-frame overlay during camera switching hides the unzoom/zoom transition for a clean visual cut between cameras
 
 ### Changed
 
-- Programmatic camera zoom (keyboard/menu) bypasses CSS transition animations for near-instant switching
+- Programmatic camera zoom (keyboard/menu) uses fast transitions for near-instant switching
 - Zoom state polling uses requestAnimationFrame instead of fixed timeouts, adapting to actual render speed
 
 ## [2.0.0] - 2026-02-20

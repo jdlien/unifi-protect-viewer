@@ -8,12 +8,12 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils.js')
 
-const INSTANT_ZOOM_ID = 'upv-instant-zoom'
-const INSTANT_ZOOM_CSS = `
+const FAST_ZOOM_ID = 'upv-fast-zoom'
+const FAST_ZOOM_CSS = `
 [class*="ZoomableViewport"],
 [class*="ViewportRemoveOnceFirefox"],
 [class*="SizeTransitionWrapper"] {
-  transition-duration: 0s !important;
+  transition-duration: 45ms !important;
 }
 `
 // Max time to wait for React to reach the expected zoom state
@@ -40,10 +40,8 @@ function detectCameras() {
   // Sort by viewport index
   cameras.sort((a, b) => a.index - b.index)
 
-  // /dashboard/all does not support zoom
-  const zoomSupported = !window.location.href.includes('/dashboard/all')
-
   // Navigating to a new view always resets Protect's zoom state
+  const zoomSupported = true
   ipcRenderer.send('update-camera-list', { cameras, zoomSupported })
   ipcRenderer.send('update-camera-zoom', -1)
 
@@ -82,21 +80,21 @@ function clickTileOverlay(index) {
 }
 
 /**
- * Inject CSS that disables zoom transitions, making tile repositioning instant.
+ * Inject CSS that speeds up zoom transitions (~10x faster than default).
  */
 function disableZoomTransitions() {
-  if (document.getElementById(INSTANT_ZOOM_ID)) return
+  if (document.getElementById(FAST_ZOOM_ID)) return
   const style = document.createElement('style')
-  style.id = INSTANT_ZOOM_ID
-  style.textContent = INSTANT_ZOOM_CSS
+  style.id = FAST_ZOOM_ID
+  style.textContent = FAST_ZOOM_CSS
   document.head.appendChild(style)
 }
 
 /**
- * Remove the instant-zoom CSS override, restoring normal transitions.
+ * Remove the fast-zoom CSS override, restoring normal transitions.
  */
 function enableZoomTransitions() {
-  const style = document.getElementById(INSTANT_ZOOM_ID)
+  const style = document.getElementById(FAST_ZOOM_ID)
   if (style) style.remove()
 }
 
@@ -140,73 +138,8 @@ function waitFrames(n) {
 }
 
 /**
- * Create a canvas overlay showing the current zoomed camera's video frame.
- * Acts as a "curtain" to hide the unzoom→zoom transition during camera switching.
- * Uses the video's native resolution for the canvas buffer and object-fit: contain
- * to preserve aspect ratio. Returns null if capture fails (caller falls back to
- * the normal transition without an overlay).
- * @param {number} viewportIndex - The currently zoomed viewport index
- * @returns {HTMLCanvasElement|null} The overlay element, or null if capture failed
- */
-function createFreezeFrame(viewportIndex) {
-  const tile = document.querySelector(`[data-viewport="${viewportIndex}"]`)
-  if (!tile) return null
-
-  const video = tile.querySelector('video')
-  if (!video || !video.videoWidth) return null
-
-  // Append to the liveview container itself — position: absolute + inset: 0
-  // gives pixel-perfect alignment without any coordinate math
-  const container = document.querySelector('[class*="liveView__FullscreenWrapper"]')
-  if (!container) return null
-  const containerRect = container.getBoundingClientRect()
-  const dpr = window.devicePixelRatio || 1
-
-  const canvas = document.createElement('canvas')
-  canvas.width = containerRect.width * dpr
-  canvas.height = containerRect.height * dpr
-  canvas.style.cssText = `
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 99999;
-    pointer-events: none;
-  `
-
-  try {
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    // Draw video centered, preserving aspect ratio (manual object-fit: contain)
-    const videoAspect = video.videoWidth / video.videoHeight
-    const canvasAspect = canvas.width / canvas.height
-    let drawW, drawH, drawX, drawY
-    if (videoAspect > canvasAspect) {
-      drawW = canvas.width
-      drawH = canvas.width / videoAspect
-      drawX = 0
-      drawY = (canvas.height - drawH) / 2
-    } else {
-      drawH = canvas.height
-      drawW = canvas.height * videoAspect
-      drawX = (canvas.width - drawW) / 2
-      drawY = 0
-    }
-    ctx.drawImage(video, drawX, drawY, drawW, drawH)
-  } catch {
-    return null
-  }
-
-  container.appendChild(canvas)
-  return canvas
-}
-
-/**
  * Zoom into a specific camera tile. If already zoomed into a different camera,
  * unzooms first, waits for React to confirm, then zooms to the target.
- * When switching cameras, a freeze-frame overlay hides the transition so
- * the user sees a clean cut from one camera to another.
  * If already zoomed into the same camera, toggles back to grid.
  * Disables CSS transitions during programmatic zoom for instant switching.
  * @param {number} index - The viewport index (0-based)
@@ -226,19 +159,11 @@ async function zoomToCamera(index) {
     }
 
     if (currentZoom >= 0) {
-      // Switching cameras — freeze the current view as an overlay to hide
-      // the unzoom→zoom transition. Remove overlay as soon as the target
-      // camera is zoomed so the live feed is revealed immediately.
-      const overlay = createFreezeFrame(currentZoom)
-      try {
-        clickTileOverlay(currentZoom)
-        await waitForZoomState(-1)
-        clickTileOverlay(index)
-        await waitForZoomState(index)
-      } finally {
-        if (overlay) overlay.remove()
-      }
-      // Wait for DOM to settle after overlay removal before re-enabling transitions
+      // Switching cameras — unzoom current, then zoom target
+      clickTileOverlay(currentZoom)
+      await waitForZoomState(-1)
+      clickTileOverlay(index)
+      await waitForZoomState(index)
       await waitFrames(2)
       ipcRenderer.send('update-camera-zoom', getCurrentZoomIndex())
       return
@@ -336,9 +261,6 @@ function setupHotkeyListener() {
     // Skip if not on a dashboard page
     const dashboard = require('./dashboard.js')
     if (!dashboard.isDashboardPage()) return
-
-    // Skip on /dashboard/all (no zoom support)
-    if (window.location.href.includes('/dashboard/all')) return
 
     // Skip if focus is in an input element
     const tag = document.activeElement?.tagName

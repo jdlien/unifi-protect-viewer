@@ -45,6 +45,93 @@ async function ensureButtonsInjected() {
   await buttons.handleDashboardButton()
 }
 
+// Guard to ensure protect-page initialization only runs once
+let protectPageInitialized = false
+
+/**
+ * Initialize the UI controller, buttons, and listeners for a /protect/ page.
+ * Called either at DOMContentLoaded (if already on a protect page) or after
+ * login redirects to a protect page. Guarded to run only once.
+ */
+async function initializeProtectPage() {
+  if (protectPageInitialized) return
+  protectPageInitialized = true
+
+  utils.log('Initializing protect page UI')
+
+  // 1. Initialize the controller (loads config, sets state, waits for DOM, enforces, sets up observer)
+  try {
+    await uiController.initialize()
+  } catch (error) {
+    utils.logError('Failed to initialize UI controller', error)
+  }
+
+  // 2. Start the button style checker
+  buttonStyles.setupStyleChecker()
+
+  // 3. Inject buttons and register updaters with the controller
+  try {
+    const sidebarUpdater = await buttons.injectSidebarButton(() => uiController.toggleNav())
+    if (sidebarUpdater) uiController.registerButton('sidebar-button', sidebarUpdater)
+
+    const headerToggleUpdater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
+    if (headerToggleUpdater) uiController.registerButton('header-toggle-button', headerToggleUpdater)
+
+    const fullscreenUpdater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
+    if (fullscreenUpdater) uiController.registerButton('fullscreen-button', fullscreenUpdater)
+
+    await buttons.handleDashboardButton()
+  } catch (error) {
+    utils.logError('Failed to inject buttons', error)
+  }
+
+  // 4. Register dashboard button as state change listener (with async hygiene)
+  let dashboardUpdatePending = false
+  uiController.onStateChange(async () => {
+    if (dashboardUpdatePending) return
+    dashboardUpdatePending = true
+    try {
+      await buttons.handleDashboardButton()
+    } catch (err) {
+      utils.logError('Error updating dashboard button from state change:', err)
+    } finally {
+      dashboardUpdatePending = false
+    }
+  })
+
+  // 5. Set up camera hotkey listener (bare number keys for zoom)
+  cameras.setupHotkeyListener()
+
+  // 6. Register URL-change-aware listener for button re-injection
+  uiController.onStateChange(() => {
+    ensureButtonsInjected().catch((err) => {
+      utils.logError('Error in ensureButtonsInjected:', err)
+    })
+  })
+}
+
+/**
+ * Watch for the URL to transition from a non-protect page (e.g. login) to a
+ * /protect/ page, then run initializeProtectPage(). Polls every 500ms for up
+ * to 120 seconds.
+ */
+function watchForProtectPageTransition() {
+  const MAX_WAIT = 120000
+  const startTime = Date.now()
+  const interval = setInterval(() => {
+    if (Date.now() - startTime > MAX_WAIT) {
+      clearInterval(interval)
+      return
+    }
+    if (window.location.href.includes('/protect/')) {
+      clearInterval(interval)
+      initializeProtectPage().catch((err) => {
+        utils.logError('Failed to initialize protect page after login:', err)
+      })
+    }
+  }, 500)
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   utils.log('Page loaded, URL:', window.location.href)
   timeouts.clearTimeout('connection')
@@ -57,55 +144,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     navigation.initializeWithPolling()
 
     if (isProtectPage) {
-      // 1. Initialize the controller (loads config, sets state, waits for DOM, enforces, sets up observer)
-      try {
-        await uiController.initialize()
-      } catch (error) {
-        utils.logError('Failed to initialize UI controller', error)
-      }
-
-      // 2. Start the button style checker
-      buttonStyles.setupStyleChecker()
-
-      // 3. Inject buttons and register updaters with the controller
-      try {
-        const sidebarUpdater = await buttons.injectSidebarButton(() => uiController.toggleNav())
-        if (sidebarUpdater) uiController.registerButton('sidebar-button', sidebarUpdater)
-
-        const headerToggleUpdater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
-        if (headerToggleUpdater) uiController.registerButton('header-toggle-button', headerToggleUpdater)
-
-        const fullscreenUpdater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
-        if (fullscreenUpdater) uiController.registerButton('fullscreen-button', fullscreenUpdater)
-
-        await buttons.handleDashboardButton()
-      } catch (error) {
-        utils.logError('Failed to inject buttons', error)
-      }
-
-      // 4. Register dashboard button as state change listener (with async hygiene)
-      let dashboardUpdatePending = false
-      uiController.onStateChange(async () => {
-        if (dashboardUpdatePending) return
-        dashboardUpdatePending = true
-        try {
-          await buttons.handleDashboardButton()
-        } catch (err) {
-          utils.logError('Error updating dashboard button from state change:', err)
-        } finally {
-          dashboardUpdatePending = false
-        }
-      })
-
-      // 5. Set up camera hotkey listener (bare number keys for zoom)
-      cameras.setupHotkeyListener()
-
-      // 6. Register URL-change-aware listener for button re-injection
-      uiController.onStateChange(() => {
-        ensureButtonsInjected().catch((err) => {
-          utils.logError('Error in ensureButtonsInjected:', err)
-        })
-      })
+      await initializeProtectPage()
+    } else {
+      // Not on a protect page yet (e.g. login page) — watch for redirect
+      watchForProtectPageTransition()
     }
   }
 
