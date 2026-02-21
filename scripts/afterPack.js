@@ -1,9 +1,11 @@
 const { flipFuses, FuseVersion, FuseV1Options } = require('@electron/fuses')
+const { execFileSync } = require('child_process')
 const path = require('path')
 
 /**
  * afterPack hook for electron-builder.
- * Flips Electron fuses on the packaged binary to harden the production app.
+ * Flips Electron fuses on the packaged binary to harden the production app,
+ * then ad-hoc re-signs on macOS (fuse flipping invalidates the code signature).
  */
 module.exports = async function afterPack(context) {
   const platform = context.electronPlatformName
@@ -37,4 +39,15 @@ module.exports = async function afterPack(context) {
   })
 
   console.log('Fuses flipped successfully')
+
+  // On macOS, fuse flipping invalidates the Electron code signature.
+  // Ad-hoc re-sign so local builds launch without SIGKILL.
+  // In CI, electron-builder's real signing step overwrites this.
+  // Skip for universal build temp dirs — the differing CodeResources files
+  // would cause the universal merge to fail.
+  if (platform === 'darwin' && !context.appOutDir.includes('-temp')) {
+    console.log('Ad-hoc re-signing macOS app after fuse flip...')
+    execFileSync('codesign', ['--force', '--deep', '--sign', '-', electronBinaryPath])
+    console.log('Ad-hoc signing complete')
+  }
 }

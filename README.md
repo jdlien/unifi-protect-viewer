@@ -9,11 +9,9 @@ The app will then automatically log in and present you with the live view you se
 Download the latest version for your platform:
 
 - **macOS**:
-
   - [Universal (Intel/Apple Silicon)](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-universal.dmg)
 
 - **Windows**:
-
   - [Windows Installer x64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-x64.exe)
 
   - [Windows Installer ARM64](https://github.com/jdlien/unifi-protect-viewer/releases/latest/download/UniFi-Protect-Viewer-Setup-arm64.exe)
@@ -22,24 +20,32 @@ Or view all downloads, including Linux versions, on the [releases page](https://
 
 ## Features
 
-- Access UniFi Protect web UI in a desktop application
-- Native-like experience with application menu
+- Access UniFi Protect web UI in a dedicated desktop application
+- Toggle sidebar navigation and header with `Escape` or menu/buttons
+- **Camera hotkeys**: press `1`–`9` to zoom into individual cameras, `0` to return to grid view
+- **Cameras menu** dynamically lists cameras on the current liveview dashboard
+- **Configuration page** (`Cmd+,` / `Ctrl+,`) to edit settings without resetting credentials
+- Fullscreen mode with dedicated button and `Cmd+Shift+F` / `Ctrl+Shift+F`
+- Dashboard button to return to your liveview from any page
+- Widget panel management
+- Auto-login with saved credentials
 - Automatic updates via GitHub releases
-- Stays logged in between sessions
-- No need to open a browser
-- Automatic updates
+- Native application menu with platform-specific Window menu
+- Hardened Electron build with security fuses
 
 ## Credits
 
-This application was based on [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has now been almost completely rewritten. It now only works with Protect v5. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
+This application was based on [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has now been almost completely rewritten. It requires UniFi Protect v6 or later. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
 
-Some of the features included by this version are:
+Some of the differences from the original include:
 
-- You can toggle navigation/header by pressing `Escape`
-- There is a menu with many options for modifying the view
-- A button shows, allowing you to return to the dashboard view after you leave it
-- The configuration and error pages have been redesigned
-- The latest version of Electron is now used
+- Full TypeScript codebase with strict mode
+- Toggle navigation/header visibility with buttons, keyboard shortcuts, or menu
+- Camera zoom hotkeys and a dynamic Cameras menu
+- Configuration page accessible from any screen
+- Dashboard button to quickly return to your liveview
+- Redesigned configuration and error pages
+- Electron v40 with hardened runtime and security fuses
 
 ## Installation
 
@@ -66,8 +72,8 @@ pnpm build:linux
 Releases are CI-driven from tags:
 
 ```bash
-git tag v2.1.3
-git push origin v2.1.3
+git tag v2.2.2
+git push origin v2.2.2
 ```
 
 ### Code Signing
@@ -82,13 +88,14 @@ Windows builds are signed with a code signing certificate belonging to my compan
 
 ## Usage
 
-After configuration, the app will automatically start the live view upon startup. If you want to change the configuration, you can press `F10` (or use the UniFi Protect Viewer menu)to reset all settings and restart the configuration process.
+After configuration, the app will automatically start the live view upon startup.
 
-- Escape: Toggle Navigation
-- F9: Restart
-- F10: Restart & Reset
-
-
-## Planned Features
-
-- Menu option to edit settings (e.g., change the Protect URL) without resetting credentials.
+| Shortcut                       | Action                               |
+| ------------------------------ | ------------------------------------ |
+| `Escape`                       | Toggle sidebar navigation and header |
+| `1`–`9`                        | Zoom into camera by position         |
+| `0`                            | Return to grid view (unzoom)         |
+| `Cmd+,` / `Ctrl+,`             | Open configuration page              |
+| `Cmd+Shift+F` / `Ctrl+Shift+F` | Toggle fullscreen                    |
+| `F9`                           | Restart                              |
+| `F10`                          | Restart & reset all settings         |
