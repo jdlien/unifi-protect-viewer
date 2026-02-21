@@ -44,7 +44,10 @@
     "release:major": "node scripts/release.js major",
     "release:minor": "node scripts/release.js minor",
     "release:patch": "node scripts/release.js patch",
-    "release:none": "node scripts/release.js none"
+    "release:none": "node scripts/release.js none",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:all": "vitest run"
   },
   "keywords": [
     "app",
@@ -70,10 +73,12 @@
     "electron-builder": "^26.8.1",
     "electron-reloader": "^1.2.3",
     "glob": "^13.0.6",
+    "happy-dom": "^20.7.0",
     "otplib": "^13.3.0",
     "prettier": "^3.8.1",
     "readline-sync": "^1.4.10",
-    "semver": "^7.7.4"
+    "semver": "^7.7.4",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "dotenv": "^17.3.1",
