@@ -93,6 +93,12 @@ jobs:
           files-folder-filter: exe
           file-digest: SHA256
 
+      # Signing changes the exe binaries, so recompute SHA512 hashes in latest.yml
+      - name: Recompute latest.yml checksums after signing
+        if: env.HAS_AZURE_SIGNING == 'true'
+        run: node scripts/recompute-checksums.js dist/latest.yml
+        shell: bash
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
