@@ -9,10 +9,12 @@
  *   The controller does NOT import buttons.js.
  */
 
-const { ipcRenderer } = require('electron')
 const utils = require('./utils')
 const buttonStyles = require('./buttonStyles')
 const { DOM_ELEMENT_WAIT_MS, ENFORCEMENT_BURST_INTERVAL_MS, ENFORCEMENT_BURST_COUNT } = require('./constants')
+
+// IPC bridge — set via initialize() for testability, falls back to electron-ipc
+let ipc = null
 
 // --- Internal state ---
 const state = {
@@ -75,11 +77,11 @@ async function persistState() {
   const settings = {}
   settings.hideNav = state.navHidden
   settings.hideHeader = state.headerHidden
-  await ipcRenderer.invoke('configSavePartial', settings)
+  await ipc.invoke('configSavePartial', settings)
 }
 
 function notifyMainProcess() {
-  ipcRenderer.send('update-ui-state', {
+  ipc.send('update-ui-state', {
     navHidden: state.navHidden,
     headerHidden: state.headerHidden,
   })
@@ -93,14 +95,17 @@ function notifyMainProcess() {
  * Loads config, sets state, waits for DOM elements, applies state,
  * sets up observer + enforcement. Must be awaited before button injection.
  */
-async function initialize() {
+async function initialize(deps = {}) {
+  // Set IPC bridge (injected for tests, otherwise from electron-ipc)
+  ipc = deps.ipcRenderer || require('./electron-ipc').ipcRenderer
+
   // a. Load config
-  const config = (await ipcRenderer.invoke('configLoad')) || {}
+  const config = (await ipc.invoke('configLoad')) || {}
   state.navHidden = config.hideNav === true
   state.headerHidden = config.hideHeader === true
 
   // b. Load fullscreen state
-  state.isFullscreen = await ipcRenderer.invoke('isFullScreen')
+  state.isFullscreen = await ipc.invoke('isFullScreen')
 
   // c. Wait for nav + header to exist (5s timeout)
   try {
@@ -122,7 +127,7 @@ async function initialize() {
     notifyButtons()
     notifyStateChangeListeners()
   }
-  ipcRenderer.on('fullscreen-change', fullscreenHandler)
+  ipc.on('fullscreen-change', fullscreenHandler)
 
   // f. Set up MutationObserver
   setupObserver()
@@ -354,14 +359,19 @@ function destroy() {
     bodyObserver = null
   }
   stopEnforcement()
-  if (fullscreenHandler) {
-    ipcRenderer.removeListener('fullscreen-change', fullscreenHandler)
+  if (fullscreenHandler && ipc) {
+    ipc.removeListener('fullscreen-change', fullscreenHandler)
     fullscreenHandler = null
   }
   buttonRegistry.clear()
   stateChangeListeners.length = 0
   trackedNav = null
   trackedHeader = null
+  ipc = null
+  state.navHidden = false
+  state.headerHidden = false
+  state.isFullscreen = false
+  state.toggleInProgress = false
   state.initialized = false
 }
 
