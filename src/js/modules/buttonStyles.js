@@ -4,6 +4,7 @@
  */
 
 const utils = require('./utils')
+const { STYLE_CHECKER_INTERVAL_MS } = require('./constants')
 
 // Button styles as a string constant
 const BUTTON_STYLES = /*css*/ `
@@ -209,7 +210,7 @@ function setupStyleChecker() {
       injectButtonStyles()
       utils.logger.debug('Button styles were missing, re-injected during routine check')
     }
-  }, 5000)
+  }, STYLE_CHECKER_INTERVAL_MS)
 }
 
 /**

@@ -1,10 +1,16 @@
 const { ipcRenderer } = require('electron')
+const {
+  LOGIN_ATTEMPTS_RESET_MS,
+  LOGIN_SUCCESS_CHECK_INTERVAL_MS,
+  LOGIN_SUCCESS_MAX_WAIT_MS,
+  POST_LOGIN_DASHBOARD_DELAY_MS,
+  POST_LOGIN_DASHBOARD_RETRY_DELAY_MS,
+} = require('./constants')
 
 // Constants
 const MAX_LOGIN_ATTEMPTS = 3
 const LOGIN_ATTEMPTS_KEY = 'loginAttempts'
 const ATTEMPTS_RESET_TIME_KEY = 'loginAttemptsResetTime'
-const RESET_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 /**
  * Check if this is a login page
@@ -80,7 +86,8 @@ async function attemptLogin() {
     }
 
     // Set reset time if this is the first attempt
-    const resetTime = currentAttempts === 1 ? Date.now() + RESET_TIMEOUT_MS : Date.now() + RESET_TIMEOUT_MS
+    const resetTime =
+      currentAttempts === 1 ? Date.now() + LOGIN_ATTEMPTS_RESET_MS : Date.now() + LOGIN_ATTEMPTS_RESET_MS
 
     // Update attempt counter in persistent storage
     await updateLoginAttempts(currentAttempts, resetTime)
@@ -160,8 +167,8 @@ function setupLoginSuccessMonitor() {
   const startTime = Date.now()
   const dashboard = require('./dashboard.js')
   const ui = require('./ui.js')
-  const MAX_CHECK_TIME = 30000 // 30 seconds timeout
-  const CHECK_INTERVAL = 500 // Check every 500ms
+  const MAX_CHECK_TIME = LOGIN_SUCCESS_MAX_WAIT_MS
+  const CHECK_INTERVAL = LOGIN_SUCCESS_CHECK_INTERVAL_MS
 
   // Flag to track if we've already detected login success
   let loginSuccessDetected = false
@@ -198,12 +205,12 @@ function setupLoginSuccessMonitor() {
               if (isReadyRetry) {
                 ui.handleLiveView()
               }
-            }, 2000) // Extra 2 second delay for retry
+            }, POST_LOGIN_DASHBOARD_RETRY_DELAY_MS)
           }
         } catch (error) {
           console.error('Error during post-login dashboard customization:', error)
         }
-      }, 1000) // Wait 1 second after URL change
+      }, POST_LOGIN_DASHBOARD_DELAY_MS)
 
       clearInterval(checkInterval)
     }

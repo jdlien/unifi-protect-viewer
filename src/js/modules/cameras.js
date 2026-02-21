@@ -7,6 +7,7 @@
 
 const { ipcRenderer } = require('electron')
 const utils = require('./utils.js')
+const { ZOOM_WAIT_TIMEOUT_MS } = require('./constants')
 
 const FAST_ZOOM_ID = 'upv-fast-zoom'
 const FAST_ZOOM_CSS = `
@@ -16,8 +17,6 @@ const FAST_ZOOM_CSS = `
   transition-duration: 45ms !important;
 }
 `
-// Max time to wait for React to reach the expected zoom state
-const ZOOM_WAIT_TIMEOUT_MS = 2000
 
 /**
  * Detect cameras on the current dashboard liveview.

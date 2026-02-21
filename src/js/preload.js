@@ -11,6 +11,7 @@ const buttonStyles = require('./modules/buttonStyles.js')
 
 // Renderer-only update functions (notification UI, progress bar)
 const { initializeUpdateListeners } = require('./modules/updates-renderer.js')
+const { PROTECT_PAGE_POLL_MS, PROTECT_PAGE_MAX_WAIT_MS, UPDATE_LISTENER_DELAY_MS } = require('./modules/constants')
 
 /**
  * Ensure all custom buttons are injected and registered with the controller.
@@ -102,10 +103,9 @@ async function initializeProtectPage() {
  * to 120 seconds.
  */
 function watchForProtectPageTransition() {
-  const MAX_WAIT = 120000
   const startTime = Date.now()
   const interval = setInterval(() => {
-    if (Date.now() - startTime > MAX_WAIT) {
+    if (Date.now() - startTime > PROTECT_PAGE_MAX_WAIT_MS) {
       clearInterval(interval)
       return
     }
@@ -115,7 +115,7 @@ function watchForProtectPageTransition() {
         utils.logError('Failed to initialize protect page after login:', err)
       })
     }
-  }, 500)
+  }, PROTECT_PAGE_POLL_MS)
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -140,7 +140,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Initialize updates - after a delay to ensure UI is ready
   setTimeout(() => {
     initializeUpdateListeners()
-  }, 5000)
+  }, UPDATE_LISTENER_DELAY_MS)
 
   // Route IPC toggle events through the controller
   ipcRenderer.on('toggle-navigation', () => {

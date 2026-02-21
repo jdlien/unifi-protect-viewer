@@ -2,6 +2,7 @@ const ui = require('./ui.js')
 const utils = require('./utils.js')
 const auth = require('./auth.js')
 const dashboard = require('./dashboard.js')
+const { DASHBOARD_RETRY_DELAY_MS } = require('./constants')
 
 /**
  * Setup navigation monitoring to detect URL changes in SPA.
@@ -46,7 +47,7 @@ function setupNavigationMonitor() {
       const success = await dashboard.initializeDashboard()
       if (!success) {
         utils.log('Dashboard not ready yet, will retry')
-        setTimeout(applyDashboardCustomizations, 500)
+        setTimeout(applyDashboardCustomizations, DASHBOARD_RETRY_DELAY_MS)
       }
     } catch (error) {
       utils.logError('Error applying dashboard customizations:', error)

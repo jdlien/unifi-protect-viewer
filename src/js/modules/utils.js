@@ -5,7 +5,9 @@
  * @param {number} interval - Check interval in milliseconds
  * @returns {Promise<void>} - Resolves when condition is met, rejects on timeout
  */
-async function waitUntil(condition, timeout = 30000, interval = 20) {
+const { DEFAULT_WAIT_TIMEOUT_MS, DEFAULT_WAIT_INTERVAL_MS } = require('./constants')
+
+async function waitUntil(condition, timeout = DEFAULT_WAIT_TIMEOUT_MS, interval = DEFAULT_WAIT_INTERVAL_MS) {
   // Try the condition immediately first
   try {
     if (condition()) return

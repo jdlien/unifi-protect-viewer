@@ -1,5 +1,6 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils')
+const { DOM_ELEMENT_WAIT_MS, WIDGET_TRANSITION_MS } = require('./constants')
 
 /**
  * Fullscreen view modification function to customize the LiveView UI.
@@ -104,7 +105,7 @@ async function handleWidgetPanel() {
         document.querySelector('[class*="dashboard__Widgets"]') !== null &&
         document.querySelector('[class*="dashboard__StyledExpandButton"] button') !== null
       )
-    }, 5000)
+    }, DOM_ELEMENT_WAIT_MS)
 
     const expandButton = document.querySelector('[class*="dashboard__StyledExpandButton"] button')
     utils.setStyle(expandButton, 'opacity', '0.5')
@@ -134,7 +135,7 @@ function toggleWidgetPanel() {
       const widgetPanel = document.querySelector('[class*="dashboard__Widgets"]')
       const expanded = widgetPanel && parseFloat(getComputedStyle(widgetPanel).width) > 0
       ipcRenderer.send('update-ui-state', { widgetPanelExpanded: expanded })
-    }, 350)
+    }, WIDGET_TRANSITION_MS)
   } else {
     utils.logError('Could not find widget panel expand button')
   }

@@ -12,6 +12,7 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils')
 const buttonStyles = require('./buttonStyles')
+const { DOM_ELEMENT_WAIT_MS, ENFORCEMENT_BURST_INTERVAL_MS, ENFORCEMENT_BURST_COUNT } = require('./constants')
 
 // --- Internal state ---
 const state = {
@@ -105,7 +106,7 @@ async function initialize() {
   try {
     await utils.waitUntil(
       () => document.querySelector('nav') !== null && document.querySelector('header') !== null,
-      5000,
+      DOM_ELEMENT_WAIT_MS,
     )
   } catch {
     // Elements may not exist on non-protect pages; proceed anyway
@@ -252,13 +253,13 @@ function startEnforcement() {
   stopEnforcement()
   let count = 0
   enforcementTimer = setInterval(() => {
-    if (count < 10) {
+    if (count < ENFORCEMENT_BURST_COUNT) {
       enforceCurrentState()
       count++
     } else {
       stopEnforcement()
     }
-  }, 300)
+  }, ENFORCEMENT_BURST_INTERVAL_MS)
 }
 
 function stopEnforcement() {

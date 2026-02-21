@@ -1,6 +1,7 @@
 const { ipcRenderer } = require('electron')
 const utils = require('./utils')
 const buttonStyles = require('./buttonStyles')
+const { DOM_ELEMENT_WAIT_MS, DASHBOARD_BUTTON_WAIT_MS, NAV_POPUP_DURATION_MS } = require('./constants')
 
 // Shared icon constants for navigation elements
 const navIcons = {
@@ -31,8 +32,8 @@ const dashboardIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 // Fullscreen icons
 const fullscreenIcons = {
-  enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0L488 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39-87 87c-9.4 9.4-24.6 9.4-33.9 0l-32-32c-9.4-9.4-9.4-24.6 0-33.9l87-87L327 41c-6.9-6.9-8.9-17.2-5.2-26.2S334.3 0 344 0zM168 512L24 512c-13.3 0-24-10.7-24-24L0 344c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39 87-87c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8z"/></svg>`,
-  exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9.4-9.4 24.6-9.4 33.9 0l32 32c9.4 9.4 9.4 24.6 0 33.9l-87 87 39 39c6.9 6.9 8.9 17.2 5.2 26.2s-12.5 14.8-22.2 14.8l-144 0c-13.3 0-24-10.7-24-24l0-144c0-9.7 5.8-18.5 14.8-22.2s19.3-1.7 26.2 5.2l39 39L439 7zM72 272l144 0c13.3 0 24 10.7 24 24l0 144c0 9.7-5.8 18.5-14.8 22.2s-19.3 1.7-26.2-5.2l-39-39L73 505c-9.4 9.4-24.6 9.4-33.9 0L7 473c-9.4-9.4-9.4-24.6 0-33.9l87-87L55 313c-6.9-6.9-8.9-17.2-5.2-26.2s12.5-14.8 22.2-14.8z"/></svg>`,
+  enter: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M344 0h144c13 0 24 11 24 24v144a24 24 0 0 1-41 17l-39-39-87 87c-9 9-25 9-34 0l-32-32c-9-9-9-25 0-34l87-87-39-39a24 24 0 0 1 17-41M168 512H24c-13 0-24-11-24-24V344a24 24 0 0 1 41-17l39 39 87-87c9-9 25-9 34 0l32 32c9 9 9 25 0 34l-87 87 39 39a24 24 0 0 1-17 41"/></svg>`,
+  exit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="currentColor" d="M439 7c9-9 25-9 34 0l32 32c9 9 9 25 0 34l-87 87 39 39a24 24 0 0 1-17 41H296c-13 0-24-11-24-24V72a24 24 0 0 1 41-17l39 39zM72 272h144c13 0 24 11 24 24v144a24 24 0 0 1-41 17l-39-39-87 87c-9 9-25 9-34 0L7 473c-9-9-9-25 0-34l87-87-39-39a24 24 0 0 1 17-41"/></svg>`,
 }
 
 /**
@@ -78,7 +79,7 @@ async function createHeaderButton(options) {
 
   try {
     // Wait for header to be available
-    await utils.waitUntil(() => document.querySelector('header') !== null, 5000)
+    await utils.waitUntil(() => document.querySelector('header') !== null, DOM_ELEMENT_WAIT_MS)
 
     // Double check button wasn't created during waiting (race condition)
     if (document.getElementById(id)) {
@@ -284,7 +285,7 @@ function injectDashboardButton() {
   setTimeout(() => {
     const popup = document.getElementById('show-nav-popup')
     if (popup) popup.remove()
-  }, 5000)
+  }, NAV_POPUP_DURATION_MS)
 
   return button
 }
@@ -305,7 +306,7 @@ async function handleDashboardButton() {
   try {
     await utils.waitUntil(
       () => document.querySelector('header') !== null && document.querySelector('nav') !== null,
-      2000,
+      DASHBOARD_BUTTON_WAIT_MS,
     )
   } catch {
     setDashboardButtonVisibility(true)
@@ -376,7 +377,7 @@ async function createNavButton(options) {
   }
 
   try {
-    await utils.waitUntil(() => document.querySelector('nav') !== null, 5000)
+    await utils.waitUntil(() => document.querySelector('nav') !== null, DOM_ELEMENT_WAIT_MS)
 
     // Re-check after wait
     if (document.getElementById(id)) {
