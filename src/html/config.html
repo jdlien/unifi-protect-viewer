@@ -58,6 +58,7 @@
         <div style="border-radius: 8px; padding: 12px; background-color: #8882; margin-bottom: 16px">
           <div class="hotkey"><key>Esc</key><span>Toggle Navigation</span></div>
           <div class="hotkey"><key>F11</key><span>Fullscreen</span></div>
+          <div class="hotkey"><key id="configHotkey"></key><span>Configuration</span></div>
           <div class="hotkey"><key>F9</key><span>Restart</span></div>
           <div class="hotkey"><key>F10</key><span>Reset Configuration</span></div>
         </div>
@@ -69,7 +70,7 @@
           <table class="diagnostics-table">
             <tbody id="diagnosticsBody">
               <tr>
-                <td colspan="2" style="color: #888">Loading diagnostics...</td>
+                <td colspan="3" style="color: #888">Loading diagnostics...</td>
               </tr>
             </tbody>
           </table>
@@ -83,6 +84,10 @@
 
       // Load stored config on page load
       window.addEventListener('DOMContentLoaded', async () => {
+        // Set platform-specific hotkey label
+        const isMac = navigator.platform.toUpperCase().includes('MAC')
+        document.getElementById('configHotkey').textContent = isMac ? '⌘+,' : 'Ctrl+,'
+
         try {
           // statusEl.textContent = 'Loading configuration...'
 
@@ -252,26 +257,25 @@
             .catch(() => ({ supported: false, smooth: false, powerEfficient: false }))
 
           const platformNames = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }
-          const rows = [
-            ['Platform', `${platformNames[diag.platform] || diag.platform} / ${diag.arch}`],
-            ['Electron', diag.electronVersion],
-            ['Chrome', diag.chromeVersion],
-            ['Hardware Acceleration', statusHtml(diag.hardwareAcceleration)],
-            [
-              'H.264 Decode',
-              `Supported: ${statusHtml(h264.supported)} &nbsp; Smooth: ${statusHtml(h264.smooth)} &nbsp; Power Efficient: ${statusHtml(h264.powerEfficient)}`,
-            ],
-            [
-              'H.265/HEVC Decode',
-              `Supported: ${statusHtml(h265.supported)} &nbsp; Smooth: ${statusHtml(h265.smooth)} &nbsp; Power Efficient: ${statusHtml(h265.powerEfficient)}`,
-            ],
-            ['App Version', (await window.electronAPI.getAppVersion()) || 'Unknown'],
-          ]
 
-          tbody.innerHTML = rows.map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`).join('')
+          const codecRows = (label, codec) =>
+            `<tr><td rowspan="3">${label}</td><td>Supported</td><td>${statusHtml(codec.supported)}</td></tr>` +
+            `<tr><td>Smooth</td><td>${statusHtml(codec.smooth)}</td></tr>` +
+            `<tr><td>Power Efficient</td><td>${statusHtml(codec.powerEfficient)}</td></tr>`
+
+          const simpleRow = (label, value) => `<tr><td>${label}</td><td colspan="2">${value}</td></tr>`
+
+          tbody.innerHTML =
+            simpleRow('Platform', `${platformNames[diag.platform] || diag.platform} / ${diag.arch}`) +
+            simpleRow('Electron', diag.electronVersion) +
+            simpleRow('Chrome', diag.chromeVersion) +
+            simpleRow('HW Acceleration', statusHtml(diag.hardwareAcceleration)) +
+            codecRows('H.264<br />Decode', h264) +
+            codecRows('H.265/HEVC<br />Decode', h265) +
+            simpleRow('App Version', (await window.electronAPI.getAppVersion()) || 'Unknown')
         } catch (error) {
           console.error('Error loading diagnostics:', error)
-          tbody.innerHTML = '<tr><td colspan="2" style="color: #f44336">Failed to load diagnostics</td></tr>'
+          tbody.innerHTML = '<tr><td colspan="3" style="color: #f44336">Failed to load diagnostics</td></tr>'
         }
       }
 

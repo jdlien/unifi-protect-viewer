@@ -4,6 +4,7 @@
 
 import { log, logError } from './utils'
 import * as dialogs from './dialogs'
+import { htmlPath } from './paths'
 
 const { app, Menu, shell, dialog } = require('electron') as typeof import('electron')
 
@@ -30,6 +31,7 @@ let fullscreenState = false
 let cameraListState: CameraEntry[] = []
 let zoomedCameraIndex = -1
 let cameraZoomSupported = true
+let configPageState = false
 
 /**
  * Build the menu template using current dynamic state
@@ -53,6 +55,15 @@ function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
           click: () => {
             const updates = require('./updates-main') as typeof import('./updates-main')
             updates.checkForUpdatesWithDialog(mainWindow)
+          },
+        },
+        {
+          label: 'Configuration',
+          accelerator: 'CmdOrCtrl+,',
+          enabled: !configPageState,
+          click: () => {
+            const configUrl = `file://${htmlPath('config.html')}`
+            mainWindow.loadURL(configUrl)
           },
         },
         { type: 'separator' },
@@ -259,8 +270,10 @@ export function setupApplicationMenu(mainWindow: Electron.BrowserWindow, store: 
  */
 export function updateMenuState(mainWindow: Electron.BrowserWindow): void {
   mainWindow.webContents
-    .executeJavaScript(`window.location.href.includes('/protect/dashboard')`)
-    .then((isDashboardPage: boolean) => {
+    .executeJavaScript(`window.location.href`)
+    .then((currentUrl: string) => {
+      // Dashboard item
+      const isDashboardPage = currentUrl.includes('/protect/dashboard')
       const viewMenu = mainMenu.items.find((item) => item.label === 'View')
       if (viewMenu && viewMenu.submenu) {
         const dashboardItem = viewMenu.submenu.items.find((item) => item.label === 'Return to Dashboard')
@@ -268,6 +281,10 @@ export function updateMenuState(mainWindow: Electron.BrowserWindow): void {
           dashboardItem.enabled = !isDashboardPage
         }
       }
+
+      // Config page state
+      const isConfigPage = currentUrl.includes('/html/config.html')
+      updateConfigPageState(isConfigPage)
     })
     .catch((error: unknown) => {
       logError('Error updating menu state:', error)
@@ -284,6 +301,16 @@ export function updateDashboardState(isDashboardPage: boolean): void {
     if (dashboardItem) {
       dashboardItem.enabled = !isDashboardPage
     }
+  }
+}
+
+/**
+ * Update config page state in the menu (disables Configuration item when on config page)
+ */
+export function updateConfigPageState(isConfigPage: boolean): void {
+  if (configPageState !== isConfigPage) {
+    configPageState = isConfigPage
+    rebuildMenu()
   }
 }
 
