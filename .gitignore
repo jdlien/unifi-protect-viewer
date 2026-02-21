@@ -10,3 +10,4 @@ notarization-log.json
 logs/code_signing_tool.log
 thinning-log.txt
 /scripts/tmp
+test-results
