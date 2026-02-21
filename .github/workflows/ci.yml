@@ -17,9 +17,34 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --check "src/**/*.{js,css,html}" "*.js" "scripts/**/*.js"
+      - run: pnpm exec prettier --check "src/**/*.{ts,css,html}" "*.ts" "scripts/**/*.js"
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
 
   build:
+    needs: [typecheck, test]
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -32,6 +57,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Compile TypeScript
+        run: pnpm build:ts
       - name: Build (no signing)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'

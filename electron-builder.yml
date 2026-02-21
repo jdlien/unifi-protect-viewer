@@ -11,8 +11,10 @@ directories:
   buildResources: 'build'
 
 files:
-  - 'main.js'
-  - 'src/**/*'
+  - 'out/**/*'
+  - 'src/html/**/*'
+  - 'src/css/**/*'
+  - 'src/img/**/*'
   - 'node_modules/**/*'
   - 'package.json'
 

@@ -3,11 +3,15 @@
   "productName": "UniFi Protect Viewer",
   "version": "2.1.2",
   "description": "Electron app for UniFi Protect",
-  "main": "main.js",
+  "main": "out/main.js",
   "scripts": {
+    "prestart": "tsc",
     "start": "electron --ignore=builds .",
+    "predev": "tsc",
     "dev": "NODE_ENV=development electron .",
-    "clean": "rm -rf builds dist || true",
+    "build:ts": "tsc",
+    "build:ts:watch": "tsc --watch",
+    "clean": "rm -rf builds dist out || true",
     "build": "electron-builder --config",
     "build:mac": "electron-builder --mac --universal",
     "build:mac-arm64": "electron-builder --mac --arm64",
@@ -70,6 +74,7 @@
     "@electron/fuses": "^2.0.0",
     "@electron/packager": "^19.0.5",
     "@playwright/test": "^1.58.2",
+    "@types/node": "^25.3.0",
     "archiver": "^7.0.1",
     "electron": "^40.6.0",
     "electron-builder": "^26.8.1",
@@ -80,6 +85,7 @@
     "prettier": "^3.8.1",
     "readline-sync": "^1.4.10",
     "semver": "^7.7.4",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
   "dependencies": {
