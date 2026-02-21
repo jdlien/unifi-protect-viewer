@@ -1,7 +1,7 @@
 {
   "name": "unifi-protect-viewer",
   "productName": "UniFi Protect Viewer",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Electron app for UniFi Protect",
   "main": "out/main.js",
   "scripts": {
@@ -52,6 +52,9 @@
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --project=smoke --project=config",
+    "test:e2e:live": "playwright test --project=live",
+    "test:e2e:fragile": "playwright test --project=fragile",
     "test:all": "vitest run && playwright test"
   },
   "keywords": [

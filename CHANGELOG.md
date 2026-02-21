@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.2.0] - 2026-02-21
+
+### Added
+
+- **Configuration menu item** (`Cmd+,` / `Ctrl+,`) to access settings from any page without resetting configuration
+- Platform-aware hotkey labels on the config page (shows `⌘` on macOS, `Ctrl` on Windows/Linux)
+- Platform-specific **Window menu**: native macOS Window menu role and Windows-style Window menu with Minimize/Close actions
+- 234 unit tests across 10 test files (Vitest + happy-dom), up from zero
+- Comprehensive Playwright E2E test suite (69 tests across 11 spec files) covering login, dashboard, buttons, navigation, cameras, widget panel, menu, fullscreen, and config page
+- E2E tests skip gracefully when Protect server credentials are not available
+- CI jobs for TypeScript type-checking and unit tests
+
+### Changed
+
+- **Migrated entire codebase from JavaScript to TypeScript** with `strict: true` — all 21 source modules, main entry point, and test files
+- Diagnostics table on config page uses a cleaner 3-column layout with codec capabilities in separate rows
+- Split dual-process `updates.js` into `updates-main.ts` and `updates-renderer.ts`
+- Extracted magic numbers into `constants.ts`
+- Standardized all renderer logging through `utils.log`/`logError`/`logWarn`
+- Simplified navigation initialization to a single code path
+- Updated README build instructions for pnpm workflow
+
+### Fixed
+
+- Redundant arch flags in universal macOS CI build causing extra per-arch artifacts
+
 ## [2.1.2] - 2026-02-20
 
 ### Fixed
