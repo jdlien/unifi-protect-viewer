@@ -38,6 +38,15 @@
         "subtasks": []
       },
       {
+        "id": 6,
+        "title": "Add beta/pre-release channel for testing updates before public release",
+        "description": "Set up a pre-release workflow so update flows can be tested end-to-end on Windows (and other platforms) before tagging a release as 'latest'. Key pieces:\n\n1. CI: Ensure tags like v2.3.0-beta.1 trigger the same build pipeline but publish as a GitHub pre-release (GitHub does this automatically for semver pre-release tags — verify electron-builder respects it).\n2. App config: Add a way to enable `autoUpdater.allowPrerelease = true` for local testing (env var, CLI flag, or hidden settings toggle — doesn't need to be user-facing).\n3. Testing workflow: Document the flow — install previous stable build on Windows, flip the pre-release flag, verify the full update lifecycle (check → download progress → install prompt → clicks still work), then cut the real tag.\n4. Optional: Add a pre-release smoke-test checklist to RELEASING.md.\n\nGoal: Never ship six patch releases in a row again because platform-specific updater bugs weren't caught before going public.",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [],
+        "subtasks": []
+      },
+      {
         "id": 2,
         "title": "Improve design of diagnostic information on the configuration screen",
         "description": "Redesign the diagnostics section in config.html to be more polished and visually appealing. Currently it's a basic table with minimal styling inside a semi-transparent box. Consider improving layout, typography, spacing, status indicators, and overall visual hierarchy to better match a modern Electron app settings page. The diagnostics show platform, Electron/Chrome versions, hardware acceleration status, H.264/H.265 codec support, and app version.",
