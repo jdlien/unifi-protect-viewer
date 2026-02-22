@@ -7,7 +7,8 @@ import { log, logError } from './utils'
 import * as version from './version'
 import { htmlUrl, imgPath, preloadPath } from './paths'
 
-const { BrowserWindow, app, shell, globalShortcut } = require('electron') as typeof import('electron')
+const { BrowserWindow, app, nativeTheme, session, shell, globalShortcut } =
+  require('electron') as typeof import('electron')
 
 // Constants
 const DEFAULT_WIDTH = 1270
@@ -39,6 +40,8 @@ export async function createWindow(store: StoreInterface): Promise<Electron.Brow
       webSecurity: true,
     },
     icon: imgPath('128.png'),
+    show: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1a1a1a' : '#f0f0f0',
     frame: true,
     autoHideMenuBar: true,
   })
@@ -65,6 +68,10 @@ export async function createWindow(store: StoreInterface): Promise<Electron.Brow
   mainWindow.webContents.on('certificate-error', handleCertificateError(store))
 
   mainWindow.on('close', () => {
+    // Flush Chromium's in-memory localStorage/DOM storage to disk before the
+    // renderer is destroyed — without this, writes made during the session
+    // (e.g. UniFi Protect's theme preference) can be lost on quit.
+    session.defaultSession.flushStorageData()
     store.set('bounds', mainWindow.getBounds())
   })
 
@@ -81,6 +88,7 @@ export async function createWindow(store: StoreInterface): Promise<Electron.Brow
   mainWindow.on('closed', () => app.quit())
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
     registerDevToolsShortcut(mainWindow)
   })
 

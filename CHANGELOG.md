@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.6] - 2026-02-22
+
+### Fixed
+
+- **Theme preference not persisting across restarts** — localStorage writes (including UniFi Protect's dark/light theme selection) were lost on quit because Chromium's storage engine hadn't flushed to disk before the process terminated. Added explicit `session.flushStorageData()` call during window close
+- **White flash on startup in dark mode** — set the BrowserWindow background color to match the system theme and deferred showing the window until first paint (`ready-to-show`) to eliminate the bright flash before web content loads
+
 ## [2.2.5] - 2026-02-22
 
 ### Fixed
