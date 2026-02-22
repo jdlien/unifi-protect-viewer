@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.4] - 2026-02-21
+
+### Fixed
+
+- **Windows: app freezes after update check** — all `dialog.showMessageBox()` calls in the update flow were not being `await`ed, causing Windows to permanently lose mouse input after dismissing the "no updates available" dialog (keyboard shortcuts still worked). Fixed by awaiting all 5 unawaited dialog calls
+- **macOS: ad-hoc signing crash on launch** — replaced `codesign --deep` with inside-out signing (frameworks → helpers → main app) to prevent Team ID mismatches that caused "mapping process and mapped file have different Team IDs" crash. Added `disable-library-validation` entitlement for ad-hoc signed builds
+
+### Added
+
+- Regression tests for dialog.showMessageBox() await requirement (static analysis guard)
+- Regression tests for macOS entitlements and afterPack signing behavior
+
 ## [2.2.3] - 2026-02-21
 
 ### Fixed

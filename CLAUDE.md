@@ -224,7 +224,7 @@ Shared interfaces live in `src/ts/types/`:
 
 We wrap a third-party React app (UniFi Protect). These rules define what we touch:
 
-### In scope (our responsibility)
+### In Scope (our responsibility)
 
 - Custom buttons we inject (sidebar toggle, header toggle, fullscreen, dashboard)
 - Visibility of `<nav>` and `<header>` elements (`display: none`/`flex`)
@@ -234,7 +234,7 @@ We wrap a third-party React app (UniFi Protect). These rules define what we touc
 - Login form filling
 - Window management, menus, keyboard shortcuts, auto-update
 
-### Out of scope (don't touch)
+### Out of Scope (don't touch)
 
 - Protect's internal styling (except our specific overrides)
 - React component state (fiber tree reading is **read-only**, never write)
@@ -320,6 +320,10 @@ Scope in parentheses when helpful: `fix(auth): prevent double login attempts`
 - Semantic versioning for releases
 
 ## Testing
+
+### Write Failing Tests Before Fixing Bugs
+
+If we are observing a failure or an issue, it is critical that we introduce a test to prove the error and introduce the ability to catch a regression for this specific issue later. Use a red-green-refactor technique for confirming and fixing bugs.
 
 ### Unit tests (Vitest + happy-dom)
 

@@ -45,9 +45,55 @@ module.exports = async function afterPack(context) {
   // In CI, electron-builder's real signing step overwrites this.
   // Skip for universal build temp dirs — the differing CodeResources files
   // would cause the universal merge to fail.
+  //
+  // IMPORTANT: --deep is unreliable on modern macOS and can leave nested
+  // frameworks with stale Team IDs. We sign inside-out instead: frameworks
+  // and helpers first, then the main app bundle.
   if (platform === 'darwin' && !context.appOutDir.includes('-temp')) {
-    console.log('Ad-hoc re-signing macOS app after fuse flip...')
-    execFileSync('codesign', ['--force', '--deep', '--sign', '-', electronBinaryPath])
+    console.log('Ad-hoc re-signing macOS app after fuse flip (inside-out)...')
+
+    const frameworksDir = path.join(electronBinaryPath, 'Contents', 'Frameworks')
+    const entitlementsPath = path.join(context.packager.info.projectDir, 'build', 'entitlements.mac.plist')
+    const sign = (target) => execFileSync('codesign', ['--force', '--sign', '-', target])
+    const signWithEntitlements = (target) =>
+      execFileSync('codesign', [
+        '--force',
+        '--sign',
+        '-',
+        '--entitlements',
+        entitlementsPath,
+        '--options',
+        'runtime',
+        target,
+      ])
+
+    // 1. Sign nested frameworks (Electron Framework is the critical one — fuse flip modified it)
+    const fs = require('fs')
+    const frameworkEntries = fs.readdirSync(frameworksDir)
+
+    for (const entry of frameworkEntries) {
+      const entryPath = path.join(frameworksDir, entry)
+      if (entry.endsWith('.framework')) {
+        console.log(`  Signing framework: ${entry}`)
+        sign(entryPath)
+      }
+    }
+
+    // 2. Sign helper apps with entitlements (they inherit from the main app)
+    for (const entry of frameworkEntries) {
+      const entryPath = path.join(frameworksDir, entry)
+      if (entry.endsWith('.app')) {
+        console.log(`  Signing helper: ${entry}`)
+        signWithEntitlements(entryPath)
+      }
+    }
+
+    // 3. Sign the main app bundle last with entitlements + hardened runtime
+    // The disable-library-validation entitlement allows loading frameworks
+    // with different (or no) Team IDs, which is required for ad-hoc signing
+    console.log(`  Signing main app: ${electronBinaryName}`)
+    signWithEntitlements(electronBinaryPath)
+
     console.log('Ad-hoc signing complete')
   }
 }

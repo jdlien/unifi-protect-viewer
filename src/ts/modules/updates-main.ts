@@ -312,7 +312,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       _closeCheckingDialog()
       if (isManualCheckInProgress) {
         log('Showing no updates available dialog.')
-        dialog.showMessageBox(_mainWindow, {
+        await dialog.showMessageBox(_mainWindow, {
           type: 'info',
           title: 'No Updates',
           message: 'You have the latest version',
@@ -334,7 +334,7 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       const errorMessage = error.message || String(error)
       logError('Update error occurred:', errorMessage)
 
-      dialog.showMessageBox(_mainWindow, {
+      await dialog.showMessageBox(_mainWindow, {
         type: 'error',
         title: 'Update Error',
         message: 'Error During Update Process',
@@ -450,7 +450,7 @@ function setupUpdateIpcHandlers(mainWindow: Electron.BrowserWindow): void {
   ipcMain.handle('updates:check-manual', async () => {
     if (isDev) {
       log('Manual update check skipped in dev mode.')
-      dialog.showMessageBox(_mainWindow!, {
+      await dialog.showMessageBox(_mainWindow!, {
         type: 'info',
         title: 'Updates Disabled',
         message: 'Update checking is disabled in development mode.',
@@ -503,12 +503,12 @@ export { getAutoUpdater }
 /**
  * Check for updates manually and show the UI flow.
  */
-export function checkForUpdatesWithDialog(mainWindow: Electron.BrowserWindow): void {
+export async function checkForUpdatesWithDialog(mainWindow: Electron.BrowserWindow): Promise<void> {
   _mainWindow = mainWindow
   if (isDev) {
     log('Manual update check skipped in dev mode.')
     if (!dialog) dialog = require('electron').dialog
-    dialog.showMessageBox(mainWindow, {
+    await dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Updates Disabled',
       message: 'Update checking is disabled in development mode.',
@@ -519,7 +519,7 @@ export function checkForUpdatesWithDialog(mainWindow: Electron.BrowserWindow): v
   }
 
   log('Manual update check triggered (checkForUpdatesWithDialog).')
-  _manageUpdateUI('check')
+  await _manageUpdateUI('check')
 }
 
 /**
@@ -566,7 +566,7 @@ export async function simulateUpdateDownload(mainWindow: Electron.BrowserWindow)
   _closeDownloadDialog()
 
   if (_mainWindow && !_mainWindow.isDestroyed()) {
-    dialog.showMessageBox(_mainWindow, {
+    await dialog.showMessageBox(_mainWindow, {
       type: 'info',
       title: 'Simulation Complete',
       message: 'Update Download Simulation Complete',
