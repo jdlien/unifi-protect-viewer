@@ -17,10 +17,17 @@ export const ipcMain = {
 }
 export const app = {
   getVersion: vi.fn().mockReturnValue('2.0.0-test'),
+  getAppPath: vi.fn().mockReturnValue('/mock/app'),
   whenReady: vi.fn().mockResolvedValue(undefined),
   on: vi.fn(),
+  quit: vi.fn(),
 }
 export const BrowserWindow = vi.fn()
+export const nativeTheme = { shouldUseDarkColors: false }
+export const session = {
+  defaultSession: { flushStorageData: vi.fn() },
+}
+export const globalShortcut = { unregisterAll: vi.fn() }
 export const dialog = {
   showMessageBox: vi.fn().mockResolvedValue({ response: 0 }),
 }

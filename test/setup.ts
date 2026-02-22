@@ -27,10 +27,17 @@ vi.mock('electron', () => ({
   },
   app: {
     getVersion: vi.fn().mockReturnValue('2.0.0-test'),
+    getAppPath: vi.fn().mockReturnValue('/mock/app'),
     whenReady: vi.fn().mockResolvedValue(undefined),
     on: vi.fn(),
+    quit: vi.fn(),
   },
   BrowserWindow: vi.fn(),
+  nativeTheme: { shouldUseDarkColors: false },
+  session: {
+    defaultSession: { flushStorageData: vi.fn() },
+  },
+  globalShortcut: { unregisterAll: vi.fn() },
   dialog: {
     showMessageBox: vi.fn().mockResolvedValue({ response: 0 }),
   },
