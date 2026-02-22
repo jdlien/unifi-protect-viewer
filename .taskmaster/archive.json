@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "Add Configuration menu item to open settings without clearing them",
+    "status": "done",
+    "priority": "medium"
+  },
+  {
+    "id": 3,
+    "title": "Refactor codebase into highly testable TypeScript",
+    "status": "done",
+    "priority": "high"
+  },
+  {
+    "id": 4,
+    "title": "Fix Windows SHA-512 checksum mismatch in CI auto-update builds",
+    "status": "done",
+    "priority": "high"
+  },
+  {
+    "id": 5,
+    "title": "Investigate/fix update dialog showing File/Edit menus on Windows",
+    "status": "done",
+    "priority": "medium"
+  },
+  {
+    "id": 2,
+    "title": "Improve design of diagnostic information on the configuration screen",
+    "status": "done",
+    "priority": "low"
+  }
+]
