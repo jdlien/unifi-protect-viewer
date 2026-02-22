@@ -123,13 +123,28 @@ describe('afterPack hook (scripts/afterPack.js)', () => {
   })
 
   describe('macOS signing', () => {
-    it('does NOT use --deep flag (prevents Team ID mismatch)', async () => {
+    it('does NOT use --deep on .app bundles (prevents Team ID mismatch)', async () => {
       await afterPack(createDarwinContext())
       const calls = getCodesignCalls()
 
       expect(calls.length).toBeGreaterThan(0)
       for (const args of calls) {
-        expect(args).not.toContain('--deep')
+        const target = args[args.length - 1]
+        if (targetIsApp(target)) {
+          // --deep on .app bundles causes Team ID mismatches between the
+          // main binary and nested frameworks. Only sign .app bundles directly.
+          expect(args).not.toContain('--deep')
+        }
+      }
+    })
+
+    it('uses --deep for frameworks (to sign nested executables like chrome_crashpad_handler)', async () => {
+      await afterPack(createDarwinContext())
+
+      const frameworkCalls = getCodesignCalls().filter((args) => targetIsFramework(args[args.length - 1]))
+      expect(frameworkCalls.length).toBeGreaterThan(0)
+      for (const args of frameworkCalls) {
+        expect(args).toContain('--deep')
       }
     })
 

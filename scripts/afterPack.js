@@ -55,6 +55,10 @@ module.exports = async function afterPack(context) {
     const frameworksDir = path.join(electronBinaryPath, 'Contents', 'Frameworks')
     const entitlementsPath = path.join(context.packager.info.projectDir, 'build', 'entitlements.mac.plist')
     const sign = (target) => execFileSync('codesign', ['--force', '--sign', '-', target])
+    // Frameworks contain nested executables (e.g. chrome_crashpad_handler)
+    // that must be signed recursively — --deep is safe here since it's scoped
+    // to a single framework, not the top-level app bundle.
+    const signDeep = (target) => execFileSync('codesign', ['--force', '--deep', '--sign', '-', target])
     const signWithEntitlements = (target) =>
       execFileSync('codesign', [
         '--force',
@@ -75,7 +79,7 @@ module.exports = async function afterPack(context) {
       const entryPath = path.join(frameworksDir, entry)
       if (entry.endsWith('.framework')) {
         console.log(`  Signing framework: ${entry}`)
-        sign(entryPath)
+        signDeep(entryPath)
       }
     }
 
