@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.5] - 2026-02-22
+
+### Fixed
+
+- **Windows: harden update flow against remaining freeze edge cases** — serialized all update UI transitions through a promise queue to prevent re-entrant modal operations from desynchronizing Win32's enable/disable state; captured local BrowserWindow references in `ready-to-show` callbacks to prevent mutable global races; fixed inconsistent error data shape that lost the real error message
+
+### Added
+
+- Regression tests for queue serialization, local ref capture, error shape consistency, and internal call deadlock prevention (static analysis guards)
+
 ## [2.2.4] - 2026-02-21
 
 ### Fixed

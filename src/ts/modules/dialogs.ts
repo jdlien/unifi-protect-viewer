@@ -10,12 +10,12 @@ const { dialog, app, shell } = require('electron') as typeof import('electron')
 /**
  * Show native About dialog
  */
-export function showAboutDialog(mainWindow: Electron.BrowserWindow): void {
+export async function showAboutDialog(mainWindow: Electron.BrowserWindow): Promise<void> {
   const appVersion = app.getVersion()
   const updates = require('./updates-main') as typeof import('./updates-main')
 
-  dialog
-    .showMessageBox(mainWindow, {
+  try {
+    const { response } = await dialog.showMessageBox(mainWindow, {
       title: 'About UniFi Protect Viewer',
       message: 'UniFi Protect Viewer',
       detail: `Version ${appVersion}\n\nA clean, standalone viewer for UniFi Protect cameras.\n\nDeveloped by JD Lien.`,
@@ -25,16 +25,15 @@ export function showAboutDialog(mainWindow: Electron.BrowserWindow): void {
       noLink: true,
       icon: imgPath('128.png'),
     })
-    .then(({ response }) => {
-      if (response === 0) {
-        updates.checkForUpdatesWithDialog(mainWindow)
-      } else if (response === 1) {
-        shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
-      }
-    })
-    .catch((err: unknown) => {
-      logError('Error showing About dialog:', err)
-    })
+
+    if (response === 0) {
+      await updates.checkForUpdatesWithDialog(mainWindow)
+    } else if (response === 1) {
+      shell.openExternal('https://github.com/jdlien/unifi-protect-viewer')
+    }
+  } catch (err: unknown) {
+    logError('Error showing About dialog:', err)
+  }
 }
 
 /**

@@ -130,6 +130,7 @@ Key rule: `buttons.ts` does NOT import `uiController`. Buttons are dumb views �
 ### Type Definitions
 
 Shared interfaces live in `src/ts/types/`:
+
 - `state.ts` — `UIState`, `UIInternalState`
 - `config.ts` — `AppConfig`, `WindowBounds`
 - `ipc.ts` — Typed IPC channel maps
@@ -245,19 +246,19 @@ We wrap a third-party React app (UniFi Protect). These rules define what we touc
 
 These will break when Protect updates. Keep them documented here:
 
-| Selector                                         | File              | Purpose                    |
-| :----------------------------------------------- | :---------------- | :------------------------- |
-| `[data-viewport]`                                | cameras.ts        | Camera tile identification |
-| `[class*=ClickCaptureOverlay__Root]`             | cameras.ts        | Zoom click target          |
-| `[class*=CameraName]`                            | cameras.ts        | Camera name extraction     |
-| `[class*=ZoomableViewport]`                      | cameras.ts        | Fast zoom CSS override     |
-| `[class^=liveView__FullscreenWrapper]`           | dashboard.ts, ui.ts | LiveView readiness       |
-| `[class^=dashboard__Content]`                    | dashboard.ts, ui.ts | Dashboard content styling |
-| `[class*=dashboard__Widgets]`                    | preload.ts, ui.ts | Widget panel state         |
-| `[class*=dashboard__StyledExpandButton]`         | preload.ts, ui.ts | Widget panel toggle        |
-| `[class^=liveView__LiveViewWrapper]`             | ui.ts             | LiveView container         |
-| `[class^=liveview__ViewportsWrapper]`            | ui.ts             | Viewport aspect ratio      |
-| `__reactFiber$*` / `memoizedProps.zoomedSlotIdx` | cameras.ts        | React fiber zoom state     |
+| Selector                                         | File                | Purpose                    |
+| :----------------------------------------------- | :------------------ | :------------------------- |
+| `[data-viewport]`                                | cameras.ts          | Camera tile identification |
+| `[class*=ClickCaptureOverlay__Root]`             | cameras.ts          | Zoom click target          |
+| `[class*=CameraName]`                            | cameras.ts          | Camera name extraction     |
+| `[class*=ZoomableViewport]`                      | cameras.ts          | Fast zoom CSS override     |
+| `[class^=liveView__FullscreenWrapper]`           | dashboard.ts, ui.ts | LiveView readiness         |
+| `[class^=dashboard__Content]`                    | dashboard.ts, ui.ts | Dashboard content styling  |
+| `[class*=dashboard__Widgets]`                    | preload.ts, ui.ts   | Widget panel state         |
+| `[class*=dashboard__StyledExpandButton]`         | preload.ts, ui.ts   | Widget panel toggle        |
+| `[class^=liveView__LiveViewWrapper]`             | ui.ts               | LiveView container         |
+| `[class^=liveview__ViewportsWrapper]`            | ui.ts               | Viewport aspect ratio      |
+| `__reactFiber$*` / `memoizedProps.zoomedSlotIdx` | cameras.ts          | React fiber zoom state     |
 
 ## Code Standards
 

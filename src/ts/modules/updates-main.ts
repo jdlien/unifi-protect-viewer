@@ -24,6 +24,7 @@ let _mainWindow: Electron.BrowserWindow | null = null
 let isManualCheckInProgress = false
 let checkingDialog: Electron.BrowserWindow | null = null
 let downloadDialog: Electron.BrowserWindow | null = null
+let _uiQueue: Promise<void> = Promise.resolve()
 
 /**
  * Platform-specific BrowserWindow options for translucent dialog appearance.
@@ -152,21 +153,97 @@ function createDummyAutoUpdater(): any {
   })
 }
 
-function _closeCheckingDialog(): void {
-  if (checkingDialog && !checkingDialog.isDestroyed()) {
-    checkingDialog.close()
-  }
-  checkingDialog = null
+/**
+ * Close the checking dialog and wait for it to be fully destroyed.
+ *
+ * On Windows, BrowserWindow.close() is asynchronous — the parent window is
+ * only re-enabled in the WM_NCDESTROY handler, which fires after DestroyWindow
+ * completes. If we show a dialog.showMessageBox on the same parent before the
+ * modal BrowserWindow is fully destroyed, Win32's enable/disable state gets
+ * permanently desynchronized, freezing mouse input on the parent window.
+ * See: https://github.com/electron/electron/issues/45965
+ */
+function _closeCheckingDialog(): Promise<void> {
+  return new Promise((resolve) => {
+    if (checkingDialog && !checkingDialog.isDestroyed()) {
+      checkingDialog.once('closed', () => {
+        checkingDialog = null
+        resolve()
+      })
+      checkingDialog.close()
+    } else {
+      checkingDialog = null
+      resolve()
+    }
+  })
 }
 
-function _closeDownloadDialog(): void {
+/**
+ * Close the download dialog and wait for it to be fully destroyed.
+ * See _closeCheckingDialog for rationale.
+ */
+function _closeDownloadDialog(): Promise<void> {
+  return new Promise((resolve) => {
+    if (downloadDialog && !downloadDialog.isDestroyed()) {
+      downloadDialog.once('closed', () => {
+        downloadDialog = null
+        resolve()
+      })
+      downloadDialog.close()
+    } else {
+      downloadDialog = null
+      resolve()
+    }
+  })
+}
+
+/**
+ * Safety net: explicitly re-enable the main window before showing a native dialog.
+ *
+ * On Windows, closing a modal BrowserWindow and immediately showing a
+ * dialog.showMessageBox can leave the parent permanently disabled for mouse input
+ * due to Win32 enable/disable message interleaving. This ensures the main window
+ * is always enabled before we hand it to dialog.showMessageBox as a parent.
+ */
+function _ensureMainWindowEnabled(): void {
+  if (_mainWindow && !_mainWindow.isDestroyed()) {
+    _mainWindow.setEnabled(true)
+  }
+}
+
+/**
+ * Fast-path progress handler — bypasses the queue for real-time updates.
+ */
+function _handleProgress(data: any): void {
   if (downloadDialog && !downloadDialog.isDestroyed()) {
-    downloadDialog.close()
+    downloadDialog.webContents.send('update-progress', data.progress)
   }
-  downloadDialog = null
+  if (_mainWindow && !_mainWindow.isDestroyed()) {
+    _mainWindow.webContents.send('download-progress', data.progress)
+  }
 }
 
+/**
+ * Queue wrapper for update UI transitions.
+ *
+ * Serializes all non-progress transitions through a promise chain so that
+ * overlapping modal operations cannot desync Win32's enable/disable state.
+ * Progress updates bypass the queue for real-time responsiveness.
+ */
 async function _manageUpdateUI(step: string, data?: any): Promise<void> {
+  if (step === 'progress') {
+    _handleProgress(data)
+    return
+  }
+  const task = _uiQueue.then(() => _manageUpdateUIImpl(step, data))
+  // Keep the queue alive even if this step fails
+  _uiQueue = task.catch((err) => {
+    logError('Queued update UI transition failed:', err)
+  })
+  return task
+}
+
+async function _manageUpdateUIImpl(step: string, data?: any): Promise<void> {
   if (!_mainWindow || _mainWindow.isDestroyed()) {
     logError('Update UI cannot be shown: main window is not available.')
     return
@@ -176,8 +253,8 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
 
   switch (step) {
     case 'check':
-      _closeCheckingDialog()
-      _closeDownloadDialog()
+      await _closeCheckingDialog()
+      await _closeDownloadDialog()
 
       isManualCheckInProgress = true
       log('Showing checking for updates window.')
@@ -202,21 +279,22 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       })
       checkingDialog.removeMenu()
       checkingDialog.loadURL(htmlUrl('update-checking.html'))
-      checkingDialog.once('ready-to-show', () => checkingDialog!.show())
-      checkingDialog.on('closed', () => {
-        checkingDialog = null
+      const checkingRef = checkingDialog
+      checkingDialog.once('ready-to-show', () => {
+        if (!checkingRef.isDestroyed()) checkingRef.show()
       })
 
       try {
         await autoUpdaterInstance.checkForUpdates()
       } catch (err) {
         logError('Error initiating update check:', err)
-        _manageUpdateUI('error', { error: err })
+        await _manageUpdateUIImpl('error', { error: err })
       }
       break
 
     case 'available': {
-      _closeCheckingDialog()
+      await _closeCheckingDialog()
+      _ensureMainWindowEnabled()
       const { info } = data
 
       log(`Showing update available dialog for version ${info.version}`)
@@ -231,12 +309,12 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       })
 
       if (downloadResponse === 0) {
-        _manageUpdateUI('downloading')
+        await _manageUpdateUIImpl('downloading')
         try {
           await autoUpdaterInstance.downloadUpdate()
         } catch (err) {
           logError('Error starting update download:', err)
-          _manageUpdateUI('error', err)
+          await _manageUpdateUIImpl('error', { error: err })
         }
       } else {
         isManualCheckInProgress = false
@@ -245,8 +323,8 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
     }
 
     case 'downloading':
-      _closeCheckingDialog()
-      _closeDownloadDialog()
+      await _closeCheckingDialog()
+      await _closeDownloadDialog()
 
       log('Showing downloading update window.')
       downloadDialog = new BrowserWindow({
@@ -270,23 +348,15 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       })
       downloadDialog.removeMenu()
       downloadDialog.loadURL(htmlUrl('update-downloading.html'))
-      downloadDialog.once('ready-to-show', () => downloadDialog!.show())
-      downloadDialog.on('closed', () => {
-        downloadDialog = null
+      const downloadRef = downloadDialog
+      downloadDialog.once('ready-to-show', () => {
+        if (!downloadRef.isDestroyed()) downloadRef.show()
       })
       break
 
-    case 'progress':
-      if (downloadDialog && !downloadDialog.isDestroyed()) {
-        downloadDialog.webContents.send('update-progress', data.progress)
-      }
-      if (_mainWindow && !_mainWindow.isDestroyed()) {
-        _mainWindow.webContents.send('download-progress', data.progress)
-      }
-      break
-
     case 'downloaded': {
-      _closeDownloadDialog()
+      await _closeDownloadDialog()
+      _ensureMainWindowEnabled()
       const { downloadedInfo } = data
 
       log(`Showing update downloaded dialog for version ${downloadedInfo.version}`)
@@ -309,8 +379,9 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
     }
 
     case 'not-available':
-      _closeCheckingDialog()
+      await _closeCheckingDialog()
       if (isManualCheckInProgress) {
+        _ensureMainWindowEnabled()
         log('Showing no updates available dialog.')
         await dialog.showMessageBox(_mainWindow, {
           type: 'info',
@@ -326,9 +397,10 @@ async function _manageUpdateUI(step: string, data?: any): Promise<void> {
       break
 
     case 'error': {
-      _closeCheckingDialog()
-      _closeDownloadDialog()
+      await _closeCheckingDialog()
+      await _closeDownloadDialog()
       isManualCheckInProgress = false
+      _ensureMainWindowEnabled()
 
       const error = data?.error || new Error('Unknown update error')
       const errorMessage = error.message || String(error)
@@ -563,9 +635,10 @@ export async function simulateUpdateDownload(mainWindow: Electron.BrowserWindow)
     await new Promise<void>((resolve) => setTimeout(resolve, intervalMs))
   }
 
-  _closeDownloadDialog()
+  await _closeDownloadDialog()
 
   if (_mainWindow && !_mainWindow.isDestroyed()) {
+    _ensureMainWindowEnabled()
     await dialog.showMessageBox(_mainWindow, {
       type: 'info',
       title: 'Simulation Complete',
