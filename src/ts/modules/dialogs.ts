@@ -7,10 +7,22 @@ import { imgPath } from './paths'
 
 const { dialog, app, shell } = require('electron') as typeof import('electron')
 
+let _isAboutDialogOpen = false
+let _isResetDialogOpen = false
+
+/** Reset dialog guard flags (test helper) */
+export function _resetDialogGuards(): void {
+  _isAboutDialogOpen = false
+  _isResetDialogOpen = false
+}
+
 /**
  * Show native About dialog
  */
 export async function showAboutDialog(mainWindow: Electron.BrowserWindow): Promise<void> {
+  if (_isAboutDialogOpen) return
+  _isAboutDialogOpen = true
+
   const appVersion = app.getVersion()
   const updates = require('./updates-main') as typeof import('./updates-main')
 
@@ -33,6 +45,8 @@ export async function showAboutDialog(mainWindow: Electron.BrowserWindow): Promi
     }
   } catch (err: unknown) {
     logError('Error showing About dialog:', err)
+  } finally {
+    _isAboutDialogOpen = false
   }
 }
 
@@ -40,6 +54,9 @@ export async function showAboutDialog(mainWindow: Electron.BrowserWindow): Promi
  * Show reset confirmation dialog
  */
 export async function showResetConfirmation(mainWindow: Electron.BrowserWindow): Promise<boolean> {
+  if (_isResetDialogOpen) return false
+  _isResetDialogOpen = true
+
   try {
     const result = await dialog.showMessageBox(mainWindow, {
       type: 'warning',
@@ -55,5 +72,7 @@ export async function showResetConfirmation(mainWindow: Electron.BrowserWindow):
   } catch (err) {
     logError('Error showing reset confirmation dialog:', err)
     return false
+  } finally {
+    _isResetDialogOpen = false
   }
 }

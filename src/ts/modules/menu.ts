@@ -6,7 +6,7 @@ import { log, logError } from './utils'
 import * as dialogs from './dialogs'
 import { htmlUrl } from './paths'
 
-const { app, Menu, shell, dialog } = require('electron') as typeof import('electron')
+const { app, Menu, shell } = require('electron') as typeof import('electron')
 
 const isDev = process.env.NODE_ENV === 'development'
 
@@ -98,24 +98,13 @@ function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
         {
           label: 'Reset Configuration',
           accelerator: 'F10',
-          click: () => {
-            dialog
-              .showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Reset Configuration',
-                message: 'Are you sure you want to reset all settings?',
-                detail: 'This will clear all your saved settings including credentials.',
-                buttons: ['Cancel', 'Reset'],
-                defaultId: 0,
-                cancelId: 0,
-              })
-              .then(({ response }) => {
-                if (response === 1) {
-                  store.clear()
-                  app.relaunch()
-                  app.exit()
-                }
-              })
+          click: async () => {
+            const confirmed = await dialogs.showResetConfirmation(mainWindow)
+            if (confirmed) {
+              store.clear()
+              app.relaunch()
+              app.exit()
+            }
           },
         },
         {

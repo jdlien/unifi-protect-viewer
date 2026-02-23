@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.7] - 2026-02-22
+
+### Fixed
+
+- **Dialog stacking on repeated F10 / About menu clicks** — pressing F10 or opening the About dialog multiple times rapidly would stack duplicate native dialogs. Added concurrency guards to `showResetConfirmation()` and `showAboutDialog()` so only one instance can be open at a time
+- **Menu F10 handler used duplicated, unawaited dialog code** — replaced inline `dialog.showMessageBox().then(...)` with `await dialogs.showResetConfirmation()`, eliminating code duplication and the unawaited promise pattern
+
+### Added
+
+- Regression tests for dialog guard idempotency (concurrent calls, guard reset, error recovery)
+
 ## [2.2.6] - 2026-02-22
 
 ### Fixed
