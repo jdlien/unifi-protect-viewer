@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.8] - 2026-04-24
+
+### Added
+
+- MIT `LICENSE` file
+
+### Changed
+
+- README attribution softened from "based on" to "inspired by" to reflect that the codebase has been almost entirely rewritten since the original fork
+- Minor/patch dependency updates (prettier, @electron/fuses, @playwright/test, @types/node, dotenv, happy-dom, otplib, vitest)
+
+### Removed
+
+- Dead `getHeaders` and `brands` exports from `src/ts/modules/version.ts`; Client Hints spoofing was never wired up and modern Chromium emits low-entropy `Sec-CH-UA` automatically
+- Unused `@electron/packager` dev dependency (the build uses electron-builder)
+
 ## [2.2.7] - 2026-02-22
 
 ### Fixed

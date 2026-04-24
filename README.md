@@ -35,7 +35,7 @@ Or view all downloads, including Linux versions, on the [releases page](https://
 
 ## Credits
 
-This application was based on [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has now been almost completely rewritten. It requires UniFi Protect v6 or later. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
+This application was inspired by [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has since been almost completely rewritten and now shares little code with the original. It requires UniFi Protect v6 or later. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
 
 Some of the differences from the original include:
 
