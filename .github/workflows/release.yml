@@ -174,10 +174,23 @@ jobs:
           cd release-artifacts
           sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | tee checksums-sha256.txt
 
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { capture=1; next }
+            capture && /^## \[/ { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          echo "--- Extracted release notes for $VERSION: ---"
+          cat release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           generate_release_notes: true
+          append_body: true
           files: |
             release-artifacts/*.dmg
             release-artifacts/*.zip
