@@ -1,6 +1,6 @@
 # UniFi Protect Viewer
 
-This Electron app is a wrapper for UniFi Protect that gives a clean interface that maximizes the live view and automatically logs you in. When you first launch the app, you'll be prompted to enter a URL for your Protect console and your Ubiquiti credentials (or, if connecting directly to a console, you can also use a local account). The URL will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
+This Electron app is a wrapper for UniFi Protect that gives a clean interface that maximizes the live view and automatically logs you in. Requires UniFi Protect v6 or later. When you first launch the app, you'll be prompted to enter a URL for your Protect console and your Ubiquiti credentials (or, if connecting directly to a console, you can also use a local account). The URL will typically be something like `https://192.168.1.1/protect`, although if the site you're accessing is not on your network, you may need to use your Internet IP address or hostname.
 
 The app will then automatically log in and present you with the live view you selected.
 
@@ -32,20 +32,6 @@ Or view all downloads, including Linux versions, on the [releases page](https://
 - Automatic updates via GitHub releases
 - Native application menu with platform-specific Window menu
 - Hardened Electron build with security fuses
-
-## Credits
-
-This application was inspired by [UniFi Protect Viewer](https://github.com/digital195/unifi-protect-viewer) by Sebastian Loer, but has since been almost completely rewritten and now shares little code with the original. It requires UniFi Protect v6 or later. The chief difference is that this version still allows you to use all the features of UniFi Protect. In contrast, the original was intended as a kiosk application that isn't intended to be interacted with beyond viewing the live view. This difference has resulted in this version being substantially more complex.
-
-Some of the differences from the original include:
-
-- Full TypeScript codebase with strict mode
-- Toggle navigation/header visibility with buttons, keyboard shortcuts, or menu
-- Camera zoom hotkeys and a dynamic Cameras menu
-- Configuration page accessible from any screen
-- Dashboard button to quickly return to your liveview
-- Redesigned configuration and error pages
-- Electron v40 with hardened runtime and security fuses
 
 ## Installation
 

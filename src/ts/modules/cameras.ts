@@ -20,24 +20,51 @@ const FAST_ZOOM_CSS = `
 }
 `
 
+const VISUAL_ROW_TOLERANCE_PX = 20
+const LAYOUT_DEBOUNCE_MS = 750
+
+/**
+ * Return the actual `data-viewport` indices of the current dashboard tiles,
+ * sorted in visual reading order (top-to-bottom, then left-to-right).
+ *
+ * Protect v7 custom liveviews let users reorder tiles without renumbering the
+ * underlying `data-viewport` attribute, so raw numeric order no longer matches
+ * the visible layout. This function is the bridge between "the tile at visual
+ * position N" (what hotkeys and the Cameras menu want) and Protect's internal
+ * viewport index (what the zoom dispatch and React fiber state use).
+ */
+export function getVisualTileOrder(): number[] {
+  const tiles = Array.from(document.querySelectorAll('[data-viewport]')) as HTMLElement[]
+  return tiles
+    .map((tile) => ({
+      idx: parseInt(tile.getAttribute('data-viewport')!, 10),
+      rect: tile.getBoundingClientRect(),
+    }))
+    .filter((t) => !isNaN(t.idx))
+    .sort((a, b) => {
+      if (Math.abs(a.rect.top - b.rect.top) > VISUAL_ROW_TOLERANCE_PX) return a.rect.top - b.rect.top
+      return a.rect.left - b.rect.left
+    })
+    .map((t) => t.idx)
+}
+
 /**
  * Detect cameras on the current dashboard liveview.
  * Sends the camera list and zoom-support flag to the main process.
+ * Cameras are ordered by visual position so the menu and hotkeys match the
+ * on-screen layout regardless of Protect's internal viewport numbering.
  */
 export function detectCameras(): CameraInfo[] {
-  const tiles = document.querySelectorAll('[data-viewport]')
+  const visualOrder = getVisualTileOrder()
   const cameras: CameraInfo[] = []
 
-  tiles.forEach((tile) => {
-    const index = parseInt(tile.getAttribute('data-viewport')!, 10)
-    if (isNaN(index)) return
-
+  visualOrder.forEach((index) => {
+    const tile = document.querySelector(`[data-viewport="${index}"]`)
+    if (!tile) return
     const nameEl = tile.querySelector('[class*=CameraName]')
     const name = nameEl ? nameEl.textContent!.trim() : `Camera ${index + 1}`
     cameras.push({ index, name })
   })
-
-  cameras.sort((a, b) => a.index - b.index)
 
   const zoomSupported = true
   ipcRenderer.send('update-camera-list', { cameras, zoomSupported })
@@ -234,6 +261,47 @@ export function getCurrentZoomIndex(): number {
 }
 
 /**
+ * Watch the liveview container for tile layout changes (re-arrangement, add/remove)
+ * and re-run detectCameras() when the visual order actually changes.
+ *
+ * Protect's edit mode mutates tile positions and `data-viewport` attributes as the
+ * user drags and saves. A debounced MutationObserver + snapshot diff keeps the
+ * Cameras menu in sync without spamming IPC during the drag itself.
+ */
+let layoutObserver: MutationObserver | null = null
+let layoutDebounceTimer: ReturnType<typeof setTimeout> | null = null
+let lastLayoutSnapshot = ''
+
+export function watchLayoutChanges(): void {
+  // Protect v7 uses react-grid-layout; tiles are absolutely positioned inside
+  // `customGrid__StyledReactGridLayout`, with position encoded as inline
+  // `transform: translate(...)` on each tile. Watching style-attribute changes
+  // on descendants captures drag, save, and auto-arrange equally well.
+  const container = document.querySelector('[class*=customGrid__StyledReactGridLayout]')
+  if (!container) return
+
+  if (layoutObserver) layoutObserver.disconnect()
+  lastLayoutSnapshot = getVisualTileOrder().join(',')
+
+  layoutObserver = new MutationObserver(() => {
+    if (layoutDebounceTimer) clearTimeout(layoutDebounceTimer)
+    layoutDebounceTimer = setTimeout(() => {
+      const snapshot = getVisualTileOrder().join(',')
+      if (snapshot === lastLayoutSnapshot) return
+      lastLayoutSnapshot = snapshot
+      detectCameras()
+    }, LAYOUT_DEBOUNCE_MS)
+  })
+
+  layoutObserver.observe(container, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'data-viewport'],
+  })
+}
+
+/**
  * Set up keyboard listener for bare number keys (1-9, 0) to zoom cameras.
  * Only active on dashboard pages, ignored when focus is in an input.
  */
@@ -254,10 +322,11 @@ export function setupHotkeyListener(): void {
     }
 
     if (e.key >= '1' && e.key <= '9') {
-      const index = Number(e.key) - 1
-      if (document.querySelector(`[data-viewport="${index}"]`)) {
+      const position = Number(e.key) - 1
+      const viewportIdx = getVisualTileOrder()[position]
+      if (viewportIdx !== undefined) {
         e.preventDefault()
-        zoomToCamera(index)
+        zoomToCamera(viewportIdx)
       }
     }
   })

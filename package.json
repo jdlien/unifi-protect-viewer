@@ -1,7 +1,7 @@
 {
   "name": "unifi-protect-viewer",
   "productName": "UniFi Protect Viewer",
-  "version": "2.2.8",
+  "version": "2.3.0",
   "description": "Electron app for UniFi Protect",
   "main": "out/main.js",
   "scripts": {
@@ -78,7 +78,7 @@
     "@playwright/test": "^1.59.1",
     "@types/node": "^25.6.0",
     "archiver": "^7.0.1",
-    "electron": "^40.6.0",
+    "electron": "^41.3.0",
     "electron-builder": "^26.8.1",
     "electron-reloader": "^1.2.3",
     "glob": "^13.0.6",
@@ -87,7 +87,7 @@
     "prettier": "^3.8.3",
     "readline-sync": "^1.4.10",
     "semver": "^7.7.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.5"
   },
   "dependencies": {

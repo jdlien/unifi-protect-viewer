@@ -42,6 +42,7 @@ export async function initializeDashboard(): Promise<boolean> {
 
     const cameras = require('./cameras') as typeof import('./cameras')
     cameras.detectCameras()
+    cameras.watchLayoutChanges()
 
     return true
   } catch (error) {

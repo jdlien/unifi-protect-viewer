@@ -19,6 +19,7 @@ const mockButtons = {
 
 const mockCameras = {
   detectCameras: vi.fn(),
+  watchLayoutChanges: vi.fn(),
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

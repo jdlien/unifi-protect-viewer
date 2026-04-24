@@ -68,19 +68,17 @@ export function setupNavigationMonitor(): () => void {
   })
 
   const navigationEvents = ['popstate', 'hashchange'] as const
-  const eventListeners: Record<string, () => void> = {}
+  const cleanups: Array<() => void> = []
 
   navigationEvents.forEach((event) => {
     const listener = () => handleURLChange()
-    eventListeners[event] = listener
     window.addEventListener(event, listener)
+    cleanups.push(() => window.removeEventListener(event, listener))
   })
 
   return () => {
     observer.disconnect()
-    navigationEvents.forEach((event) => {
-      window.removeEventListener(event, eventListeners[event])
-    })
+    cleanups.forEach((fn) => fn())
     monitorSetup = false
   }
 }

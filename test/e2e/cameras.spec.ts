@@ -31,19 +31,34 @@ test.describe('Cameras', () => {
     expect(names.some((n) => n.length > 0)).toBe(true)
   })
 
-  test('key 1 zooms to first camera', async ({ electronPage }) => {
+  test('key 1 zooms to the visually-first camera', async ({ electronPage }) => {
     await waitForCameras(electronPage, 30_000)
 
     // Ensure we're starting unzoomed
     await electronPage.keyboard.press('0')
     await electronPage.waitForTimeout(2000)
 
-    // Press 1 to zoom to first camera
+    // Compute the expected data-viewport value for visual position 0.
+    // In Protect v7 custom layouts this is usually not 0 — it's whatever tile
+    // is in the top-left visually. The hotkey handler maps key "1" to this.
+    const expectedViewportIdx = await electronPage.evaluate(() => {
+      const tiles = Array.from(document.querySelectorAll('[data-viewport]')) as HTMLElement[]
+      const sorted = tiles
+        .map((t) => ({ idx: parseInt(t.getAttribute('data-viewport')!, 10), rect: t.getBoundingClientRect() }))
+        .filter((t) => !isNaN(t.idx))
+        .sort((a, b) => {
+          if (Math.abs(a.rect.top - b.rect.top) > 20) return a.rect.top - b.rect.top
+          return a.rect.left - b.rect.left
+        })
+      return sorted[0]?.idx ?? -1
+    })
+
+    // Press 1 to zoom to the visually-first camera
     await electronPage.keyboard.press('1')
     await electronPage.waitForTimeout(2000)
 
-    // Check that fast-zoom CSS was injected (it gets removed after zoom completes)
-    // Or check that the zoom state changed via the fiber bridge
+    // Read Protect's internal zoomedSlotIdx via fiber; it should equal the
+    // data-viewport of the visually-first tile, NOT necessarily 0.
     const zoomIndex = await electronPage.evaluate(() => {
       const resultEl = document.createElement('div')
       resultEl.id = '__test_zoom_check'
@@ -53,7 +68,7 @@ test.describe('Cameras', () => {
       const script = document.createElement('script')
       script.textContent = `(function() {
         var result = document.getElementById('__test_zoom_check');
-        var tile = document.querySelector('[data-viewport="0"]');
+        var tile = document.querySelector('[data-viewport]');
         if (!tile) { result.dataset.zoom = '-1'; return; }
         var fiberKey = Object.keys(tile).find(function(k) {
           return k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$');
@@ -78,7 +93,7 @@ test.describe('Cameras', () => {
       return zoom
     })
 
-    expect(zoomIndex).toBe(0) // Zoomed to first camera (index 0)
+    expect(zoomIndex).toBe(expectedViewportIdx)
 
     // RESTORE: press 0 to unzoom
     await electronPage.keyboard.press('0')

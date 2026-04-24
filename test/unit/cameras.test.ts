@@ -63,9 +63,25 @@ function getMockIpcSend(): Mock {
  *     <div class="ClickCaptureOverlay__Root__xxx"></div>
  *   </div>
  */
-function createCameraTile(index: number, name: string): HTMLElement {
+function createCameraTile(index: number, name: string, position?: { top: number; left: number }): HTMLElement {
   const tile = document.createElement('div')
   tile.setAttribute('data-viewport', String(index))
+
+  // Give the tile a getBoundingClientRect so getVisualTileOrder can sort it.
+  // Default (0,0) means "unspecified" — stable sort preserves DOM insertion order.
+  const top = position?.top ?? 0
+  const left = position?.left ?? 0
+  tile.getBoundingClientRect = () => ({
+    top,
+    left,
+    width: 200,
+    height: 150,
+    bottom: top + 150,
+    right: left + 200,
+    x: left,
+    y: top,
+    toJSON: () => {},
+  })
 
   const nameEl = document.createElement('div')
   nameEl.className = `CameraName__abc${index}`
@@ -215,16 +231,31 @@ describe('cameras', () => {
       expect(result[0].index).toBe(0)
     })
 
-    it('sorts cameras by index', () => {
-      // Add tiles in reverse order
-      document.body.appendChild(createCameraTile(2, 'Cam C'))
-      document.body.appendChild(createCameraTile(0, 'Cam A'))
-      document.body.appendChild(createCameraTile(1, 'Cam B'))
+    it('sorts cameras by visual position, not by data-viewport index', () => {
+      // Protect v7 scenario: data-viewport numbers do not match visual layout.
+      // Layout (visual left-to-right, top-to-bottom):
+      //   row 1:  vp=5 "Front",  vp=2 "Side"
+      //   row 2:  vp=8 "Back",   vp=0 "Yard"
+      document.body.appendChild(createCameraTile(8, 'Back', { top: 200, left: 0 }))
+      document.body.appendChild(createCameraTile(5, 'Front', { top: 0, left: 0 }))
+      document.body.appendChild(createCameraTile(0, 'Yard', { top: 200, left: 250 }))
+      document.body.appendChild(createCameraTile(2, 'Side', { top: 0, left: 250 }))
 
       const result = cameras.detectCameras()
 
-      expect(result.map((c: { index: number }) => c.index)).toEqual([0, 1, 2])
-      expect(result[0].name).toBe('Cam A')
+      expect(result.map((c: { index: number; name: string }) => c.name)).toEqual(['Front', 'Side', 'Back', 'Yard'])
+      // data-viewport numbers preserved (needed for click dispatch + zoom state matching)
+      expect(result.map((c: { index: number }) => c.index)).toEqual([5, 2, 8, 0])
+    })
+
+    it('treats tiles within VISUAL_ROW_TOLERANCE_PX as the same row', () => {
+      // Two tiles ~15px apart vertically should still sort left-to-right.
+      document.body.appendChild(createCameraTile(1, 'Right', { top: 10, left: 300 }))
+      document.body.appendChild(createCameraTile(0, 'Left', { top: 0, left: 0 }))
+
+      const result = cameras.detectCameras()
+
+      expect(result.map((c: { name: string }) => c.name)).toEqual(['Left', 'Right'])
     })
 
     it('sends camera list to main process via IPC', () => {
@@ -261,6 +292,80 @@ describe('cameras', () => {
       const result = cameras.detectCameras()
 
       expect(result[0].name).toBe('Garage')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // watchLayoutChanges
+  // ---------------------------------------------------------------------------
+  describe('watchLayoutChanges', () => {
+    function setupLiveviewContainer(tiles: HTMLElement[]): HTMLElement {
+      const container = document.createElement('div')
+      container.className = 'customGrid__StyledReactGridLayout-sc-142pcju-1 abc123'
+      tiles.forEach((tile) => container.appendChild(tile))
+      document.body.appendChild(container)
+      return container
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('no-ops when the liveview container is absent', () => {
+      expect(() => cameras.watchLayoutChanges()).not.toThrow()
+    })
+
+    it('re-runs detectCameras after tile rearrangement, debounced', async () => {
+      const tileA = createCameraTile(0, 'Left', { top: 0, left: 0 })
+      const tileB = createCameraTile(1, 'Right', { top: 0, left: 250 })
+      setupLiveviewContainer([tileA, tileB])
+
+      cameras.watchLayoutChanges()
+      vi.clearAllMocks() // ignore the snapshot init
+
+      // Simulate Protect swapping the tile positions
+      tileA.getBoundingClientRect = () =>
+        ({
+          top: 0,
+          left: 250,
+          width: 200,
+          height: 150,
+          bottom: 150,
+          right: 450,
+          x: 250,
+          y: 0,
+          toJSON: () => {},
+        }) as DOMRect
+      tileB.getBoundingClientRect = () =>
+        ({ top: 0, left: 0, width: 200, height: 150, bottom: 150, right: 200, x: 0, y: 0, toJSON: () => {} }) as DOMRect
+      tileA.setAttribute('style', 'transform: translateX(250px)')
+
+      await vi.advanceTimersByTimeAsync(800)
+
+      const camListCall = mockIpcSend.mock.calls.find((c) => c[0] === 'update-camera-list')
+      expect(camListCall).toBeDefined()
+      expect(camListCall![1].cameras.map((c: { name: string }) => c.name)).toEqual(['Right', 'Left'])
+    })
+
+    it('does not re-send IPC when mutations leave visual order unchanged', async () => {
+      const tileA = createCameraTile(0, 'Left', { top: 0, left: 0 })
+      const tileB = createCameraTile(1, 'Right', { top: 0, left: 250 })
+      setupLiveviewContainer([tileA, tileB])
+
+      cameras.watchLayoutChanges()
+      vi.clearAllMocks()
+
+      // Cosmetic attribute change, no position change
+      tileA.setAttribute('style', 'background: red')
+
+      await vi.advanceTimersByTimeAsync(800)
+
+      const camListCalls = mockIpcSend.mock.calls.filter((c) => c[0] === 'update-camera-list')
+      expect(camListCalls).toHaveLength(0)
     })
   })
 
@@ -401,6 +506,39 @@ describe('cameras', () => {
 
       // Key '1' maps to index 0, so the overlay on viewport 0 should get clicked
       expect(clickSpy).toHaveBeenCalled()
+    })
+
+    it('number key maps to visual position, not to raw data-viewport value', () => {
+      // v7 scenario: pressing "1" should zoom into the visually-first tile
+      // even if its data-viewport is not 0.
+      document.body.appendChild(createCameraTile(7, 'top-left', { top: 0, left: 0 }))
+      document.body.appendChild(createCameraTile(3, 'top-right', { top: 0, left: 250 }))
+      cameras.setupHotkeyListener()
+
+      const topLeftOverlay = document.querySelector('[data-viewport="7"] [class*=ClickCaptureOverlay__Root]')!
+      const topRightOverlay = document.querySelector('[data-viewport="3"] [class*=ClickCaptureOverlay__Root]')!
+      const topLeftClick = vi.fn()
+      const topRightClick = vi.fn()
+      topLeftOverlay.addEventListener('click', topLeftClick)
+      topRightOverlay.addEventListener('click', topRightClick)
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, cancelable: true }))
+
+      expect(topLeftClick).toHaveBeenCalled()
+      expect(topRightClick).not.toHaveBeenCalled()
+    })
+
+    it('ignores number keys beyond the camera count (no preventDefault)', () => {
+      // Only 2 cameras present; pressing "5" should do nothing and NOT swallow the event
+      setupDashboardDOM(2)
+      cameras.setupHotkeyListener()
+
+      const event = new KeyboardEvent('keydown', { key: '5', bubbles: true, cancelable: true })
+      const preventDefault = vi.spyOn(event, 'preventDefault')
+
+      document.dispatchEvent(event)
+
+      expect(preventDefault).not.toHaveBeenCalled()
     })
 
     it('ignores number keys when not on a dashboard page', () => {

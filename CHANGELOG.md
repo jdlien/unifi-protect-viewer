@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.3.0] - 2026-04-24
+
+### Fixed
+
+- **Camera hotkeys and menu order mismatched visual layout on Protect v7 custom liveviews** — `1`–`9` previously mapped to raw `data-viewport` numbers, which in v7 no longer correspond to on-screen reading order once a user customizes their layout. Keys now map to the visually first, second, third… tile regardless of Protect's internal numbering. Cameras menu labels reorder to match.
+- **Cameras menu stayed stale after the user rearranged their liveview in Protect's edit mode** — a debounced `MutationObserver` on the v7 `customGrid__StyledReactGridLayout` container now re-detects camera order when tiles are moved or auto-arranged, with a snapshot diff to avoid IPC spam during drag.
+
+### Changed
+
+- Upgraded Electron 40.6.0 → 41.3.0
+- Upgraded TypeScript 5.9.3 → 6.0.3
+- Migrated `moduleResolution` from legacy `Node` to `Bundler`, removing the TS 7 deprecation warning
+- Enabled `noUncheckedIndexedAccess` for stricter array/object indexing safety
+- Replaced an event-listener registry keyed on string with a cleanup-closure array in `navigation.ts` (clearer and `noUncheckedIndexedAccess`-friendly)
+
 ## [2.2.8] - 2026-04-24
 
 ### Added
