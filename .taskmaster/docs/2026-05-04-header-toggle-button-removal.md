@@ -3,6 +3,43 @@
 **Date:** 2026-05-04
 **Outcome:** Removed the injected nav button. `toggleHeader()` remains accessible via menu (View → Toggle Header) and keyboard shortcut.
 
+> ## ⚠️ FIRST READ: Local-vs-cloud Protect bundles are NOT the same app
+>
+> If you are debugging a sidebar / nav / divider / "this feature works on `unifi.ui.com` but not in our Electron app" issue, **check this before going any further.**
+>
+> The Electron viewer connects directly to the user's local UDM (e.g.
+> `https://beehive.jdlien.com`), which **hosts and serves its own Protect web
+> bundle.** That bundle is **not the same version** as the Protect bundle
+> served through `https://unifi.ui.com` (UniFi Cloud's relay). They drift —
+> the cloud version is generally newer, exposes some features earlier, and
+> renders different React components in a few places.
+>
+> **Concrete example from this debugging session (2026-05-04):** the new
+> Protect's bottom-nav `toggleDividerButton` (the interactive `|->` arrow
+> that moves bottom items between expanded and collapsed positions) is
+> rendered by `unifi.ui.com`'s bundle but **not** by the bundle served from
+> the user's local UDM at all. Protect's React tree picks `<DIV
+toggleDividerWrapper>` containing a `<button toggleDividerButton>` on
+> `unifi.ui.com`, and a static `<HR>` with no interactive button locally.
+> Toggling `localStorage['portal:navigation:expanded']` had **no effect**
+> in the local bundle — its component-selection logic doesn't even consult
+> that key.
+>
+> **Historical precedent:** for years, dark-mode in Protect only worked
+> via `unifi.ui.com` and not on direct local connections. This is a
+> long-running pattern of feature differentiation, not an Electron bug.
+>
+> **How to confirm you've hit this case** — open DevTools in the Electron
+> renderer, run `location.host`, and compare what stock Chrome shows on
+> the same logical page. If the hosts differ (`yourdomain.com` vs
+> `unifi.ui.com`), you are looking at two different builds of Protect.
+> Don't assume our wrapper is breaking anything until you've verified the
+> behavior reproduces on `unifi.ui.com` itself in stock Chrome.
+>
+> Also-useful diagnostic scripts that locked this down: `upv-debug-1-layout.js`,
+> `upv-debug-2-fonts.js`, `upv-debug-3-ua.js` (one-off temporary files in the
+> parent dir during the 2026-05-04 session — recreate from this doc if needed).
+
 ## Why we removed it
 
 UniFi Protect's redesigned sidebar (e.g. on the "Beehive" console — class names `nav__bnl29xSM nav-vertical__bnl29xSM` inside a `navWrapper__bnl29xSM` shell) introduced two new realities that combine badly with our injected button:
