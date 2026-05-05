@@ -11,7 +11,6 @@ export const OUR = {
   fullscreenButton: '#fullscreen-button',
   fullscreenButtonLabel: '#fullscreen-button-label',
   fullscreenButtonIcon: '#fullscreen-icon',
-  headerToggleButton: '#header-toggle-button',
   dashboardButton: '#dashboard-button',
   buttonStyles: '#unifi-protect-viewer-button-styles',
   fastZoomStyle: '#upv-fast-zoom',

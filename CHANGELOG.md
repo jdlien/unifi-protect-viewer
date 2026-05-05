@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Hide-nav toggle no longer hid the sidebar on the new UniFi Protect layout** — the redesigned nav wraps `<nav>` in a `navWrapper__` `<div>` that owns the visible width/border, so applying `display: none` to the inner `<nav>` left the wrapper showing. The controller now finds and toggles the wrapper when present and falls back to the `<nav>` element on older Protect versions.
+
+### Removed
+
+- **In-nav header-toggle button.** Protect's redesigned sidebar (`navWrapper__` shell, scroll-area viewport, top UL outside `<nav>`, React-driven inner rerenders) made every placement option for our injected toggle either visually wrong, structurally fragile, or in conflict with Protect's own `|->` divider toggle. The header-show/hide toggle is still available via the **View → Toggle Header** menu item and the keyboard shortcut. Background notes and discarded approaches are documented in `.taskmaster/docs/2026-05-04-header-toggle-button-removal.md` for if/when we want to revisit.
+
 ## [2.3.0] - 2026-04-24
 
 ### Fixed

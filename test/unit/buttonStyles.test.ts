@@ -40,7 +40,6 @@ describe('buttonStyles', () => {
 
     it('contains expected CSS class selectors', () => {
       expect(buttonStyles.BUTTON_STYLES).toContain('.header-button')
-      expect(buttonStyles.BUTTON_STYLES).toContain('.custom-nav-button')
       expect(buttonStyles.BUTTON_STYLES).toContain('.dashboard-button')
     })
   })

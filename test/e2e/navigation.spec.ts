@@ -158,33 +158,6 @@ test.describe('Navigation toggles', () => {
     await waitForEnforcementSettle(electronPage)
   })
 
-  test('header toggle button icon updates on toggle', async ({ electronPage }) => {
-    await waitForButtonsInjected(electronPage, 30_000)
-
-    const initialHtml = await electronPage.evaluate((sel) => {
-      const btn = document.querySelector(sel)
-      return btn ? btn.innerHTML : ''
-    }, OUR.headerToggleButton)
-
-    await electronPage.evaluate(async () => {
-      await window.electronAPI.ui.toggleHeaderOnly()
-    })
-    await waitForEnforcementSettle(electronPage)
-
-    const toggledHtml = await electronPage.evaluate((sel) => {
-      const btn = document.querySelector(sel)
-      return btn ? btn.innerHTML : ''
-    }, OUR.headerToggleButton)
-
-    expect(toggledHtml).not.toBe(initialHtml)
-
-    // RESTORE
-    await electronPage.evaluate(async () => {
-      await window.electronAPI.ui.toggleHeaderOnly()
-    })
-    await waitForEnforcementSettle(electronPage)
-  })
-
   test('UI state persisted to config after toggle', async ({ electronPage }) => {
     await waitForButtonsInjected(electronPage, 30_000)
 

@@ -204,6 +204,44 @@ describe('uiController', () => {
       await uiController.toggleNav()
       expect(uiController.getState().headerHidden).toBe(false)
     })
+
+    it('hides the navWrapper element when present (new Protect)', async () => {
+      // Reset DOM and rebuild with the new-Protect wrapper structure.
+      uiController.destroy()
+      document.body.innerHTML = ''
+      const wrapper = document.createElement('div')
+      wrapper.className = 'navWrapper__bnl29xSM navWrapper-vertical__bnl29xSM'
+      const innerNav = document.createElement('nav')
+      innerNav.className = 'nav__bnl29xSM nav-vertical__bnl29xSM'
+      wrapper.appendChild(innerNav)
+      document.body.appendChild(wrapper)
+      document.body.appendChild(document.createElement('header'))
+
+      await uiController.initialize({ ipcRenderer: mockIpc })
+
+      await uiController.toggleNav()
+
+      // The wrapper should be hidden, not the inner nav (whose own display is left to Protect).
+      expect(wrapper.style.display).toBe('none')
+      expect(innerNav.style.display).toBe('')
+
+      await uiController.toggleNav()
+      expect(wrapper.style.display).toBe('flex')
+    })
+
+    it('falls back to <nav> element when no navWrapper exists (old Protect)', async () => {
+      uiController.destroy()
+      document.body.innerHTML = ''
+      const oldNav = document.createElement('nav')
+      oldNav.className = 'nav__ZljDoyET nav-auto__ZljDoyET'
+      document.body.appendChild(oldNav)
+      document.body.appendChild(document.createElement('header'))
+
+      await uiController.initialize({ ipcRenderer: mockIpc })
+      await uiController.toggleNav()
+
+      expect(oldNav.style.display).toBe('none')
+    })
   })
 
   describe('toggleHeader', () => {

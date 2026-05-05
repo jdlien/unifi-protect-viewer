@@ -76,9 +76,23 @@ function notifyStateChangeListeners(): void {
   }
 }
 
+/**
+ * Returns the element that visually contains the sidebar.
+ *
+ * In old Protect the visible sidebar IS the `<nav>` element. In new Protect a
+ * wrapper `<div class="navWrapper__…">` provides the width/border, with `<nav>`
+ * nested inside; hiding the inner nav alone leaves the wrapper visible. Prefer
+ * the wrapper when present, fall back to the `<nav>` itself.
+ */
+function getNavRoot(): HTMLElement | null {
+  const wrapper = document.querySelector('[class*="navWrapper__"]') as HTMLElement | null
+  if (wrapper) return wrapper
+  return document.querySelector('nav') as HTMLElement | null
+}
+
 function applyNavState(): void {
-  const nav = document.querySelector('nav')
-  if (nav) setStyle(nav as HTMLElement, 'display', state.navHidden ? 'none' : 'flex')
+  const navRoot = getNavRoot()
+  if (navRoot) setStyle(navRoot, 'display', state.navHidden ? 'none' : 'flex')
 }
 
 function applyHeaderState(): void {
@@ -309,21 +323,21 @@ function setupObserver(): void {
     bodyObserver = null
   }
 
-  const nav = document.querySelector('nav')
+  const navRoot = getNavRoot()
   const header = document.querySelector('header')
 
-  trackedNav = nav
+  trackedNav = navRoot
   trackedHeader = header
 
-  if (nav || header) {
+  if (navRoot || header) {
     navHeaderObserver = new MutationObserver(() => {
       if (!state.toggleInProgress) {
         enforceCurrentState()
       }
     })
 
-    if (nav) {
-      navHeaderObserver.observe(nav, { attributes: true, attributeFilter: ['style', 'class'] })
+    if (navRoot) {
+      navHeaderObserver.observe(navRoot, { attributes: true, attributeFilter: ['style', 'class'] })
     }
     if (header) {
       navHeaderObserver.observe(header, { attributes: true, attributeFilter: ['style', 'class'] })
@@ -332,17 +346,17 @@ function setupObserver(): void {
 
   if (document.body) {
     bodyObserver = new MutationObserver(() => {
-      const currentNav = document.querySelector('nav')
+      const currentNavRoot = getNavRoot()
       const currentHeader = document.querySelector('header')
 
-      const navReplaced = currentNav !== trackedNav
+      const navReplaced = currentNavRoot !== trackedNav
       const headerReplaced = currentHeader !== trackedHeader
 
       if (navReplaced || headerReplaced) {
-        trackedNav = currentNav
+        trackedNav = currentNavRoot
         trackedHeader = currentHeader
 
-        if (currentNav || currentHeader) {
+        if (currentNavRoot || currentHeader) {
           setupObserver()
           enforceCurrentState()
           notifyStateChangeListeners()

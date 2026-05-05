@@ -19,7 +19,6 @@ export async function waitForButtonsInjected(page: Page, timeout = 30_000): Prom
   await Promise.all([
     page.waitForSelector(OUR.sidebarButton, { timeout }),
     page.waitForSelector(OUR.fullscreenButton, { timeout }),
-    page.waitForSelector(OUR.headerToggleButton, { timeout }),
   ])
 }
 

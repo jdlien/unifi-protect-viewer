@@ -14,21 +14,6 @@ const navIcons = {
   },
 }
 
-const headerToggleIcons = {
-  up: `
-  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
-     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
-      ${navIcons.sidebar.visible}
-    </div>
-  </div>`,
-  down: `
-  <div style="display: flex; align-items: center; flex-direction: column; font-size: 11px;">
-     <div style="transform: scaleY(0.66) rotate(90deg); width: 24px; height: 24px; padding: 2px;">
-      ${navIcons.sidebar.hidden}
-    </div>
-  </div>`,
-}
-
 const dashboardIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"><rect x="3" y="3" width="18" height="15" rx="1" fill-opacity=".2"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20 10V4h-7.5v6H20Zm-8.5 0V4H4v6h7.5ZM4 3h16a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm0 8h7.5v6H4v-6Zm16 6h-7.5v-6H20v6Zm-2.5 3a.5.5 0 0 1 0 1h-11a.5.5 0 0 1 0-1h11Z"/></svg>`
 
 const fullscreenIcons = {
@@ -331,73 +316,6 @@ export function setDashboardButtonVisibility(show: boolean): void {
 
   if (show) button.style.display = 'block'
   else button.style.display = 'none'
-}
-
-interface NavButtonOptions {
-  id: string
-  tooltip: string
-  onClick: () => void
-  content: string
-}
-
-/**
- * Generalizes button creation for navigation sidebar buttons.
- */
-export async function createNavButton(options: NavButtonOptions): Promise<boolean> {
-  const { id, tooltip, onClick, content } = options
-
-  if (!document.getElementById('unifi-protect-viewer-button-styles')) {
-    buttonStyles.injectButtonStyles()
-  }
-
-  if (document.getElementById(id)) {
-    return true
-  }
-
-  try {
-    await waitUntil(() => document.querySelector('nav') !== null, DOM_ELEMENT_WAIT_MS)
-
-    if (document.getElementById(id)) {
-      return true
-    }
-
-    const nav = document.querySelector('nav')
-    if (!nav) return false
-
-    const buttonElement = document.createElement('button')
-    buttonElement.id = id
-    buttonElement.className = 'custom-nav-button'
-    buttonElement.title = tooltip || ''
-    buttonElement.setAttribute('role', 'button')
-    buttonElement.innerHTML = content
-    buttonElement.onclick = onClick
-
-    nav.prepend(buttonElement)
-    return true
-  } catch (error) {
-    logError(`Error injecting ${id} nav button`, error)
-    return false
-  }
-}
-
-/**
- * Inject the header toggle button into the nav sidebar.
- */
-export async function injectHeaderToggleButton(onClick?: () => void): Promise<ButtonUpdater | null> {
-  const updater: ButtonUpdater = (state: UIState) => {
-    const btn = document.getElementById('header-toggle-button')
-    if (!btn) return
-    btn.innerHTML = state.headerHidden ? headerToggleIcons.down : headerToggleIcons.up
-  }
-
-  const created = await createNavButton({
-    id: 'header-toggle-button',
-    tooltip: 'Toggle Header',
-    onClick: onClick || (() => {}),
-    content: headerToggleIcons.up,
-  })
-
-  return created ? updater : null
 }
 
 // Re-export createHeaderButton for external use

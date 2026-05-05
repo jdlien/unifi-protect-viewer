@@ -36,12 +36,6 @@ test.describe('Buttons', () => {
     expect(hasSvg).toBe(true)
   })
 
-  test('header toggle button is injected in nav', async ({ electronPage }) => {
-    await waitForButtonsInjected(electronPage, 30_000)
-    const button = electronPage.locator(OUR.headerToggleButton)
-    await expect(button).toBeVisible()
-  })
-
   test('fullscreen button is injected in header', async ({ electronPage }) => {
     await waitForButtonsInjected(electronPage, 30_000)
     const button = electronPage.locator(OUR.fullscreenButton)

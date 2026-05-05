@@ -27,10 +27,6 @@ async function ensureButtonsInjected(): Promise<void> {
     const updater = await buttons.injectSidebarButton(() => uiController.toggleNav())
     if (updater) uiController.registerButton('sidebar-button', updater)
   }
-  if (!document.getElementById('header-toggle-button')) {
-    const updater = await buttons.injectHeaderToggleButton(() => uiController.toggleHeader())
-    if (updater) uiController.registerButton('header-toggle-button', updater)
-  }
   if (!document.getElementById('fullscreen-button')) {
     const updater = await buttons.injectFullscreenButton(() => buttons.toggleFullscreen())
     if (updater) uiController.registerButton('fullscreen-button', updater)
