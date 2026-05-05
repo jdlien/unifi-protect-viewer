@@ -226,7 +226,9 @@ describe('uiController', () => {
       expect(innerNav.style.display).toBe('')
 
       await uiController.toggleNav()
-      expect(wrapper.style.display).toBe('flex')
+      // Restoring visibility clears the inline override (no `display: flex`).
+      // We let Protect's own CSS govern when the sidebar is shown.
+      expect(wrapper.style.display).toBe('')
     })
 
     it('falls back to <nav> element when no navWrapper exists (old Protect)', async () => {
@@ -241,6 +243,29 @@ describe('uiController', () => {
       await uiController.toggleNav()
 
       expect(oldNav.style.display).toBe('none')
+    })
+
+    it('does NOT write inline display when nav is visible', async () => {
+      // Regression guard: previously we wrote `display: flex` inline whenever
+      // nav was visible, which collided with Protect's styled-components
+      // layout (e.g. broke the divider-collapse toggle button position and
+      // click handler). Visible-state should leave the inline style empty.
+      uiController.destroy()
+      document.body.innerHTML = ''
+      const oldNav = document.createElement('nav')
+      document.body.appendChild(oldNav)
+      document.body.appendChild(document.createElement('header'))
+
+      await uiController.initialize({ ipcRenderer: mockIpc })
+
+      // Initial state (visible) — no inline display.
+      expect(oldNav.style.display).toBe('')
+
+      // Toggle to hidden → 'none', then toggle back to visible → cleared.
+      await uiController.toggleNav()
+      expect(oldNav.style.display).toBe('none')
+      await uiController.toggleNav()
+      expect(oldNav.style.display).toBe('')
     })
   })
 

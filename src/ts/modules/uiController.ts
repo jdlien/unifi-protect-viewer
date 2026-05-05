@@ -90,14 +90,31 @@ function getNavRoot(): HTMLElement | null {
   return document.querySelector('nav') as HTMLElement | null
 }
 
+/**
+ * Apply hide/show to the nav root. We only write inline `display: none` when
+ * hiding; when showing we *clear* the inline override and let Protect's own
+ * CSS / styled-components govern. This matters because Protect drives layout
+ * state (e.g. the divider-collapse toggle) through styled-component CSS that
+ * can be overridden by a forced `display: flex`.
+ */
 function applyNavState(): void {
   const navRoot = getNavRoot()
-  if (navRoot) setStyle(navRoot, 'display', state.navHidden ? 'none' : 'flex')
+  if (!navRoot) return
+  if (state.navHidden) {
+    setStyle(navRoot, 'display', 'none')
+  } else {
+    navRoot.style.removeProperty('display')
+  }
 }
 
 function applyHeaderState(): void {
-  const header = document.querySelector('header')
-  if (header) setStyle(header as HTMLElement, 'display', state.headerHidden ? 'none' : 'flex')
+  const header = document.querySelector('header') as HTMLElement | null
+  if (!header) return
+  if (state.headerHidden) {
+    setStyle(header, 'display', 'none')
+  } else {
+    header.style.removeProperty('display')
+  }
 }
 
 async function persistState(): Promise<void> {
@@ -273,14 +290,25 @@ export function onStateChange(listener: (state: UIState) => void): () => void {
 
 // --- Enforcement ---
 
+/**
+ * Reapply hide/show. No-op when nothing is hidden — when everything is
+ * visible we want to leave Protect's own CSS / styled-components alone
+ * rather than fight it with redundant inline writes.
+ */
 export function enforceCurrentState(): void {
-  if (!state.initialized && !state.navHidden && !state.headerHidden) return
+  if (!state.navHidden && !state.headerHidden) return
   applyNavState()
   applyHeaderState()
 }
 
+/**
+ * Burst re-enforcement during initial settling, in case Protect's React
+ * keeps re-rendering and overwriting our inline `display: none`. Skipped
+ * entirely when nothing is hidden — there's nothing to defend.
+ */
 export function startEnforcement(): void {
   stopEnforcement()
+  if (!state.navHidden && !state.headerHidden) return
   let count = 0
   enforcementTimer = setInterval(() => {
     if (count < ENFORCEMENT_BURST_COUNT) {
@@ -330,6 +358,10 @@ function setupObserver(): void {
   trackedHeader = header
 
   if (navRoot || header) {
+    // Re-enforce only on `style` mutations. Class changes are part of
+    // Protect's own state machine (e.g. styled-component layout transitions
+    // for the divider-collapse toggle) and we don't want to react to them.
+    // enforceCurrentState() itself is a no-op when nothing is hidden.
     navHeaderObserver = new MutationObserver(() => {
       if (!state.toggleInProgress) {
         enforceCurrentState()
@@ -337,10 +369,10 @@ function setupObserver(): void {
     })
 
     if (navRoot) {
-      navHeaderObserver.observe(navRoot, { attributes: true, attributeFilter: ['style', 'class'] })
+      navHeaderObserver.observe(navRoot, { attributes: true, attributeFilter: ['style'] })
     }
     if (header) {
-      navHeaderObserver.observe(header, { attributes: true, attributeFilter: ['style', 'class'] })
+      navHeaderObserver.observe(header, { attributes: true, attributeFilter: ['style'] })
     }
   }
 
