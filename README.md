@@ -64,13 +64,15 @@ git push origin v2.2.2
 
 ### Code Signing
 
+Release builds are signed in CI (see `.github/workflows/release.yml`).
+
 #### macOS
 
-This application is signed and notarized for macOS. See the `scripts/sign-builds.js` file for details on the macOS signing process.
+macOS builds are signed and notarized via electron-builder using an Apple Developer ID certificate, with credentials supplied through GitHub Actions secrets (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`).
 
 #### Windows
 
-Windows builds are signed with a code signing certificate belonging to my company (FullSpec Systems) using SSL.com's CodeSignTool.
+Windows builds are signed with [Azure Trusted Signing](https://learn.microsoft.com/en-us/azure/trusted-signing/) using a certificate belonging to FullSpec Systems. Signing runs in CI via the `azure/trusted-signing-action` step after electron-builder produces the unsigned installers.
 
 ## Usage
 
